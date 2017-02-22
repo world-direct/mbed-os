@@ -2635,5 +2635,9 @@
     "SARA_NBIOT_EVK": {
         "inherits": ["SARA_NBIOT"],
         "extra_labels": ["ublox", "HI2110", "SARA_NBIOT"]
+    },
+	"WD_CORE": {
+    },
+	"WD_ROUTING": {
     }
 }
