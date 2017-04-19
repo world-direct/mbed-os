@@ -108,11 +108,22 @@ LoopFillZerobss:
   bcc  FillZerobss
 
 /* Call the clock system intitialization function.*/
+  bl SystemInitPre
+  bl HAL_InitPre
+#if defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED)
+  ldr r0, =uvisor_init
+  blx r0
+#endif /* defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED) */
   bl  SystemInit   
 /* Call static constructors */
-    bl __libc_init_array
+  //bl __libc_init_array
 /* Call the application's entry point.*/
-  bl  main
+  //bl  main
+  // Calling the crt0 'cold-start' entry point. There __libc_init_array is called
+  // and when existing hardware_init_hook() and software_init_hook() before 
+  // starting main(). software_init_hook() is available and has to be called due 
+  // to initializsation when using rtos.
+  bl _start
   bx  lr    
 .size  Reset_Handler, .-Reset_Handler
 
@@ -138,7 +149,7 @@ Infinite_Loop:
    .section  .isr_vector,"a",%progbits
   .type  g_pfnVectors, %object
   .size  g_pfnVectors, .-g_pfnVectors
- 
+   
 g_pfnVectors:
   .word  __stack
   .word  Reset_Handler
@@ -247,8 +258,8 @@ g_pfnVectors:
   .word     SPI5_IRQHandler                   /* SPI5 						  */
   .word     SPI6_IRQHandler                   /* SPI6						  */
   .word     SAI1_IRQHandler                   /* SAI1						  */
-  .word     0                                 /* Reserved			          */
-  .word     0                                 /* Reserved			          */
+  .word     LTDC_IRQHandler                   /* LTDC_IRQHandler			  */
+  .word     LTDC_ER_IRQHandler                /* LTDC_ER_IRQHandler			  */
   .word     DMA2D_IRQHandler                  /* DMA2D                        */
   
 /*******************************************************************************
@@ -549,6 +560,12 @@ g_pfnVectors:
    .weak      SAI1_IRQHandler            
    .thumb_set SAI1_IRQHandler,Default_Handler
 
+   .weak      LTDC_IRQHandler            
+   .thumb_set LTDC_IRQHandler,Default_Handler
+
+   .weak      LTDC_ER_IRQHandler            
+   .thumb_set LTDC_ER_IRQHandler,Default_Handler
+
    .weak      DMA2D_IRQHandler            
    .thumb_set DMA2D_IRQHandler,Default_Handler
 
@@ -556,5 +573,3 @@ g_pfnVectors:
  
    
    
-
- 
