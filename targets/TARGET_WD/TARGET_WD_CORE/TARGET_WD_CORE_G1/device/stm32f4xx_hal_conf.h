@@ -204,7 +204,8 @@
 
 #define PHY_BCR                         ((uint16_t)0x00U)    /*!< Transceiver Basic Control Register   */
 #define PHY_BSR                         ((uint16_t)0x01U)    /*!< Transceiver Basic Status Register    */
- 
+#define PHY_ANAR						((uint16_t)0x0004U)  /*!< Transceiver Auto Negotiation Advertisement Register    */
+	 
 #define PHY_RESET                       ((uint16_t)0x8000U)  /*!< PHY Reset */
 #define PHY_LOOPBACK                    ((uint16_t)0x4000U)  /*!< Select loop-back mode */
 #define PHY_FULLDUPLEX_100M             ((uint16_t)0x2100U)  /*!< Set the full-duplex mode at 100 Mb/s */
@@ -216,6 +217,9 @@
 #define PHY_POWERDOWN                   ((uint16_t)0x0800U)  /*!< Select the power down mode           */
 #define PHY_ISOLATE                     ((uint16_t)0x0400U)  /*!< Isolate PHY from MII                 */
 
+#define PHY_HALFDUPLEX_100M_CAPABILITY	((uint16_t)0x0080U)  /*!< Set the half-duplex mode at 100 Mb/s capability (overrides strap-in option) */
+#define PHY_FULLDUPLEX_100M_CAPABILITY	((uint16_t)0x0100U)  /*!< Set the full-duplex mode at 100 Mb/s capability (overrides strap-in option) */
+	 
 #define PHY_AUTONEGO_COMPLETE           ((uint16_t)0x0020U)  /*!< Auto-Negotiation process completed   */
 #define PHY_LINKED_STATUS               ((uint16_t)0x0004U)  /*!< Valid link established               */
 #define PHY_JABBER_DETECTION            ((uint16_t)0x0002U)  /*!< Jabber condition detected            */
