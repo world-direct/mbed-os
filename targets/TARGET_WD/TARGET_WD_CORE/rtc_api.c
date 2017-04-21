@@ -32,6 +32,8 @@
 #include "rtc_api.h"
 #include "rtc_api_hal.h"
 #include "mbed_error.h"
+#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal_rtc.h"
+
 
 static RTC_HandleTypeDef RtcHandle;
 
@@ -206,12 +208,12 @@ time_t rtc_read(void)
     timeinfo.tm_wday = dateStruct.WeekDay;
     timeinfo.tm_mon  = dateStruct.Month - 1;
     timeinfo.tm_mday = dateStruct.Date;
-    timeinfo.tm_year = dateStruct.Year + 68;
+    timeinfo.tm_year = dateStruct.Year + 100;
     timeinfo.tm_hour = timeStruct.Hours;
     timeinfo.tm_min  = timeStruct.Minutes;
     timeinfo.tm_sec  = timeStruct.Seconds;
     // Daylight Saving Time information is not available
-    timeinfo.tm_isdst  = -1;
+	timeinfo.tm_isdst  = RTC_DAYLIGHTSAVING_NONE;
 
     // Convert to timestamp
     time_t t = mktime(&timeinfo);
@@ -233,7 +235,7 @@ void rtc_write(time_t t)
     dateStruct.WeekDay        = timeinfo->tm_wday;
     dateStruct.Month          = timeinfo->tm_mon + 1;
     dateStruct.Date           = timeinfo->tm_mday;
-    dateStruct.Year           = timeinfo->tm_year - 68;
+    dateStruct.Year           = timeinfo->tm_year - 100;
     timeStruct.Hours          = timeinfo->tm_hour;
     timeStruct.Minutes        = timeinfo->tm_min;
     timeStruct.Seconds        = timeinfo->tm_sec;
@@ -251,15 +253,11 @@ void rtc_write(time_t t)
 
 int rtc_isenabled(void)
 {
-#if DEVICE_LOWPOWERTIMER
     if ((RTC->ISR & RTC_ISR_INITS) ==  RTC_ISR_INITS) {
         return 1;
     } else {
         return 0;
     }
-#else /* DEVICE_LOWPOWERTIMER */
-    return 1;
-#endif /* DEVICE_LOWPOWERTIMER */
 }
 
 #if DEVICE_LOWPOWERTIMER
