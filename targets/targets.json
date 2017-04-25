@@ -2643,7 +2643,7 @@
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_CORE" ],
     "macros": [],
-    "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "SPI", "PORTIN", "PORTOUT" ],
+    "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "SPI", "PORTIN", "PORTOUT", "LOWPOWERTIMER" ],
     "features": [ "LWIP" ],
     "release_versions": [ "5" ]
   }
