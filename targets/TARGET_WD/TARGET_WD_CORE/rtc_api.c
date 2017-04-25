@@ -34,22 +34,25 @@
 #include "mbed_error.h"
 #include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal_rtc.h"
 
-
 static RTC_HandleTypeDef RtcHandle;
 
 #if RTC_LSI
 #define RTC_CLOCK LSI_VALUE
+#define RTC_ASYNCH_PREDIV (0x007F)
+#define RTC_SYNCH_PREDIV (0x00F9)
 #else
 #define RTC_CLOCK LSE_VALUE
+#define RTC_ASYNCH_PREDIV (0x007F)
+#define RTC_SYNCH_PREDIV (0x00FF)
 #endif
 
-#if DEVICE_LOWPOWERTIMER
-#define RTC_ASYNCH_PREDIV ((RTC_CLOCK - 1) / 0x8000)
-#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
-#else
-#define RTC_ASYNCH_PREDIV (0x007F)
-#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
-#endif
+//#if DEVICE_LOWPOWERTIMER
+//#define RTC_ASYNCH_PREDIV ((RTC_CLOCK - 1) / 0x8000)
+//#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
+//#else
+//#define RTC_ASYNCH_PREDIV (0x007F)
+//#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
+//#endif
 
 #if DEVICE_LOWPOWERTIMER
 static void (*irq_handler)(void);
@@ -208,7 +211,7 @@ time_t rtc_read(void)
     timeinfo.tm_wday = dateStruct.WeekDay;
     timeinfo.tm_mon  = dateStruct.Month - 1;
     timeinfo.tm_mday = dateStruct.Date;
-    timeinfo.tm_year = dateStruct.Year + 100;
+    timeinfo.tm_year = dateStruct.Year + 69U;
     timeinfo.tm_hour = timeStruct.Hours;
     timeinfo.tm_min  = timeStruct.Minutes;
     timeinfo.tm_sec  = timeStruct.Seconds;
@@ -230,12 +233,19 @@ void rtc_write(time_t t)
 
     // Convert the time into a tm
     struct tm *timeinfo = localtime(&t);
-
-    // Fill RTC structures
+	/* 
+		1. init: t = 0, 
+		2. timeinfo->tm_year = 70. 
+		3. in dateStruct.Year we can only store values in the range 0-99
+		4. we subtract a high value in order to gain more range but we CANT subtract 70,
+		   because RTC_ISR->INITS detects the initialization state based on year != 0
+	*/
+    
+	// Fill RTC structures
     dateStruct.WeekDay        = timeinfo->tm_wday;
     dateStruct.Month          = timeinfo->tm_mon + 1;
     dateStruct.Date           = timeinfo->tm_mday;
-    dateStruct.Year           = timeinfo->tm_year - 100;
+    dateStruct.Year           = timeinfo->tm_year - 69U;
     timeStruct.Hours          = timeinfo->tm_hour;
     timeStruct.Minutes        = timeinfo->tm_min;
     timeStruct.Seconds        = timeinfo->tm_sec;
@@ -253,7 +263,11 @@ void rtc_write(time_t t)
 
 int rtc_isenabled(void)
 {
-    if ((RTC->ISR & RTC_ISR_INITS) ==  RTC_ISR_INITS) {
+    if ((RTC->ISR & RTC_ISR_INITS) == RTC_ISR_INITS && 
+		(
+			(RTC->DR & RTC_DR_YU_Msk) != 0 || 
+			(RTC->DR & RTC_DR_YT_Msk) != 0)
+	    ) {	// safety check as we are in trouble if year = 0
         return 1;
     } else {
         return 0;
