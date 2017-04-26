@@ -37,6 +37,7 @@ static inline void debug(const char *format, ...) {
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
+	printf("\r\n");
 }
 
 /** Conditionally output a debug message
