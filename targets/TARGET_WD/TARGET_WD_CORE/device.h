@@ -34,7 +34,10 @@
 
 //=======================================
 #define DEVICE_ID_LENGTH       24
-#define MBED_CONF_PLATFORM_STDIO_BAUD_RATE 115200
+
+#ifndef MBED_CONF_PLATFORM_STDIO_BAUD_RATE
+#define MBED_CONF_PLATFORM_STDIO_BAUD_RATE	115200	  
+#endif // !MBED_CONF_PLATFORM_STDIO_BAUD_RATE
 
 #include "objects.h"
 
