@@ -172,8 +172,8 @@ typedef enum {
 	// Generic signals namings
     SERIAL_TX   = PE_8, // Virtual Com Port
     SERIAL_RX   = PE_7, // Virtual Com Port
-    USBTX       = PD_8, // Virtual Com Port
-    USBRX       = PD_9, // Virtual Com Port
+    USBTX       = PE_8, // Virtual Com Port
+    USBRX       = PE_7, // Virtual Com Port
 	I2C_SCL     = PD_15,
     I2C_SDA     = PD_14,
     SPI_MOSI    = PD_11,
