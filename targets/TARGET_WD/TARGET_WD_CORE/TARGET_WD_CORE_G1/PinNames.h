@@ -174,12 +174,16 @@ typedef enum {
     SERIAL_RX   = PE_7, // Virtual Com Port
     USBTX       = PE_8, // Virtual Com Port
     USBRX       = PE_7, // Virtual Com Port
-	I2C_SCL     = PD_15,
-    I2C_SDA     = PD_14,
-    SPI_MOSI    = PD_11,
-    SPI_MISO    = PD_12,
-    SPI_SCK     = PD_13,
-    SPI_CS      = PD_10,
+	I2C_SCL     = PB_8,
+    I2C_SDA     = PB_9,
+    SPI_MOSI    = PB_5,
+    SPI_MISO    = PA_6,
+    SPI_SCK     = PA_5,
+    SPI_CS0     = PD_12,
+	SPI_CS1     = PD_13,
+	SPI_CS2     = PD_14,
+	SPI_CS3     = PD_15,
+	SPI_CS4     = PC_6,
 	
 	LED1        = RGBLED1_GN_Pin,
 	
