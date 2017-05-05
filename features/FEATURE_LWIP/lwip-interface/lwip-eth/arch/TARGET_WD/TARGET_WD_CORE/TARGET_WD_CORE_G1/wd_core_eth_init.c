@@ -1,6 +1,7 @@
 #include <string.h>
 #include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx.h"
 #include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal.h"
+#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/25AA02E48_EEPROM.h"
 #include "toolchain.h"
 
 /**
@@ -83,9 +84,15 @@ void HAL_ETH_MspDeInit(ETH_HandleTypeDef* heth)
 	}
 }
 
-// todo: read MAC
 uint8_t mbed_otp_mac_address(char *mac) {
 	char default_mac[6] = {0x00, 0x80, 0xe1, 0x1c, 0x00, 0x36};
-	memcpy(mac, default_mac, 6);
+	uint8_t internal_mac[6];
+	if (-1 != eeprom_read_eui48_node_address(internal_mac)) {
+		memcpy(mac, internal_mac, 6);
+	}
+	else {
+		memcpy(mac, default_mac, 6);
+	}
+	
 	return 1;
 }
