@@ -186,6 +186,7 @@ typedef enum {
 	SPI_CS4     = PC_6,
 	
 	LED1        = RGBLED1_GN_Pin,
+	LED_RED		= PE_12	// for mbed_die() error signalling
 	
     // Not connected
     NC = (int)0xFFFFFFFF
