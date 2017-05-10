@@ -28,7 +28,7 @@
 using std::memmove;
 
 #include "ATCommandsInterface.h"
-#include "mbed_debug.h"
+#include "wd_logging.h"
 
 #include "../core/errors.h"
 
@@ -53,15 +53,15 @@ ATCommandsInterface::ATCommandsInterface(IOStream* pStream)
 int ATCommandsInterface::open()
 {
 	if (m_open){
-		debug("ATCommandsInterface --> AT interface is already open");
+		wd_log_debug("ATCommandsInterface --> AT interface is already open");
 		return OK;
 	}
 	
-	debug("ATCommandsInterface --> Opening AT interface");
+	wd_log_debug("ATCommandsInterface --> Opening AT interface");
 	m_processingThread.signal_set(AT_SIG_PROCESSING_START);
 	//m_processingMtx.unlock();
 	m_open = true;
-	debug("ATCommandsInterface --> Done");
+	wd_log_debug("ATCommandsInterface --> Done");
   
 	return OK;
 }
@@ -72,7 +72,7 @@ int ATCommandsInterface::init(bool reset /* = true*/) {
 	m_transactionMtx.lock();
   
 	if (reset) {
-		debug("ATCommandsInterface --> Initializing");
+		wd_log_debug("ATCommandsInterface --> Initializing");
 		int err;
 		int tries = 5;
 		do
@@ -81,13 +81,13 @@ int ATCommandsInterface::init(bool reset /* = true*/) {
 			err = executeInternal("ATZ E1 V1", this, &res);
 			if (err && tries && res.result == ATResult::AT_OK)
 			{
-				debug("ATCommandsInterface --> No response, trying again");
+				wd_log_debug("ATCommandsInterface --> No response, trying again");
 				wait_ms(500);
 			}
 		} while (err && tries--);
 		if (err)
 		{
-			debug("ATCommandsInterface --> Error initializing %d", err);
+			wd_log_debug("ATCommandsInterface --> Error initializing %d", err);
 			m_transactionMtx.unlock();
 			return err;
 		}
@@ -95,7 +95,7 @@ int ATCommandsInterface::init(bool reset /* = true*/) {
   
 	//Enable events handling and execute events enabling commands
 	enableEvents();
-	debug("ATCommandsInterface --> AT interface initialized");
+	wd_log_debug("ATCommandsInterface --> AT interface initialized");
 	
 	m_transactionMtx.unlock();
 
@@ -106,11 +106,11 @@ int ATCommandsInterface::init(bool reset /* = true*/) {
 int ATCommandsInterface::close()
 {
 	if (!m_open) {
-		debug("ATCommandsInterface --> AT interface is already closed");
+		wd_log_debug("ATCommandsInterface --> AT interface is already closed");
 		return OK;
 	}
 
-	debug("Closing AT interface");
+	wd_log_debug("Closing AT interface");
   
 	//Lock transaction mutex
 	m_transactionMtx.lock();
@@ -134,7 +134,7 @@ int ATCommandsInterface::close()
 	//Unlock transaction mutex
 	m_transactionMtx.unlock();
 
-	debug("AT interface closed");
+	wd_log_debug("AT interface closed");
 	return OK;
 }
 
@@ -211,7 +211,7 @@ int ATCommandsInterface::deregisterEventsHandler(IATEventsHandler* pHdlr)
 
 int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcessor* pProcessor, ATResult* pResult, uint32_t timeout/*=1000*/)
 {
-	debug("ATCommandsInterface --> Executing command %s", command);
+	wd_log_debug("ATCommandsInterface --> Executing command %s", command);
 
   //Discard previous result if it arrived too late
 	osEvent evt = m_AT2Env.get(0);
@@ -219,7 +219,7 @@ int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcess
 	if (evt.status == osEventMail)
 	{
 		m_AT2Env.free((int*)evt.value.p);
-		debug("ATCommandsInterface --> Previous result discarded");
+		wd_log_debug("ATCommandsInterface --> Previous result discarded");
 	}
 
 	  //Send params to the process routine
@@ -233,14 +233,14 @@ int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcess
 		m_pTransactionProcessor = this; //Use default behaviour
 	}
 
-	debug("ATCommandsInterface --> Sending command ready signal to AT thread & aborting current blocking read operation");
+	wd_log_debug("ATCommandsInterface --> Sending command ready signal to AT thread & aborting current blocking read operation");
 
   //Produce command ready signal
 	int* msg = m_env2AT.alloc(osWaitForever);
 	*msg = AT_CMD_READY;
 	m_env2AT.put(msg);
 
-	debug("ATCommandsInterface --> Trying to enter abortRead()");
+	wd_log_debug("ATCommandsInterface --> Trying to enter abortRead()");
   //Unlock process routine (abort read)
 	m_pStream->abortRead(); //This is thread-safe
 
@@ -254,7 +254,7 @@ int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcess
 		*msg = AT_TIMEOUT;
 		m_env2AT.put(msg);
 
-		debug("ATCommandsInterface --> Trying to enter abortRead()");
+		wd_log_debug("ATCommandsInterface --> Trying to enter abortRead()");
 		//Unlock process routine (abort read)
 		m_pStream->abortRead(); //This is thread-safe
     
@@ -267,10 +267,10 @@ int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcess
 			m_AT2Env.free((int*)evt.value.p);
 		} while (msgResult != AT_TIMEOUT);  
 
-		debug("ATCommandsInterface --> Command \"%s\" returned no message", command);
+		wd_log_debug("ATCommandsInterface --> Command \"%s\" returned no message", command);
 		return NET_TIMEOUT;
 	}
-	debug("ATCommandsInterface --> Command returned with message %d", *msg);
+	wd_log_debug("ATCommandsInterface --> Command returned with message %d", *msg);
 
 	m_AT2Env.free((int*)evt.value.p);
 
@@ -281,10 +281,10 @@ int ATCommandsInterface::executeInternal(const char* command, IATCommandsProcess
 
 	int ret = ATResultToReturnCode(m_transactionResult);
 	if (ret != OK) {
-		debug("ATCommandsInterface --> Command \"%s\" returned AT result %d with code %d", command, m_transactionResult.result, m_transactionResult.code);
+		wd_log_debug("ATCommandsInterface --> Command \"%s\" returned AT result %d with code %d", command, m_transactionResult.result, m_transactionResult.code);
 	}
 
-	debug("ATCommandsInterface --> Command returned successfully");
+	wd_log_debug("ATCommandsInterface --> Command returned successfully");
 
 	return ret;
 }
@@ -304,33 +304,33 @@ int ATCommandsInterface::tryReadLine()
 	{
 		m_inputPos += readLen;
 		m_inputBuf[m_inputPos] = '\0'; //Add null terminating character to ease the use of str* functions
-		debug("ATCommandsInterface -- > In buffer: [%s]", m_inputBuf);
+		wd_log_debug("ATCommandsInterface -- > In buffer: [%s]", m_inputBuf);
 	}
 
 	if (ret == NET_INTERRUPTED) //It is worth checking readLen as data might have been read even though the read was interrupted
 	{
-		debug("ATCommandsInterface -- > Read was interrupted");
+		wd_log_debug("ATCommandsInterface -- > Read was interrupted");
 		return NET_INTERRUPTED; //0 chars were read
 	}
 	else if (readLen == 0)
 	{
-		//TODO: severity solution, too many log-entries: debug("ATCommandsInterface -- > Nothing read");
+		//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface -- > Nothing read");
 		return OK; //0 chars were read
 	}
 
-	debug("ATCommandsInterface -- > Trying to process incoming line");
+	wd_log_debug("ATCommandsInterface -- > Trying to process incoming line");
 	bool lineProcessed = false;
 
 	do
 	{
 		lineProcessed = false; //Reset flag
 
-		debug("ATCommandsInterface -- > New iteration");
+		wd_log_debug("ATCommandsInterface -- > New iteration");
 
 		    //Look for a new line
 		if (!lineDetected)
 		{
-			debug("ATCommandsInterface -- > No line detected yet");
+			wd_log_debug("ATCommandsInterface -- > No line detected yet");
 		  //Try to look for a starting CRLF
 			char* crPtr = strchr(m_inputBuf, FWK_CR);
 			/*
@@ -346,7 +346,7 @@ int ATCommandsInterface::tryReadLine()
 			      */
 			if (crPtr != NULL)
 			{
-				debug("ATCommandsInterface -- > CR char found");
+				wd_log_debug("ATCommandsInterface -- > CR char found");
 
 				#if 0
 				        //Discard all preceding characters (can do nothing if m_inputBuf == crPtr)
@@ -366,24 +366,24 @@ int ATCommandsInterface::tryReadLine()
 						  //At this point we can check whether this is the end of a preceding line or the beginning of a new one
 							if (m_inputBuf[2] != FWK_CR)
 							{
-								debug("ATCommandsInterface -- > Beginning of new line found");
+								wd_log_debug("ATCommandsInterface -- > Beginning of new line found");
 							  //Beginning of a line
 								lineDetected = true; //Move to next state-machine step
 							}
 							else
 							{
 							  //End of an unprocessed line
-								debug("ATCommandsInterface -- > End of unprocessed line");
+								wd_log_debug("ATCommandsInterface -- > End of unprocessed line");
 							}
 							//In both cases discard CRLF
-							debug("ATCommandsInterface -- > Discarding CRLF");
+							wd_log_debug("ATCommandsInterface -- > Discarding CRLF");
 							memmove(m_inputBuf, m_inputBuf + 2, (m_inputPos + 1) - 2); //Move null-terminating char as well
 							m_inputPos = m_inputPos - 2; //Adjust m_inputPos
 						}
 						else
 						{
 						  //This is completely unexpected, discard the CR char to try to recover good state
-							debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found after CR char", m_inputBuf[1]);
+							wd_log_debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found after CR char", m_inputBuf[1]);
 							memmove(m_inputBuf, m_inputBuf + 1, (m_inputPos + 1) - 1); //Move null-terminating char as well
 							m_inputPos = m_inputPos - 1; //Adjust m_inputPos
 						}
@@ -394,7 +394,7 @@ int ATCommandsInterface::tryReadLine()
 				{
 					int crPos = crPtr - m_inputBuf;
 					int lfOff = 0; //Offset for LF if present
-					debug("ATCommandsInterface -- > New line found (possible echo of command)");
+					wd_log_debug("ATCommandsInterface -- > New line found (possible echo of command)");
 				  //This is the end of line
 				  //Replace m_inputBuf[crPos] with null-terminating char
 					m_inputBuf[crPos] = '\0';
@@ -422,14 +422,14 @@ int ATCommandsInterface::tryReadLine()
 						memmove(m_inputBuf, m_inputBuf + crPos + lfOff + 1, (m_inputPos + 1) - (crPos + lfOff + 1)); //Move null-terminating char as well
 						m_inputPos = m_inputPos - (crPos + lfOff + 1); //Adjust m_inputPos
 					}
-					debug("ATCommandsInterface -- > One line was successfully processed");
+					wd_log_debug("ATCommandsInterface -- > One line was successfully processed");
 					lineProcessed = true; //Line was processed with success
 					lineDetected = false; //Search now for a new line
 				}
 			}
 			else if (m_inputBuf[0] == LF) //If there is a remaining LF char from the previous line, discard it
 			{
-				debug("ATCommandsInterface -- > Discarding single LF char");
+				wd_log_debug("ATCommandsInterface -- > Discarding single LF char");
 				memmove(m_inputBuf, m_inputBuf + 1, (m_inputPos + 1) - 1); //Move null-terminating char as well
 				m_inputPos = m_inputPos - 1; //Adjust m_inputPos
 			}
@@ -456,7 +456,7 @@ int ATCommandsInterface::tryReadLine()
 
 			if (crPtr != NULL)
 			{
-				debug("ATCommandsInterface -- > CR char found");
+				wd_log_debug("ATCommandsInterface -- > CR char found");
 				int crPos = crPtr - m_inputBuf;
 				//To determine the sequence we need at least 2 chars
 				if (m_inputPos - crPos >= 2)
@@ -464,7 +464,7 @@ int ATCommandsInterface::tryReadLine()
 				  //Look for a LF char next to the CR char
 					if (m_inputBuf[crPos + 1] == LF)
 					{
-						debug("ATCommandsInterface -- > End of new line found");
+						wd_log_debug("ATCommandsInterface -- > End of new line found");
 					  //This is the end of line
 					  //Replace m_inputBuf[crPos] with null-terminating char
 						m_inputBuf[crPos] = '\0';
@@ -486,13 +486,13 @@ int ATCommandsInterface::tryReadLine()
 							m_inputPos = m_inputPos - (crPos + 2); //Adjust m_inputPos
 						}
 
-						debug("ATCommandsInterface -- > One line was successfully processed");
+						wd_log_debug("ATCommandsInterface -- > One line was successfully processed");
 						lineProcessed = true; //Line was processed with success
 					}
 					else
 					{
 					  //This is completely unexpected, discard all chars till the CR char to try to recover good state
-						debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found in incoming line", m_inputBuf[crPos + 1]);
+						wd_log_debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found in incoming line", m_inputBuf[crPos + 1]);
 						memmove(m_inputBuf, m_inputBuf + crPos + 1, (m_inputPos + 1) - (crPos + 1)); //Move null-terminating char as well
 						m_inputPos = m_inputPos - (crPos + 1); //Adjust m_inputPos
 					}
@@ -501,7 +501,7 @@ int ATCommandsInterface::tryReadLine()
 			}
 			else if (greaterThanPtr != NULL)
 			{
-				debug("ATCommandsInterface -- > \">\" char found");
+				wd_log_debug("ATCommandsInterface -- > \">\" char found");
 				int gdPos = greaterThanPtr - m_inputBuf;
 				//To determine the sequence we need at least 2 chars
 				if (m_inputPos - gdPos >= 2)
@@ -527,13 +527,13 @@ int ATCommandsInterface::tryReadLine()
 							return ret;
 						}
 
-						debug("ATCommandsInterface -- > One line was successfully processed");
+						wd_log_debug("ATCommandsInterface -- > One line was successfully processed");
 						lineProcessed = true; //Line was processed with success
 					}
 					else
 					{
 					  //This is completely unexpected, discard all chars till the GD char to try to recover good state
-						debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found in incoming line", m_inputBuf[gdPos + 1]);
+						wd_log_debug("ATCommandsInterface -- > Unexpected %c char (%02d code) found in incoming line", m_inputBuf[gdPos + 1]);
 						memmove(m_inputBuf, m_inputBuf + gdPos + 1, (m_inputPos + 1) - (gdPos + 1)); //Move null-terminating char as well
 						m_inputPos = m_inputPos - (gdPos + 1); //Adjust m_inputPos
 					}
@@ -549,12 +549,12 @@ int ATCommandsInterface::tryReadLine()
 	  //Discard everything
 		m_inputPos = 0;
 		m_inputBuf[0] = '\0'; //Always have a null-terminating char at start of buffer
-		debug("ATCommandsInterface -- > Incoming buffer is too short to process incoming line");
+		wd_log_debug("ATCommandsInterface -- > Incoming buffer is too short to process incoming line");
 	  //Look for a new line
 		lineDetected = false;
 	}
 
-	debug("ATCommandsInterface -- > Processed every full incoming lines");
+	wd_log_debug("ATCommandsInterface -- > Processed every full incoming lines");
 
 	return OK;
 }
@@ -562,7 +562,7 @@ int ATCommandsInterface::tryReadLine()
 int ATCommandsInterface::trySendCommand()
 {
 	osEvent evt = m_env2AT.get(0);
-	//TODO: severity solution, too many log-entries: debug("ATCommandsInterface --> trySendCommand (status = %d, msg = %d)", evt.status, evt.value.p);
+	//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> trySendCommand (status = %d, msg = %d)", evt.status, evt.value.p);
 	if (evt.status == osEventMail)
 	{
 		int* msg = (int*) evt.value.p;
@@ -570,9 +570,9 @@ int ATCommandsInterface::trySendCommand()
 		{
 			if (m_transactionState != IDLE)
 			{
-				debug("ATCommandsInterface --> Previous command not processed");
+				wd_log_debug("ATCommandsInterface --> Previous command not processed");
 			}
-			debug("ATCommandsInterface --> Sending pending command");
+			wd_log_debug("ATCommandsInterface --> Sending pending command");
 			m_pStream->write((uint8_t*)m_transactionCommand, strlen(m_transactionCommand), osWaitForever);
 			char cr = FWK_CR;
 			m_pStream->write((uint8_t*)&cr, 1, osWaitForever); //Carriage return line terminator
@@ -593,7 +593,7 @@ int ATCommandsInterface::trySendCommand()
 
 int ATCommandsInterface::processReadLine()
 {
-	debug("ATCommandsInterface --> Processing read line [%s]", m_inputBuf);
+	wd_log_debug("ATCommandsInterface --> Processing read line [%s]", m_inputBuf);
 	if (m_transactionState == COMMAND_SENT)
 	{
 	  //If the command has been sent, checks echo to see if it has been received properly
@@ -644,7 +644,7 @@ int ATCommandsInterface::processReadLine()
 	  //The following lines can either be a command response or a result code (OK / ERROR / CONNECT / +CME ERROR: %s / +CMS ERROR: %s)
 		if (strcmp("OK", m_inputBuf) == 0)
 		{
-			debug("ATCommandsInterface -- > OK result received");
+			wd_log_debug("ATCommandsInterface -- > OK result received");
 			m_transactionResult.code = 0;
 			m_transactionResult.result = ATResult::AT_OK;
 			m_transactionState = IDLE;
@@ -655,7 +655,7 @@ int ATCommandsInterface::processReadLine()
 		}
 		else if (strcmp("ERROR", m_inputBuf) == 0)
 		{
-			debug("ATCommandsInterface -- > ERROR result received");
+			wd_log_debug("ATCommandsInterface -- > ERROR result received");
 			m_transactionResult.code = 0;
 			m_transactionResult.result = ATResult::AT_ERROR;
 			m_transactionState = IDLE;
@@ -666,7 +666,7 @@ int ATCommandsInterface::processReadLine()
 		}
 		else if (strncmp("CONNECT", m_inputBuf, 7 /*=strlen("CONNECT")*/) == 0) //Result can be "CONNECT" or "CONNECT %d", indicating baudrate
 		{
-			debug("ATCommandsInterface -- > CONNECT result received");
+			wd_log_debug("ATCommandsInterface -- > CONNECT result received");
 			m_transactionResult.code = 0;
 			m_transactionResult.result = ATResult::AT_CONNECT;
 			m_transactionState = IDLE;
@@ -677,7 +677,7 @@ int ATCommandsInterface::processReadLine()
 		}
 		else if (strcmp("COMMAND NOT SUPPORT", m_inputBuf) == 0) //Huawei-specific, not normalized
 		{
-			debug("ATCommandsInterface -- > COMMAND NOT SUPPORT result received");
+			wd_log_debug("ATCommandsInterface -- > COMMAND NOT SUPPORT result received");
 			m_transactionResult.code = 0;
 			m_transactionResult.result = ATResult::AT_ERROR;
 			m_transactionState = IDLE;
@@ -689,7 +689,7 @@ int ATCommandsInterface::processReadLine()
 		else if (strstr(m_inputBuf, "+CME ERROR:") == m_inputBuf) //Mobile Equipment Error
 		{
 			std::sscanf(m_inputBuf + 12 /* =strlen("+CME ERROR: ") */, "%d", &m_transactionResult.code);
-			debug("ATCommandsInterface -- > +CME ERROR: %d result received", m_transactionResult.code);
+			wd_log_debug("ATCommandsInterface -- > +CME ERROR: %d result received", m_transactionResult.code);
 			m_transactionResult.result = ATResult::AT_CME_ERROR;
 			m_transactionState = IDLE;
 			int* msg = m_AT2Env.alloc(osWaitForever);
@@ -700,7 +700,7 @@ int ATCommandsInterface::processReadLine()
 		else if (strstr(m_inputBuf, "+CMS ERROR:") == m_inputBuf) //SIM Error
 		{
 			std::sscanf(m_inputBuf + 13 /* =strlen("+CME ERROR: ") */, "%d", &m_transactionResult.code);
-			debug("ATCommandsInterface -- > +CMS ERROR: %d result received", m_transactionResult.code);
+			wd_log_debug("ATCommandsInterface -- > +CMS ERROR: %d result received", m_transactionResult.code);
 			m_transactionResult.result = ATResult::AT_CMS_ERROR;
 			m_transactionState = IDLE;
 			int* msg = m_AT2Env.alloc(osWaitForever);
@@ -710,7 +710,7 @@ int ATCommandsInterface::processReadLine()
 		}
 		else
 		{
-			debug("ATCommandsInterface -- > Unprocessed result received: '%s'", m_inputBuf);
+			wd_log_debug("ATCommandsInterface -- > Unprocessed result received: '%s'", m_inputBuf);
 		  //Must call transaction processor to complete line processing
 			int ret = m_pTransactionProcessor->onNewATResponseLine(this, m_inputBuf); //Here sendData can be called
 			return ret;
@@ -777,7 +777,7 @@ void ATCommandsInterface::disableEvents()
 				int ret = executeInternal(cmd, this, NULL); //Execute disable command
 				if (ret)
 				{
-					debug("ATCommandsInterface -- > Events disabling command \"%s\" failed", cmd);
+					wd_log_debug("ATCommandsInterface -- > Events disabling command \"%s\" failed", cmd);
 				}
 			}
 		}
@@ -791,11 +791,11 @@ int ATCommandsInterface::sendData(const char* data)
 {
   //m_inputBuf is cleared at this point (and MUST therefore be empty)
 	int dataLen = strlen(data);
-	debug("ATCommandsInterface -- > Sending raw string of length %d", dataLen);
+	wd_log_debug("ATCommandsInterface -- > Sending raw string of length %d", dataLen);
 	int ret = m_pStream->write((uint8_t*)data, dataLen, osWaitForever);
 	if (ret)
 	{
-		debug("ATCommandsInterface -- > Could not write to stream (returned %d)", ret);
+		wd_log_debug("ATCommandsInterface -- > Could not write to stream (returned %d)", ret);
 		return ret;
 	}
 
@@ -807,7 +807,7 @@ int ATCommandsInterface::sendData(const char* data)
 		int ret = m_pStream->read((uint8_t*)m_inputBuf, &readLen, MIN(dataLen - dataPos, AT_INPUT_BUF_SIZE - 1), osWaitForever); //Make sure we do not read more than needed otherwise it could break the parser
 		if (ret)
 		{
-			debug("ATCommandsInterface -- > Could not read from stream (returned %d)", ret);
+			wd_log_debug("ATCommandsInterface -- > Could not read from stream (returned %d)", ret);
 			m_inputPos = 0; //Reset input buffer state
 			m_inputBuf[0] = '\0'; //Always have a null-terminating char at start of buffer
 			return ret;
@@ -817,7 +817,7 @@ int ATCommandsInterface::sendData(const char* data)
 		{
 		  //Echo does not match output
 			m_inputBuf[readLen] = '\0';
-			debug("ATCommandsInterface -- > Echo does not match output, got '%s' instead", m_inputBuf);
+			wd_log_debug("ATCommandsInterface -- > Echo does not match output, got '%s' instead", m_inputBuf);
 			m_inputPos = 0; //Reset input buffer state
 			m_inputBuf[0] = '\0'; //Always have a null-terminating char at start of buffer
 			return NET_DIFF;
@@ -828,7 +828,7 @@ int ATCommandsInterface::sendData(const char* data)
 
 	} while (dataPos < dataLen);
 
-	debug("ATCommandsInterface -- > String sent successfully");
+	wd_log_debug("ATCommandsInterface -- > String sent successfully");
 
 	m_inputPos = 0; //Reset input buffer state
 	m_inputBuf[0] = '\0'; //Always have a null-terminating char at start of buffer
@@ -861,38 +861,38 @@ int ATCommandsInterface::ATResultToReturnCode(ATResult result) //Helper
 void ATCommandsInterface::process() //Processing thread
 {
 	
-	debug("ATCommandsInterface --> AT Thread started");
+	wd_log_debug("ATCommandsInterface --> AT Thread started");
 	
 	while (true)
 	{
 		
-		debug("ATCommandsInterface --> AT Processing on hold");
+		wd_log_debug("ATCommandsInterface --> AT Processing on hold");
 		
 		m_processingThread.signal_wait(AT_SIG_PROCESSING_START); //Block until the process is started
 		//m_processingMtx.lock();
 		
-		debug("ATCommandsInterface --> AT Processing started");
+		wd_log_debug("ATCommandsInterface --> AT Processing started");
 		
-		debug("ATCommandsInterface --> AT Processing clean input-buffer");
+		wd_log_debug("ATCommandsInterface --> AT Processing clean input-buffer");
 		int ret;
 		size_t readLen;
 		do{
 			ret = m_pStream->read((uint8_t*)m_inputBuf, &readLen, AT_INPUT_BUF_SIZE - 1, 0);
 		} while (ret == OK);
-		debug("ATCommandsInterface --> Done");
+		wd_log_debug("ATCommandsInterface --> Done");
 		
 		m_inputPos = 0; //Clear input buffer
 		do
 		{
-			//TODO: severity solution, too many log-entries: debug("ATCommandsInterface --> Trying to send a pending command");
+			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Trying to send a pending command");
 			trySendCommand(); //This must be tried first as we discarded the buffer before and therefore would be blocking though there is a pending command
-			//TODO: severity solution, too many log-entries: debug("ATCommandsInterface --> Done");
-			//TODO: severity solution, too many log-entries: debug("ATCommandsInterface --> Trying to read a new line");
+			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Done");
+			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Trying to read a new line");
 			tryReadLine();
-			//TODO: severity solution, too many log-entries: debug("ATCommandsInterface --> Done");
+			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Done");
 		} while (m_processingThread.signal_wait(AT_SIG_PROCESSING_STOP, 0).status != osEventSignal); //Loop until the process is interrupted
 		//m_processingMtx.unlock();
-		debug("ATCommandsInterface --> AT Processing stopped");
+		wd_log_debug("ATCommandsInterface --> AT Processing stopped");
 		
 	}
 	

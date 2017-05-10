@@ -22,7 +22,7 @@
  */
 
 #include <string.h>
-#include "mbed_debug.h"
+#include "wd_logging.h"
 
 #include "QuectelM66Interface.h"
 #include "SerialStreamAdapter.h"
@@ -53,11 +53,11 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 	, _gateway()
 	, _processingThread(osPriorityNormal, 8192) {
 		
-	debug("QuectelM66Interface --> ctor");
+	wd_log_debug("QuectelM66Interface --> ctor");
 	this->_serialStreamAdapter = serialStreamAdapter;
 		
 	if (!this->_commandCoordinator.startup()) {
-		debug("QuectelM66Interface --> Interface could not be started, system reset");
+		wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
 		NVIC_SystemReset();
 	}
 		
@@ -65,22 +65,22 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 
 QuectelM66Interface::~QuectelM66Interface() {
 	
-	debug("QuectelM66Interface --> dtor");
+	wd_log_debug("QuectelM66Interface --> dtor");
 	
 	if (!this->_commandCoordinator.shutdown()) {
-		debug("QuectelM66Interface --> Interface couldn't be brought down, system reset");
+		wd_log_debug("QuectelM66Interface --> Interface couldn't be brought down, system reset");
 		NVIC_SystemReset();
 	}
 	
 }
 
 const char *QuectelM66Interface::get_mac_address() {
-	debug("QuectelM66Interface --> get_mac_address");
+	wd_log_debug("QuectelM66Interface --> get_mac_address");
 	return NULL;
 }
 
 const char *QuectelM66Interface::get_ip_address() {
-	debug("QuectelM66Interface --> get_ip_address");
+	wd_log_debug("QuectelM66Interface --> get_ip_address");
 	if (mbed_lwip_quectelm66_get_ip_address(_ip_address, sizeof _ip_address)) {
 		return _ip_address;
 	}
@@ -88,7 +88,7 @@ const char *QuectelM66Interface::get_ip_address() {
 }
 
 const char *QuectelM66Interface::get_netmask() {
-	debug("QuectelM66Interface --> get_netmask");
+	wd_log_debug("QuectelM66Interface --> get_netmask");
 	if (mbed_lwip_quectelm66_get_netmask(_netmask, sizeof _netmask)) {
 		return _netmask;
 	}
@@ -96,7 +96,7 @@ const char *QuectelM66Interface::get_netmask() {
 }
 
 const char *QuectelM66Interface::get_gateway() {
-	debug("QuectelM66Interface --> get_gateway");
+	wd_log_debug("QuectelM66Interface --> get_gateway");
 	if (mbed_lwip_quectelm66_get_gateway(_gateway, sizeof _gateway)) {
 		return _gateway;
 	}
@@ -105,7 +105,7 @@ const char *QuectelM66Interface::get_gateway() {
 
 
 nsapi_error_t QuectelM66Interface::set_network(const char *ip_address, const char *netmask, const char *gateway) {
-	debug("QuectelM66Interface --> set_network");
+	wd_log_debug("QuectelM66Interface --> set_network");
 	_dhcp = false;
 	strncpy(_ip_address, ip_address ? ip_address : "", sizeof(_ip_address));
 	strncpy(_netmask, netmask ? netmask : "", sizeof(_netmask));
@@ -115,7 +115,7 @@ nsapi_error_t QuectelM66Interface::set_network(const char *ip_address, const cha
 
 
 nsapi_error_t QuectelM66Interface::set_dhcp(bool dhcp) {
-	debug("QuectelM66Interface --> set_dhcp");
+	wd_log_debug("QuectelM66Interface --> set_dhcp");
 	_dhcp = dhcp;
 	return NSAPI_ERROR_OK;
 }
@@ -131,7 +131,7 @@ static int mbed_set_serial_io_fns_wrapper_write(uint8_t* buf, size_t length, uin
 }
 
 nsapi_error_t QuectelM66Interface::connect() {
-	debug("QuectelM66Interface --> connect");
+	wd_log_info("QuectelM66Interface --> connect");
 	
 	serialStreamAdapterWrapper = this->_serialStreamAdapter;
 	
@@ -173,11 +173,11 @@ void QuectelM66Interface::serial_read_callback() {
 
 	    
 nsapi_error_t QuectelM66Interface::disconnect() {
-	debug("QuectelM66Interface --> disconnect");
+	wd_log_info("QuectelM66Interface --> disconnect");
 	return mbed_lwip_quectelm66_bringdown();
 }
 
 NetworkStack *QuectelM66Interface::get_stack() {
-	debug("QuectelM66Interface --> get_stack");
+	wd_log_debug("QuectelM66Interface --> get_stack");
 	return nsapi_create_stack(&lwip_quectelm66_stack);
 }

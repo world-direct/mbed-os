@@ -27,7 +27,7 @@
 #include "mbed_debug.h"
 #include "QuectelM66CommandCoordinator.h"
 #include "SerialStreamAdapter.h"
-#include "mbed_debug.h"
+#include "wd_logging.h"
 
 QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
 	: _atCommandInterface(serialStream)
@@ -43,7 +43,7 @@ QuectelM66CommandCoordinator::~QuectelM66CommandCoordinator() {
 
 bool QuectelM66CommandCoordinator::pppPreparation() {
 	
-	debug("QuectelM66CommandCoordinator --> pppPreparation");
+	wd_log_debug("QuectelM66CommandCoordinator --> pppPreparation");
 	
 	// ====== PPP ========
 	// "3 Procedure for PPP Setup" 
@@ -56,111 +56,111 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// 1. Power OFF : Pull Power Key from high to low, then cut off power after 12s. 
 	// 2. Power ON : Pull Power Key to low within 1s. 
 	// 3. Pull Power Key back to high when finishing Power OFF or Power ON.
-	debug("QuectelM66CommandCoordinator --> Power On the Module");
+	wd_log_debug("QuectelM66CommandCoordinator --> Power On the Module");
 	_pwrKeyPin = 0;
 	wait_ms(1000);
 	_pwrKeyPin = 1;
 	wait_ms(100);
 	_pwrKeyPin = 0;
 	do {
-		debug("QuectelM66CommandCoordinator --> Waiting until VDD_EXT signals");
+		wd_log_debug("QuectelM66CommandCoordinator --> Waiting until VDD_EXT signals");
 		wait_ms(100);	
 	} while (_vdd_extPin == 0);
 	wait_ms(1000);
 	_pwrKeyPin = 1;
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	// ====== AT ========
 	// Open ATCommandsInterface
-	debug("QuectelM66CommandCoordinator --> Open AT-Interface");	
+	wd_log_debug("QuectelM66CommandCoordinator --> Open AT-Interface");	
 	if (_atCommandInterface.open() != OK) {
-		debug("QuectelM66CommandCoordinator --> Failed");	
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");	
 		return false;
 	}
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	// Init ATCommandsInterface
-	debug("QuectelM66CommandCoordinator --> Init AT-Interface");	
+	wd_log_debug("QuectelM66CommandCoordinator --> Init AT-Interface");	
 	if (_atCommandInterface.init() != OK) {
-		debug("QuectelM66CommandCoordinator --> Failed");	
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");	
 		return false;
 	}
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	// ====== PPP ========
 	// 1.Synchronization between TE and TA 
 	// 2. Fix and save baudrate by AT+IPR=xxx&W
-	debug("QuectelM66CommandCoordinator --> \"Fix and save baudrate\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"Fix and save baudrate\")\r\n");
 	ATCommandsInterface::ATResult result;
 	if (_atCommandInterface.executeSimple("AT+IPR=115200&W", &result, 5000) != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	/*
 		Query SIM Card Status: AT+CPIN/AT+QINISTAT. 
 		Reboot module if module failed to detect SIM Card in 10s with AT+CPIN?
 	*/
-	debug("QuectelM66CommandCoordinator --> \"Query SIM Card Status\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"Query SIM Card Status\")\r\n");
 	if (_atCommandInterface.executeSimple("AT+CPIN?", &result, 2000) != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	/*
 		GSM Network： 
 			1. It indicates that module has registered to GSM network when AT+CREG? returns 1 or 5. 
 			2. Reboot the module if it failed to register to GSM network in 30s.
 	*/
-	debug("QuectelM66CommandCoordinator --> \"GSM Network\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"GSM Network\")\r\n");
 	if (_atCommandInterface.executeSimple("AT+CREG?", &result, 2000) != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	/*
 		GPRS Network： 
 			1. It indicates that module has registered to GPRS network when AT+CGREG? returns 1 or 5. 
 			2. It is able to go to next step without registering to GPRS network in 30s
 	*/
-	debug("QuectelM66CommandCoordinator --> \"GPRS Network\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"GPRS Network\")\r\n");
 	if (_atCommandInterface.executeSimple("AT+CGREG?", &result, 2000) != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	/*
 		APN configuration： 
 			1. APN must be set by AT+CGDCONT 
 			2. Use AT+CGACT? to check whether or not current context has been activated when AT+CGDCONT returns error
 	*/
-	debug("QuectelM66CommandCoordinator --> \"APN configuration\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"APN configuration\")\r\n");
 	//if (_atCommandInterface.executeSimple("AT+CGDCONT=1,\"IP\",\"WD.at-M2M\"", &result, 2000) != 0) {	
 	if (_atCommandInterface.executeSimple("AT+CGDCONT=1,\"IP\",\"A1.net\"", &result, 2000) != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
 	
 	/*
 		Start PPP Dialling by ATD*99#
 	*/
-	debug("QuectelM66CommandCoordinator --> \"APN configuration\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"APN configuration\")\r\n");
 	_atCommandInterface.executeSimple("ATD*99#", &result, 2000);
 	if (result.result != ATCommandsInterface::ATResult::AT_CONNECT) {
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	}
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
-	debug("QuectelM66CommandCoordinator --> \"Close AT-Interface\")\r\n");
+	wd_log_debug("QuectelM66CommandCoordinator --> \"Close AT-Interface\")\r\n");
 	if (_atCommandInterface.close() != 0) {	
-		debug("QuectelM66CommandCoordinator --> Failed");
+		wd_log_debug("QuectelM66CommandCoordinator --> Failed");
 		return false;
 	};
-	debug("QuectelM66CommandCoordinator --> Done");
+	wd_log_debug("QuectelM66CommandCoordinator --> Done");
 	
 	return true;
 	
@@ -168,7 +168,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 
 bool QuectelM66CommandCoordinator::startup() {
 	
-	debug("QuectelM66CommandCoordinator --> startup");
+	wd_log_debug("QuectelM66CommandCoordinator --> startup");
 	
 	if (!this->pppPreparation()) {
 		return false;
@@ -179,7 +179,7 @@ bool QuectelM66CommandCoordinator::startup() {
 
 bool QuectelM66CommandCoordinator::shutdown() {
 	
-	debug("QuectelM66CommandCoordinator --> shutdown");
+	wd_log_debug("QuectelM66CommandCoordinator --> shutdown");
 	// TODO: release serial
 	return true;
 	
@@ -187,7 +187,7 @@ bool QuectelM66CommandCoordinator::shutdown() {
 
 bool QuectelM66CommandCoordinator::reset(void) {
 	
-	debug("QuectelM66CommandCoordinator --> reset");
+	wd_log_debug("QuectelM66CommandCoordinator --> reset");
 	// TODO
 	return true;
     

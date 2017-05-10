@@ -1,38 +1,38 @@
 #include "SerialStreamAdapter.h"
-#include "mbed_debug.h"
+#include "wd_logging.h"
 #include "Cellular/core/errors.h"
 
 SerialStreamAdapter::SerialStreamAdapter(BufferedSerial* bufferedSerial) {
-	debug("SerialStreamAdapter --> ctor");
+	wd_log_debug("SerialStreamAdapter --> ctor");
 	this->_bufferedSerial = bufferedSerial;
 }
 
 int SerialStreamAdapter::abortRead() {
-	debug("SerialStreamAdapter --> SerialStreamAdapter read aborted");
+	wd_log_debug("SerialStreamAdapter --> SerialStreamAdapter read aborted");
 	return 0;
 }
 
 int SerialStreamAdapter::abortWrite() {
-	debug("SerialStreamAdapter --> abortWrite");
+	wd_log_debug("SerialStreamAdapter --> abortWrite");
 	return 0;
 }
 
 int SerialStreamAdapter::waitAvailable(uint32_t timeout /* = osWaitForever */) {
-	//TODO: severity solution, too many log-entries:	debug("SerialStreamAdapter --> abortWrite");
+	//TODO: severity solution, too many log-entries:	wd_log_debug("SerialStreamAdapter --> abortWrite");
 	return this->_bufferedSerial->readable() > 0 ? 0 : 1;
 }
 
 size_t SerialStreamAdapter::available() {
-	debug("SerialStreamAdapter --> available");
+	wd_log_debug("SerialStreamAdapter --> available");
 	return 0;
 }
 
 int SerialStreamAdapter::waitSpace(uint32_t timeout /* = osWaitForever */) {
-	debug("SerialStreamAdapter --> waitSpace");
+	wd_log_debug("SerialStreamAdapter --> waitSpace");
 }
 
 size_t SerialStreamAdapter::space() {
-	debug("SerialStreamAdapter --> space");
+	wd_log_debug("SerialStreamAdapter --> space");
 	return 0;
 }
 
@@ -73,7 +73,7 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 }
 
 int SerialStreamAdapter::write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
-	debug("SerialStreamAdapter --> write");
+	wd_log_debug("SerialStreamAdapter --> write");
 	
 	ssize_t effectiveLength = this->_bufferedSerial->write(buf, length);
 	if (effectiveLength < length) {
