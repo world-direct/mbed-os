@@ -22,11 +22,15 @@
         }
     },
     "target_overrides": {
-        "EFM32": {
-            "stdio-baud-rate": 115200
-        },
-        "EFR32": {
-            "stdio-baud-rate": 115200
-        }
-    }
+      "EFM32": {
+        "stdio-baud-rate": 115200
+      },
+      "EFR32": {
+        "stdio-baud-rate": 115200
+      },
+      "WD_CORE_G1": {
+        "stdio-baud-rate": 115200,
+        "default-serial-baud-rate":  115200
+      }
+  }
 }
