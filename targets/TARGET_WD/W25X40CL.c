@@ -8,6 +8,7 @@
 #include "W25X40CL.h"
 #include "hal/spi_api.h"
 #include "hal/gpio_api.h"
+#include "platform/wait_api.h"
 
 // INSTRUCTION COMMANDS
 #define CMD_WRITE_ENABLE								0x06
@@ -439,9 +440,9 @@ MC_RES flash_power_down() {
 MC_RES flash_release_power_down() {
 	select_chip();
 	MC_RETURN_ON_ERROR(spi_master_write(&_spi, CMD_RELEASE_POWER_DOWN));
-	deselect_chip();
 	// chip select must remain high for at least 3us, so we better be save and wait here
 	wait_us(3); 
+	deselect_chip();
 	return MC_RES_OK;
 }
 

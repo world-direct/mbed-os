@@ -45,13 +45,42 @@ void test_flash_2_read_id(void) {
 	test_flash_read_id(SPI_CS4);
 }
 
+void test_flash_prohibit_write_of_protected_region(void) {
+	// TODO: still needs to be implemented for W25X40CL
+}
+
+void test_flash_write_page_overlapping(void) {
+	flash_init(SPI_CS3, SPI_MOSI, SPI_MISO, SPI_SCK);
+	
+	uint8_t dummy_data[2] = { 0x55, 0x55 };
+	uint32_t address = 0xFE; // write multiple pages
+	
+	// test write
+	int result = flash_write(address, dummy_data, sizeof(dummy_data));
+	TEST_ASSERT_TRUE(result == 0);
+	
+	// test read
+	uint8_t buf[2];
+	result = flash_read(address, buf, sizeof(dummy_data));
+	TEST_ASSERT_TRUE(result == 0);
+	
+	// validate read
+	TEST_ASSERT_TRUE(buf[0] == dummy_data[0]);
+	TEST_ASSERT_TRUE(buf[1] == dummy_data[1]);
+	
+	// erase chip to clean up
+	result = flash_erase_chip();
+	TEST_ASSERT_TRUE(result == 0);
+}
+
 utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
 	greentea_case_failure_abort_handler(source, reason);
 	return STATUS_CONTINUE;
 }
 
 Case cases[] = {
-	Case("FLASH 1 read JEDEC ID", test_flash_1_read_id, greentea_failure_handler)
+	Case("FLASH 1 read JEDEC ID", test_flash_1_read_id, greentea_failure_handler),
+	Case("FLASH 1 write and validate", test_flash_write_page_overlapping, greentea_failure_handler)
 };
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases) {
