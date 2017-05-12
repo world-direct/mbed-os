@@ -29,10 +29,11 @@
 #include "SerialStreamAdapter.h"
 #include "wd_logging.h"
 
-QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
+QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn)
 	: _atCommandInterface(serialStream)
 	, _pwrKeyPin(pwrKey)
 	, _vdd_extPin(vdd_ext)
+	, _apn(apn)
 {
 		
 }
@@ -139,7 +140,12 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"APN configuration\"");
 	//if (_atCommandInterface.executeSimple("AT+CGDCONT=1,\"IP\",\"WD.at-M2M\"", &result, 2000, 3) != 0) {	
-	if (_atCommandInterface.executeSimple("AT+CGDCONT=1,\"IP\",\"A1.net\"", &result, 2000, 3) != 0) {	
+	
+	string apn_config_command("AT+CGDCONT=1,\"IP\",");
+	apn_config_command += "\"";
+	apn_config_command += this->_apn;
+	apn_config_command += "\"";
+	if (_atCommandInterface.executeSimple(apn_config_command.c_str(), &result, 2000, 3) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"APN configuration\" failed");
 		return false;
 	};

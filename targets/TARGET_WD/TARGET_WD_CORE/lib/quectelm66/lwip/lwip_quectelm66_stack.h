@@ -29,8 +29,8 @@ extern "C" {
 	#include "serial_io.h"
 	
 	// Access to lwip through the nsapi
-	nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac);
-	nsapi_error_t mbed_lwip_quectelm66_bringup(bool dhcp, const char *ip, const char *netmask, const char *gw);
+	nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password);
+	nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password);
 	nsapi_error_t mbed_lwip_quectelm66_bringdown(void);
 
 	char *mbed_lwip_quectelm66_get_ip_address(char *buf, int buflen);

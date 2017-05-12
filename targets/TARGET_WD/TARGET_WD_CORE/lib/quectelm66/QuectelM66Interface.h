@@ -51,7 +51,7 @@ public:
      * @param pwrKey    POWERKEY pin
      * @param vdd_ext   VDD_EXT pin
      */
-	QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase);
+	QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password);
 	
 	virtual ~QuectelM66Interface();
 
@@ -156,6 +156,10 @@ private:
 	char _ip_address[NSAPI_IPv4_SIZE];
 	char _netmask[NSAPI_IPv4_SIZE];
 	char _gateway[NSAPI_IPv4_SIZE];
+	
+	const char* _apn;
+	const char* _username;
+	const char* _password;
 	
 	uint8_t _serialBuffer[QUECTEL_M66_READ_BUFFER_SIZE];
 	

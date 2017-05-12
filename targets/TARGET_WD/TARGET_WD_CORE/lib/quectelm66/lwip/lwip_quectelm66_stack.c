@@ -543,7 +543,7 @@ static void ppp_notify_phase_cb(ppp_pcb *pcb, u8_t phase, void *ctx) {
 	}
 }
 
-nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac)
+nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password)
 {
 
 	sys_sem_new(&lwip_quectelm66_tcpip_inited, 0);
@@ -583,7 +583,7 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac)
 	/* Auth configuration, this is pretty self-explanatory */
 	wd_log_debug("lwip_quectelm66_stack --> Configuring PPP authentication method");
 	//ppp_set_auth(pcb, PPPAUTHTYPE_ANY, "M2M4WD", "WORLD6073Direct");
-	ppp_set_auth(pcb, PPPAUTHTYPE_ANY, "ppp@a1plus.at", "ppp");
+	ppp_set_auth(pcb, PPPAUTHTYPE_ANY, username, password);
 	wd_log_debug("lwip_quectelm66_stack --> Configuring PPP authentication method success");	
 		
 	wd_log_debug("lwip_quectelm66_stack --> Initiate PPP negotiation");
@@ -617,14 +617,14 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac)
 	return NSAPI_ERROR_OK;
 }
 
-nsapi_error_t mbed_lwip_quectelm66_bringup(bool dhcp, const char *ip, const char *netmask, const char *gw)
+nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password)
 {
     // Check if we've already connected
 	if (lwip_quectelm66_connected) {
 		return NSAPI_ERROR_PARAMETER;
 	}
 
-	if (mbed_lwip_quectelm66_init(NULL) != NSAPI_ERROR_OK) {
+	if (mbed_lwip_quectelm66_init(NULL, username, password) != NSAPI_ERROR_OK) {
 		return NSAPI_ERROR_DEVICE_ERROR;
 	}
 
@@ -663,39 +663,9 @@ nsapi_error_t mbed_lwip_quectelm66_bringup(bool dhcp, const char *ip, const char
 		}
 	}
 
-#if LWIP_IPV4
-	if (!dhcp) {
-		ip4_addr_t ip_addr;
-		ip4_addr_t netmask_addr;
-		ip4_addr_t gw_addr;
-
-		if (!inet_aton(ip, &ip_addr) ||
-		    !inet_aton(netmask, &netmask_addr) ||
-		    !inet_aton(gw, &gw_addr)) {
-			return NSAPI_ERROR_PARAMETER;
-		}
-
-		netif_set_addr(&lwip_quectelm66_netif, &ip_addr, &netmask_addr, &gw_addr);
-	}
-#endif
-
 	netif_set_up(&lwip_quectelm66_netif);
-
-#if LWIP_IPV4
 	
-	// We don't need this because 
-	    // Connect to the network
-//	lwip_quectelm66_dhcp = dhcp;
-//
-//	if (lwip_quectelm66_dhcp) {
-//		err_t err = dhcp_start(&lwip_quectelm66_netif);
-//		if (err) {
-//			return NSAPI_ERROR_DHCP_FAILURE;
-//		}
-//	}
-#endif
-
-	    // If doesn't have address
+	// If doesn't have address
 	if (!mbed_lwip_quectelm66_get_ip_addr(true, &lwip_quectelm66_netif)) {
 		ret = sys_arch_sem_wait(&lwip_quectelm66_netif_has_addr, 15000);
 		if (ret == SYS_ARCH_TIMEOUT) {

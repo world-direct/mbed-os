@@ -40,16 +40,19 @@ extern "C" {
 #define M66_MISC_TIMEOUT    500
 
 
-QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
-	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, userName, passPhrase) {
+QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password)
+	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, username, password) {
 	}
 
-QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
-	: _commandCoordinator(serialStreamAdapter, pwrKey, vdd_ext, apn, userName, passPhrase)
+QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password)
+	: _commandCoordinator(serialStreamAdapter, pwrKey, vdd_ext, apn)
 	, _dhcp(true)
 	, _ip_address()
 	, _netmask()
 	, _gateway()
+	, _apn(apn)
+	, _username(username)
+	, _password(password)
 	, _readProcessingThread(osPriorityNormal)
 	, _readNotificationQueue(){
 		
@@ -148,10 +151,11 @@ nsapi_error_t QuectelM66Interface::connect() {
 	mbed_set_serial_io_fns(fns);
 	
 	if (mbed_lwip_quectelm66_bringup(
-			_dhcp,
             _ip_address[0] ? _ip_address : 0,
             _netmask[0] ? _netmask : 0,
-            _gateway[0] ? _gateway : 0
+            _gateway[0] ? _gateway : 0,
+			this->_username,
+			this->_password
 		) != NSAPI_ERROR_OK) {
 			return NSAPI_ERROR_NO_CONNECTION;
 	}

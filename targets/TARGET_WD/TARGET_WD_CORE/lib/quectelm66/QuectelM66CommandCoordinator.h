@@ -37,7 +37,7 @@
  */
 class QuectelM66CommandCoordinator {
 public:
-	QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase);
+	QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn);
 
 	virtual ~QuectelM66CommandCoordinator();
 	
@@ -63,6 +63,9 @@ public:
     bool reset();
 
 private:
+	
+	const char* _apn;
+	
     ATCommandsInterface _atCommandInterface;
 	DigitalOut _pwrKeyPin;
 	DigitalIn _vdd_extPin;
