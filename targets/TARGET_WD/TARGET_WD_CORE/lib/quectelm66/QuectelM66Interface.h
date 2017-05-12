@@ -28,6 +28,12 @@
 #ifndef QUECTEL_M66_INTERFACE_H
 #define QUECTEL_M66_INTERFACE_H
 
+#define QUECTEL_M66_READ_BUFFER_SIZE					1024
+#define QUECTEL_M66_PPP_READ_START_SIGNAL				0x01
+#define QUECTEL_M66_PPP_READ_STOP_SIGNAL				0x02
+//#define QUECTEL_M66_PPP_READ_DATA_SIGNAL				0x04
+
+#include <stdint.h>
 #include "mbed.h"
 #include "QuectelM66CommandCoordinator.h"
 #include "SerialStreamAdapter.h"
@@ -143,14 +149,18 @@ private:
 	QuectelM66CommandCoordinator _commandCoordinator;
 	SerialStreamAdapter* _serialStreamAdapter;
 	
-	Thread _processingThread;
+	Thread _readProcessingThread;
+	Queue <QuectelM66Interface, 10> _readNotificationQueue;
 	
 	bool _dhcp;
 	char _ip_address[NSAPI_IPv4_SIZE];
 	char _netmask[NSAPI_IPv4_SIZE];
 	char _gateway[NSAPI_IPv4_SIZE];
 	
-	void serial_read_callback(void);
+	uint8_t _serialBuffer[QUECTEL_M66_READ_BUFFER_SIZE];
+	
+	//void serial_read_notify();
+	void serial_read_thread_entry();
 
 };
 

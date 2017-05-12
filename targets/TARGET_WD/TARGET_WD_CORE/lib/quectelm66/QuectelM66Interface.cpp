@@ -42,7 +42,6 @@ extern "C" {
 
 QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
 	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, userName, passPhrase) {
-		
 	}
 
 QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase)
@@ -51,14 +50,18 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 	, _ip_address()
 	, _netmask()
 	, _gateway()
-	, _processingThread(osPriorityNormal, 8192) {
+	, _readProcessingThread(osPriorityNormal)
+	, _readNotificationQueue(){
 		
 	wd_log_debug("QuectelM66Interface --> ctor");
-	this->_serialStreamAdapter = serialStreamAdapter;
+		
+	this->_serialStreamAdapter = serialStreamAdapter;	
+		
+	this->_readProcessingThread.start(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_thread_entry));
 		
 	if (!this->_commandCoordinator.startup()) {
 		wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
-		NVIC_SystemReset();
+		mbed_die();
 	}
 		
 }
@@ -69,7 +72,7 @@ QuectelM66Interface::~QuectelM66Interface() {
 	
 	if (!this->_commandCoordinator.shutdown()) {
 		wd_log_debug("QuectelM66Interface --> Interface couldn't be brought down, system reset");
-		NVIC_SystemReset();
+		mbed_die();
 	}
 	
 }
@@ -135,7 +138,9 @@ nsapi_error_t QuectelM66Interface::connect() {
 	
 	serialStreamAdapterWrapper = this->_serialStreamAdapter;
 	
-	_processingThread.start(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_callback));
+	//this->_serialStreamAdapter->attach(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_notify), SerialBase::RxIrq);
+	
+	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_START_SIGNAL);
 	
 	serial_io_fns fns;
 	fns.read = mbed_set_serial_io_fns_wrapper_read;
@@ -155,26 +160,49 @@ nsapi_error_t QuectelM66Interface::connect() {
 	
 }
 
-void QuectelM66Interface::serial_read_callback() {
+//void QuectelM66Interface::serial_read_notify() {
+//	
+//	//wd_log_debug("QuectelM66Interface --> Performing serial-read notification for ppp");
+//	//_readNotificationQueue.put(this);
+//	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_DATA_SIGNAL);
+//	
+//}
+
+void QuectelM66Interface::serial_read_thread_entry() {
 	
-	while (true) {
+	wd_log_debug("QuectelM66Interface --> serial_read_thread_entry");
 	
-		u8_t buffer[1024];
+	this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_START_SIGNAL);
+	this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_STOP_SIGNAL);
+	//this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_DATA_SIGNAL);
+	
+	do {
+	
+		this->_readProcessingThread.signal_wait(QUECTEL_M66_PPP_READ_START_SIGNAL);
+		wd_log_debug("QuectelM66Interface --> QUECTEL_M66_PPP_READ_START_SIGNAL received");
+	
 		int size;
-	
-		if (this->_serialStreamAdapter->read(buffer, &size, 1024, 50) == 0) {
-			ppp_pcb *tmp = mbed_get_ppp_pcb();
-			pppos_input_tcpip(tmp, buffer, size);	
-		}
+		do {
 		
-	}
+			if (this->_serialStreamAdapter->read(this->_serialBuffer, &size, QUECTEL_M66_READ_BUFFER_SIZE, 1000) == 0) {
+				wd_log_debug("QuectelM66Interface --> %d bytes read, forwarding to pppos", size);
+				ppp_pcb *tmp = mbed_get_ppp_pcb();
+				pppos_input_tcpip(tmp, this->_serialBuffer, size);	
+			}
+			
+		} while (this->_readProcessingThread.signal_wait(QUECTEL_M66_PPP_READ_STOP_SIGNAL, 0).status != osEventSignal);
+		wd_log_debug("QuectelM66Interface --> QUECTEL_M66_PPP_READ_STOP_SIGNAL received");
 	
+	} while (true);
+		
 }
 
 	    
 nsapi_error_t QuectelM66Interface::disconnect() {
 	wd_log_info("QuectelM66Interface --> disconnect");
-	return mbed_lwip_quectelm66_bringdown();
+	nsapi_error_t ret = mbed_lwip_quectelm66_bringdown();
+	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_STOP_SIGNAL);
+	return ret;
 }
 
 NetworkStack *QuectelM66Interface::get_stack() {

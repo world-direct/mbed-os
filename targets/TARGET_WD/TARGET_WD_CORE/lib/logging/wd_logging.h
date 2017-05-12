@@ -21,7 +21,7 @@
 #define WD_DEBUG_LEVEL_DEBUG	4
 
 #ifndef WD_DEBUG_LEVEL_CURRENT
-#define WD_DEBUG_LEVEL_CURRENT	WD_DEBUG_LEVEL_INFO
+#define WD_DEBUG_LEVEL_CURRENT	WD_DEBUG_LEVEL_DEBUG
 #endif
 
 #ifdef __cplusplus
@@ -30,6 +30,7 @@ extern "C" {
 	
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdint.h>
 	
 void wd_log_debug(const char *format, ...);
 	

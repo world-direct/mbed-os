@@ -120,7 +120,6 @@ int ATCommandsInterface::close()
 
 	  //Stop processing
 	m_processingThread.signal_set(AT_SIG_PROCESSING_STOP);
-	//m_stopSphre.release();
 
 	int* msg = m_env2AT.alloc(osWaitForever);
 	*msg = AT_STOP;
@@ -143,16 +142,33 @@ bool ATCommandsInterface::isOpen()
   return m_open;
 }
 
-int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, uint32_t timeout/*=1000*/)
+int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, uint32_t timeout/*=1000*/, uint32_t tries)
 {
-  return execute(command, this, pResult, timeout);
+	while (tries > 0) {
+		
+		int ret = execute(command, this, pResult, timeout);
+		
+		if (ret == OK || ret == NET_MOREINFO) {
+			return ret;
+		};
+		
+		tries--;
+		
+		if (tries > 0) {
+			wd_log_warn("ATCommandsInterface --> Command \"%s\" failed. %d tries remaining", command, tries);	
+		}
+		else {
+			wd_log_error("ATCommandsInterface --> Command \"%s\" failed. It was the last try.", command, tries);	
+		}
+		
+	}
 }
 
 int ATCommandsInterface::execute(const char* command, IATCommandsProcessor* pProcessor, ATResult* pResult, uint32_t timeout/*=1000*/)
 {
   if(!m_open)
   {
-    WARN("Interface is not open!");
+	  wd_log_warn("Interface is not open!");
     return NET_INVALID;
   }
 
@@ -349,7 +365,7 @@ int ATCommandsInterface::tryReadLine()
 				wd_log_debug("ATCommandsInterface -- > CR char found");
 
 				#if 0
-				        //Discard all preceding characters (can do nothing if m_inputBuf == crPtr)
+				//Discard all preceding characters (can do nothing if m_inputBuf == crPtr)
 				memmove(m_inputBuf, crPtr, (m_inputPos + 1) - (crPtr - m_inputBuf)); //Move null-terminating char as well
 				m_inputPos = m_inputPos - (crPtr - m_inputBuf); //Adjust m_inputPos
 				#endif
@@ -406,17 +422,16 @@ int ATCommandsInterface::tryReadLine()
 							lfOff++; //We will discard LF char as well
 						}
 					}
-					//Process line
+					
 					int ret = processReadLine();
-					if (ret)
-					{
+					if (ret > 0) {
 						m_inputPos = 0;
 						m_inputBuf[0] = '\0'; //Always have a null-terminating char at start of buffer
 						lineDetected = false;
 						return ret;
-					}
+					}	
 
-					          //If sendData has been called, all incoming data has been discarded
+					//If sendData has been called, all incoming data has been discarded
 					if (m_inputPos > 0)
 					{
 						memmove(m_inputBuf, m_inputBuf + crPos + lfOff + 1, (m_inputPos + 1) - (crPos + lfOff + 1)); //Move null-terminating char as well
@@ -599,7 +614,7 @@ int ATCommandsInterface::processReadLine()
 	  //If the command has been sent, checks echo to see if it has been received properly
 		if (strcmp(m_transactionCommand, m_inputBuf) == 0)
 		{
-			DBG("Command echo received");
+			wd_log_debug("ATCommandsInterface --> Command echo received");
 			//If so, it means that the following lines will only be solicited results
 			m_transactionState = READING_RESULT;
 			return OK;
@@ -850,12 +865,12 @@ int ATCommandsInterface::ATResultToReturnCode(ATResult result) //Helper
 
 /*virtual*/ int ATCommandsInterface::onNewATResponseLine(ATCommandsInterface* pInst, const char* line) //Default implementation for simple commands handling
 {
-  return OK;
+	return OK;
 }
 
 /*virtual*/ int ATCommandsInterface::onNewEntryPrompt(ATCommandsInterface* pInst) //Default implementation (just sends Ctrl+Z to exit the prompt by returning OK right-away)
 {
-  return OK;
+	return OK;
 }
 
 void ATCommandsInterface::process() //Processing thread
@@ -890,8 +905,11 @@ void ATCommandsInterface::process() //Processing thread
 			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Trying to read a new line");
 			tryReadLine();
 			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Done");
-		} while (m_processingThread.signal_wait(AT_SIG_PROCESSING_STOP, 0).status != osEventSignal); //Loop until the process is interrupted
-		//m_processingMtx.unlock();
+		} while (
+			m_processingThread.signal_wait(AT_SIG_PROCESSING_STOP, 0).status != osEventSignal && 
+			m_transactionResult.result != ATCommandsInterface::ATResult::AT_CONNECT // don't consume any more if we detected the successful connect for furter ppp-communication
+		); //Loop until the process is interrupted
+		
 		wd_log_debug("ATCommandsInterface --> AT Processing stopped");
 		
 	}

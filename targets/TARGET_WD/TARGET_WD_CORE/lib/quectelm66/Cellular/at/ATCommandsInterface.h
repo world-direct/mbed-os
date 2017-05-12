@@ -91,7 +91,7 @@ public:
 		int code;
 	};
 
-	int executeSimple(const char* command, ATResult* pResult, uint32_t timeout = 1000);
+	int executeSimple(const char* command, ATResult* pResult, uint32_t timeout = 1000, uint32_t tries = 1);
 	int execute(const char* command, IATCommandsProcessor* pProcessor, ATResult* pResult, uint32_t timeout = 1000);
   
 	int registerEventsHandler(IATEventsHandler* pHdlr);

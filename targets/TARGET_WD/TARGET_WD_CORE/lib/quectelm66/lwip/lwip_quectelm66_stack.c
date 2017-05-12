@@ -565,15 +565,15 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac)
 	wd_log_debug("lwip_quectelm66_stack --> Register notify phase callback");
 	int pppapi_set_notify_phase_callback_ret = pppapi_set_notify_phase_callback(pcb, ppp_notify_phase_cb);
 	if (pppapi_set_notify_phase_callback_ret != 0) {
-		wd_log_debug("PPPIPInterface --> Failed");
+		wd_log_error("PPPIPInterface --> Register notify phase callback failed");
 		return pppapi_set_notify_phase_callback_ret;
 	}
-	wd_log_debug("lwip_quectelm66_stack --> Done");
+	wd_log_debug("lwip_quectelm66_stack --> Register notify phase callback success");
 
 	/* Set this interface as default route */
 	wd_log_debug("lwip_quectelm66_stack --> Set this interface as default route");
 	pppapi_set_default(pcb);
-	wd_log_debug("lwip_quectelm66_stack --> Done");
+	wd_log_debug("lwip_quectelm66_stack --> Set this interface as default route success");
 	
 	/* Ask the peer for up to 2 DNS server addresses. */
 	//wd_log_debug("lwip_quectelm66_stack --> Ask the peer for up to 2 DNS server addresses.");
@@ -584,16 +584,16 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac)
 	wd_log_debug("lwip_quectelm66_stack --> Configuring PPP authentication method");
 	//ppp_set_auth(pcb, PPPAUTHTYPE_ANY, "M2M4WD", "WORLD6073Direct");
 	ppp_set_auth(pcb, PPPAUTHTYPE_ANY, "ppp@a1plus.at", "ppp");
-	wd_log_debug("lwip_quectelm66_stack --> Done");	
+	wd_log_debug("lwip_quectelm66_stack --> Configuring PPP authentication method success");	
 		
 	wd_log_debug("lwip_quectelm66_stack --> Initiate PPP negotiation");
 	u16_t holdoff = 0;
 	int pppapi_connect_ret = pppapi_connect(pcb, holdoff);
 	if (pppapi_connect_ret != 0) {
-		wd_log_debug("lwip_quectelm66_stack --> Failed");
+		wd_log_error("lwip_quectelm66_stack --> Initiate PPP negotiation error");
 		return pppapi_connect_ret;
 	}
-	wd_log_debug("lwip_quectelm66_stack --> Done");
+	wd_log_debug("lwip_quectelm66_stack --> Initiate PPP negotiation success");
 		
 	/*
 	if (!netif_add(&lwip_quectelm66_netif,
