@@ -32,6 +32,8 @@ extern "C" {
 #include <stdarg.h>
 #include <stdint.h>
 	
+void wd_log(int level, const char *format, va_list args);
+	
 void wd_log_debug(const char *format, ...);
 	
 void wd_log_info(const char *format, ...);
