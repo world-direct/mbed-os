@@ -64,23 +64,7 @@
  */
 #define MEMP_NUM_TCPIP_MSG_INPKT    16
 
+
 #define LWIP_DEBUG
-
-#ifdef LWIP_DEBUG
-#define TCPIP_THREAD_STACKSIZE      5000*2
-#else
-#define TCPIP_THREAD_STACKSIZE      5000
-#endif
-
-#ifdef LWIP_DEBUG
-#define DEFAULT_THREAD_STACKSIZE    1024*2
-#else
-#define DEFAULT_THREAD_STACKSIZE    1024
-#endif
-
-#define NETIF_DEBUG                 LWIP_DBG_ON
-#define SOCKETS_DEBUG               LWIP_DBG_ON
-#define DNS_DEBUG                   LWIP_DBG_ON
-#define PPP_DEBUG                   LWIP_DBG_ON
 
 #endif
