@@ -32,116 +32,122 @@
 #include "rtc_api.h"
 #include "rtc_api_hal.h"
 #include "mbed_error.h"
+#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal_rtc.h"
 
 static RTC_HandleTypeDef RtcHandle;
 
 #if RTC_LSI
 #define RTC_CLOCK LSI_VALUE
+#define RTC_ASYNCH_PREDIV (0x007F)
+#define RTC_SYNCH_PREDIV (0x00F9)
 #else
 #define RTC_CLOCK LSE_VALUE
-#endif
-
-#if DEVICE_LOWPOWERTIMER
-#define RTC_ASYNCH_PREDIV ((RTC_CLOCK - 1) / 0x8000)
-#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
-#else
 #define RTC_ASYNCH_PREDIV (0x007F)
-#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
+#define RTC_SYNCH_PREDIV (0x00FF)
 #endif
 
+//#if DEVICE_LOWPOWERTIMER
+//#define RTC_ASYNCH_PREDIV ((RTC_CLOCK - 1) / 0x8000)
+//#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
+//#else
+//#define RTC_ASYNCH_PREDIV (0x007F)
+//#define RTC_SYNCH_PREDIV  (RTC_CLOCK / (RTC_ASYNCH_PREDIV + 1) - 1)
+//#endif
+
 #if DEVICE_LOWPOWERTIMER
-static void (*irq_handler)(void);
+static void(*irq_handler)(void);
 static void RTC_IRQHandler(void);
 #endif
 
 void rtc_init(void)
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct;
-    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
+	RCC_OscInitTypeDef RCC_OscInitStruct;
+	RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
-    // Enable access to Backup domain
-    HAL_PWR_EnableBkUpAccess();
+	    // Enable access to Backup domain
+	HAL_PWR_EnableBkUpAccess();
 
-    RtcHandle.Instance = RTC;
+	RtcHandle.Instance = RTC;
 
 #if !RTC_LSI
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE;
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE; // Mandatory, otherwise the PLL is reconfigured!
-    RCC_OscInitStruct.LSEState       = RCC_LSE_ON;
-    RCC_OscInitStruct.LSIState       = RCC_LSI_OFF;
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE;
+	RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE; // Mandatory, otherwise the PLL is reconfigured!
+	RCC_OscInitStruct.LSEState       = RCC_LSE_ON;
+	RCC_OscInitStruct.LSIState       = RCC_LSI_OFF;
 
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
-        __HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSE);
-        __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
-    } else {
-        error("Cannot initialize RTC with LSE\n");
-    }
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) == HAL_OK) {
+		__HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSE);
+		__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE);
+	}
+	else {
+		error("Cannot initialize RTC with LSE\n");
+	}
 
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-        error("PeriphClkInitStruct RTC failed with LSE\n");
-    }
+	PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+	PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+		error("PeriphClkInitStruct RTC failed with LSE\n");
+	}
 
 #else /* !RTC_LSI */
 
-    __PWR_CLK_ENABLE();
+	__PWR_CLK_ENABLE();
 
-    // Reset Backup domain
-    __HAL_RCC_BACKUPRESET_FORCE();
-    __HAL_RCC_BACKUPRESET_RELEASE();
+	    // Reset Backup domain
+	__HAL_RCC_BACKUPRESET_FORCE();
+	__HAL_RCC_BACKUPRESET_RELEASE();
 
-    // Enable LSI clock
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI;
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE; // Mandatory, otherwise the PLL is reconfigured!
-    RCC_OscInitStruct.LSEState       = RCC_LSE_OFF;
-    RCC_OscInitStruct.LSIState       = RCC_LSI_ON;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-        error("Cannot initialize RTC with LSI\n");
-    }
+	    // Enable LSI clock
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI;
+	RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE; // Mandatory, otherwise the PLL is reconfigured!
+	RCC_OscInitStruct.LSEState       = RCC_LSE_OFF;
+	RCC_OscInitStruct.LSIState       = RCC_LSI_ON;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		error("Cannot initialize RTC with LSI\n");
+	}
 
-    __HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSI);
-    __HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSI);
+	__HAL_RCC_RTC_CLKPRESCALER(RCC_RTCCLKSOURCE_LSI);
+	__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSI);
 
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-        error("PeriphClkInitStruct RTC failed with LSI\n");
-    }
+	PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+	PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+		error("PeriphClkInitStruct RTC failed with LSI\n");
+	}
 
 #endif /* !RTC_LSI */
 
-    // Enable RTC
-    __HAL_RCC_RTC_ENABLE();
+	    // Enable RTC
+	__HAL_RCC_RTC_ENABLE();
 
 #if TARGET_STM32F1
-    RtcHandle.Init.AsynchPrediv = RTC_AUTO_1_SECOND;
+	RtcHandle.Init.AsynchPrediv = RTC_AUTO_1_SECOND;
 #else /* TARGET_STM32F1 */
-    RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
-    RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
-    RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
-    RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
-    RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-    RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
+	RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
+	RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
+	RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
+	RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
+	RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+	RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
 #endif /* TARGET_STM32F1 */
 
-    if (HAL_RTC_Init(&RtcHandle) != HAL_OK) {
-        error("RTC error: RTC initialization failed.");
-    }
+	if (HAL_RTC_Init(&RtcHandle) != HAL_OK) {
+		error("RTC error: RTC initialization failed.");
+	}
 
 #if DEVICE_LOWPOWERTIMER
 
 #if !RTC_LSI
-    if (!rtc_isenabled())
+	if (!rtc_isenabled())
 #endif /* !RTC_LSI */
-    {
-        rtc_write(0);
-    }
+	{
+		rtc_write(0);
+	}
 
-    NVIC_ClearPendingIRQ(RTC_WKUP_IRQn);
-    NVIC_DisableIRQ(RTC_WKUP_IRQn);
-    NVIC_SetVector(RTC_WKUP_IRQn, (uint32_t)RTC_IRQHandler);
-    NVIC_EnableIRQ(RTC_WKUP_IRQn);
+	NVIC_ClearPendingIRQ(RTC_WKUP_IRQn);
+	NVIC_DisableIRQ(RTC_WKUP_IRQn);
+	NVIC_SetVector(RTC_WKUP_IRQn, (uint32_t)RTC_IRQHandler);
+	NVIC_EnableIRQ(RTC_WKUP_IRQn);
 
 #endif /* DEVICE_LOWPOWERTIMER */
 }
@@ -150,26 +156,26 @@ void rtc_free(void)
 {
 #if RTC_LSI
     // Enable Power clock
-    __PWR_CLK_ENABLE();
+	__PWR_CLK_ENABLE();
 
-    // Enable access to Backup domain
-    HAL_PWR_EnableBkUpAccess();
+	    // Enable access to Backup domain
+	HAL_PWR_EnableBkUpAccess();
 
-    // Reset Backup domain
-    __HAL_RCC_BACKUPRESET_FORCE();
-    __HAL_RCC_BACKUPRESET_RELEASE();
+	    // Reset Backup domain
+	__HAL_RCC_BACKUPRESET_FORCE();
+	__HAL_RCC_BACKUPRESET_RELEASE();
 
-    // Disable access to Backup domain
-    HAL_PWR_DisableBkUpAccess();
+	    // Disable access to Backup domain
+	HAL_PWR_DisableBkUpAccess();
 #endif
 
-    // Disable LSI and LSE clocks
-    RCC_OscInitTypeDef RCC_OscInitStruct;
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
-    RCC_OscInitStruct.LSIState       = RCC_LSI_OFF;
-    RCC_OscInitStruct.LSEState       = RCC_LSE_OFF;
-    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+	    // Disable LSI and LSE clocks
+	RCC_OscInitTypeDef RCC_OscInitStruct;
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
+	RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
+	RCC_OscInitStruct.LSIState       = RCC_LSI_OFF;
+	RCC_OscInitStruct.LSEState       = RCC_LSE_OFF;
+	HAL_RCC_OscConfig(&RCC_OscInitStruct);
 }
 
 /*
@@ -191,120 +197,127 @@ void rtc_free(void)
 */
 time_t rtc_read(void)
 {
-    RTC_DateTypeDef dateStruct;
-    RTC_TimeTypeDef timeStruct;
-    struct tm timeinfo;
+	RTC_DateTypeDef dateStruct;
+	RTC_TimeTypeDef timeStruct;
+	struct tm timeinfo;
 
-    RtcHandle.Instance = RTC;
+	RtcHandle.Instance = RTC;
 
-    // Read actual date and time
-    // Warning: the time must be read first!
-    HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
-    HAL_RTC_GetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
+	    // Read actual date and time
+	    // Warning: the time must be read first!
+	HAL_RTC_GetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
+	HAL_RTC_GetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
 
-    // Setup a tm structure based on the RTC
-    timeinfo.tm_wday = dateStruct.WeekDay;
-    timeinfo.tm_mon  = dateStruct.Month - 1;
-    timeinfo.tm_mday = dateStruct.Date;
-    timeinfo.tm_year = dateStruct.Year + 68;
-    timeinfo.tm_hour = timeStruct.Hours;
-    timeinfo.tm_min  = timeStruct.Minutes;
-    timeinfo.tm_sec  = timeStruct.Seconds;
-    // Daylight Saving Time information is not available
-    timeinfo.tm_isdst  = -1;
+	    // Setup a tm structure based on the RTC
+	timeinfo.tm_wday = dateStruct.WeekDay;
+	timeinfo.tm_mon  = dateStruct.Month - 1;
+	timeinfo.tm_mday = dateStruct.Date;
+	timeinfo.tm_year = dateStruct.Year + 69U;
+	timeinfo.tm_hour = timeStruct.Hours;
+	timeinfo.tm_min  = timeStruct.Minutes;
+	timeinfo.tm_sec  = timeStruct.Seconds;
+	// Daylight Saving Time information is not available
+	timeinfo.tm_isdst  = RTC_DAYLIGHTSAVING_NONE;
 
     // Convert to timestamp
-    time_t t = mktime(&timeinfo);
+	time_t t = mktime(&timeinfo);
 
-    return t;
+	return t;
 }
 
 void rtc_write(time_t t)
 {
-    RTC_DateTypeDef dateStruct;
-    RTC_TimeTypeDef timeStruct;
+	RTC_DateTypeDef dateStruct;
+	RTC_TimeTypeDef timeStruct;
 
-    RtcHandle.Instance = RTC;
+	RtcHandle.Instance = RTC;
 
-    // Convert the time into a tm
-    struct tm *timeinfo = localtime(&t);
-
-    // Fill RTC structures
-    dateStruct.WeekDay        = timeinfo->tm_wday;
-    dateStruct.Month          = timeinfo->tm_mon + 1;
-    dateStruct.Date           = timeinfo->tm_mday;
-    dateStruct.Year           = timeinfo->tm_year - 68;
-    timeStruct.Hours          = timeinfo->tm_hour;
-    timeStruct.Minutes        = timeinfo->tm_min;
-    timeStruct.Seconds        = timeinfo->tm_sec;
+	    // Convert the time into a tm
+	struct tm *timeinfo = localtime(&t);
+	/* 
+		1. init: t = 0, 
+		2. timeinfo->tm_year = 70. 
+		3. in dateStruct.Year we can only store values in the range 0-99
+		4. we subtract a high value in order to gain more range but we CANT subtract 70,
+		   because RTC_ISR->INITS detects the initialization state based on year != 0
+	*/
+    
+	// Fill RTC structures
+	dateStruct.WeekDay        = timeinfo->tm_wday;
+	dateStruct.Month          = timeinfo->tm_mon + 1;
+	dateStruct.Date           = timeinfo->tm_mday;
+	dateStruct.Year           = timeinfo->tm_year - 69U;
+	timeStruct.Hours          = timeinfo->tm_hour;
+	timeStruct.Minutes        = timeinfo->tm_min;
+	timeStruct.Seconds        = timeinfo->tm_sec;
 
 #if !(TARGET_STM32F1)
-    timeStruct.TimeFormat     = RTC_HOURFORMAT_24;
-    timeStruct.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-    timeStruct.StoreOperation = RTC_STOREOPERATION_RESET;
+	timeStruct.TimeFormat     = RTC_HOURFORMAT_24;
+	timeStruct.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+	timeStruct.StoreOperation = RTC_STOREOPERATION_RESET;
 #endif /* TARGET_STM32F1 */
 
-    // Change the RTC current date/time
-    HAL_RTC_SetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
-    HAL_RTC_SetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
+	    // Change the RTC current date/time
+	HAL_RTC_SetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
+	HAL_RTC_SetTime(&RtcHandle, &timeStruct, FORMAT_BIN);
 }
 
 int rtc_isenabled(void)
 {
-#if DEVICE_LOWPOWERTIMER
-    if ((RTC->ISR & RTC_ISR_INITS) ==  RTC_ISR_INITS) {
-        return 1;
-    } else {
-        return 0;
-    }
-#else /* DEVICE_LOWPOWERTIMER */
-    return 1;
-#endif /* DEVICE_LOWPOWERTIMER */
+	if ((RTC->ISR & RTC_ISR_INITS) == RTC_ISR_INITS && 
+		(
+			(RTC->DR & RTC_DR_YU_Msk) != 0 || 
+			(RTC->DR & RTC_DR_YT_Msk) != 0)) {	// safety check as we are in trouble if year = 0
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
 
 #if DEVICE_LOWPOWERTIMER
 
 static void RTC_IRQHandler(void)
 {
-    HAL_RTCEx_WakeUpTimerIRQHandler(&RtcHandle);
+	HAL_RTCEx_WakeUpTimerIRQHandler(&RtcHandle);
 }
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 {
-    if (irq_handler) {
-        // Fire the user callback
-        irq_handler();
-    }
+	if (irq_handler) {
+	    // Fire the user callback
+		irq_handler();
+	}
 }
 
 void rtc_set_irq_handler(uint32_t handler)
 {
-    irq_handler = (void (*)(void))handler;
+	irq_handler = (void(*)(void))handler;
 }
 
 uint32_t rtc_read_subseconds(void)
 {
-    return 1000000.f * ((double)(RTC_SYNCH_PREDIV - RTC->SSR) / (RTC_SYNCH_PREDIV + 1));
+	return 1000000.f * ((double)(RTC_SYNCH_PREDIV - RTC->SSR) / (RTC_SYNCH_PREDIV + 1));
 }
 
 void rtc_set_wake_up_timer(uint32_t delta)
 {
-    uint32_t wake_up_counter = delta / (2000000 / RTC_CLOCK);
+	uint32_t wake_up_counter = delta / (2000000 / RTC_CLOCK);
 
-    if (HAL_RTCEx_SetWakeUpTimer_IT(&RtcHandle, wake_up_counter,
-                                    RTC_WAKEUPCLOCK_RTCCLK_DIV2) != HAL_OK) {
-        error("Set wake up timer failed\n");
-    }
+	if (HAL_RTCEx_SetWakeUpTimer_IT(&RtcHandle, wake_up_counter,
+	                                RTC_WAKEUPCLOCK_RTCCLK_DIV2) != HAL_OK) {
+		error("Set wake up timer failed\n");
+	}
 }
 
 void rtc_deactivate_wake_up_timer(void)
 {
-    HAL_RTCEx_DeactivateWakeUpTimer(&RtcHandle);
+	HAL_RTCEx_DeactivateWakeUpTimer(&RtcHandle);
 }
 
 void rtc_synchronize(void)
 {
-    HAL_RTC_WaitForSynchro(&RtcHandle);
+	HAL_RTC_WaitForSynchro(&RtcHandle);
 }
 #endif /* DEVICE_LOWPOWERTIMER */
 
