@@ -110,7 +110,7 @@ int ATCommandsInterface::close()
 		return OK;
 	}
 
-	wd_log_debug("Closing AT interface");
+	wd_log_debug("ATCommandsInterface --> Closing AT interface");
   
 	//Lock transaction mutex
 	m_transactionMtx.lock();
@@ -133,7 +133,7 @@ int ATCommandsInterface::close()
 	//Unlock transaction mutex
 	m_transactionMtx.unlock();
 
-	wd_log_debug("AT interface closed");
+	wd_log_debug("ATCommandsInterface --> AT interface closed");
 	return OK;
 }
 
