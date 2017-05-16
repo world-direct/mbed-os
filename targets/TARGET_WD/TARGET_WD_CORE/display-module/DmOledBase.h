@@ -58,9 +58,10 @@ public:
 	
 	virtual void select();
 	virtual void deSelect();
-	virtual void setPixel(uint16_t x, uint16_t y, uint16_t color );
+	virtual void setPixel(uint16_t x, uint16_t y, uint16_t color);
 	virtual void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) = 0;
 	virtual void sendData(uint16_t data) = 0;
+	virtual void refreshDisplay(void) = 0;
 	
 	void clearScreen(uint16_t color = BLACK);
 	

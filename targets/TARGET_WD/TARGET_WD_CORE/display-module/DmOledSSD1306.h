@@ -94,11 +94,15 @@ public:
 	virtual ~DmOledSSD1306();
 	virtual void init(void);
 	
-private:
-	void select();
-	void deSelect();
+	virtual void refreshDisplay(void);
+	void clearDisplay(void);
+	void invertDisplay(uint8_t i);
 	
-	void send8BitData(uint8_t data);
+private:
+	void enterCommandMode(void);
+	void enterDataMode(void);
+	void setPixel(uint16_t x, uint16_t y, uint16_t color);
+	
 	void writeBus(uint8_t data);
 	
 	virtual void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);

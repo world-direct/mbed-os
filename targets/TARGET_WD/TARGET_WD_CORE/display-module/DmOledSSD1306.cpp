@@ -3,8 +3,8 @@ ___________________INCLUDES____________________________
 ******************************************************/
 #include "DmOledSSD1306.h"
 
-// the memory buffer for the LCD
-
+// the memory buffer for the display
+// TODO: set WD logo bitmap here and show on init
 static uint8_t buffer[SSD1306_LCDHEIGHT * SSD1306_LCDWIDTH / 8] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -80,6 +80,7 @@ static uint8_t buffer[SSD1306_LCDHEIGHT * SSD1306_LCDWIDTH / 8] = {
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
+#define ssd1306_swap(a, b) { int16_t t = a; a = b; b = t; }
 
 
 /******************************************************
@@ -109,14 +110,12 @@ DmOledSSD1306::~DmOledSSD1306() {
 	_spi = NULL;
 }
 
-void DmOledSSD1306::select(){
-	_spi->lock();
-	_pinCS->write(0);
+void DmOledSSD1306::enterCommandMode(void) {
+	_pinDC->write(0);
 }
 
-void DmOledSSD1306::deSelect(){
-	_pinCS->write(1);
-	_spi->unlock();
+void DmOledSSD1306::enterDataMode(void) {
+	_pinDC->write(1);
 }
 
 void DmOledSSD1306::writeBus(uint8_t data) {
@@ -124,17 +123,13 @@ void DmOledSSD1306::writeBus(uint8_t data) {
 }
 
 void DmOledSSD1306::sendCommand(uint8_t index) {
-	_pinDC->write(0);
+	enterCommandMode();
+	select();
 	writeBus(index);
-}
-
-void DmOledSSD1306::send8BitData(uint8_t data) {
-	_pinDC->write(1);
-	writeBus(data);
+	deSelect();
 }
 
 void DmOledSSD1306::sendData(uint16_t data) {
-	_pinDC->write(1);
 	writeBus(data >> 8);
 	writeBus(data);
 }
@@ -146,6 +141,59 @@ void DmOledSSD1306::setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y
 	sendCommand(SSD1306_PAGEADDR);
 	sendCommand(y0);
 	sendCommand(y1);
+}
+
+void DmOledSSD1306::setPixel(uint16_t x, uint16_t y, uint16_t color) {
+	
+	if ((x < 0) || (x >= width()) || (y < 0) || (y >= height()))
+		return;
+
+	// TODO: check rotation?
+	
+	switch (color)
+	{
+		case WHITE:   buffer[x+ (y/8)*SSD1306_LCDWIDTH] |=  (1 << (y&7)); break;
+		case BLACK:   buffer[x+ (y/8)*SSD1306_LCDWIDTH] &= ~(1 << (y&7)); break;
+		case INVERSE: buffer[x+ (y/8)*SSD1306_LCDWIDTH] ^=  (1 << (y&7)); break;
+	}
+	
+}
+
+void DmOledSSD1306::invertDisplay(uint8_t i) {
+	if (i) {
+		sendCommand(SSD1306_INVERTDISPLAY);
+	} else {
+		sendCommand(SSD1306_NORMALDISPLAY);
+	}
+}
+
+void DmOledSSD1306::refreshDisplay(void) {
+	
+	sendCommand(SSD1306_COLUMNADDR);
+	sendCommand(0x00);
+	sendCommand(SSD1306_LCDWIDTH - 1);
+	
+	sendCommand(SSD1306_PAGEADDR);
+	sendCommand(0x00);
+	#if SSD1306_LCDHEIGHT == 64
+	sendCommand(0x07);
+	#elif SSD1306_LCDHEIGHT == 32
+	sendCommand(0x03);
+	#elif SSD1306_LCDHEIGHT == 16
+	sendCommand(0x01);
+	#endif
+	
+	enterDataMode();
+	select();
+	for (uint16_t i=0; i<(SSD1306_LCDWIDTH*SSD1306_LCDHEIGHT/8); i++) {
+		writeBus(buffer[i]);
+    }
+	deSelect();
+}
+
+// clear everything
+void DmOledSSD1306::clearDisplay(void) {
+	memset(buffer, 0, (SSD1306_LCDWIDTH*SSD1306_LCDHEIGHT/8));
 }
 
 void DmOledSSD1306::init(void){
@@ -160,8 +208,6 @@ void DmOledSSD1306::init(void){
 	wait_ms(10);
 	_pinRST->write(1);
 	wait_ms(1);
-	
-	select();
 	
 	// init sequence
 	sendCommand(SSD1306_DISPLAYOFF);
@@ -255,7 +301,10 @@ void DmOledSSD1306::init(void){
 	wait_ms(100);									// SEG/COM on after 100ms
 	
 	// Show that we are ready
-	// TODO: Startup signalling
-	
-	deSelect();
+	refreshDisplay();								// refresh with initial buffer contents
 }
+
+
+
+
+
