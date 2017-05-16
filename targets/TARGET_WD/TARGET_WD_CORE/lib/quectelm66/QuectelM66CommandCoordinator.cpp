@@ -92,7 +92,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// 2. Fix and save baudrate by AT+IPR=xxx&W
 	wd_log_info("QuectelM66CommandCoordinator --> \"Fix and save baudrate\"");
 	ATCommandsInterface::ATResult result;
-	if (_atCommandInterface.executeSimple("AT+IPR=115200&W", &result, 5000, 3) != 0) {	
+	if (_atCommandInterface.executeSimple("AT+IPR=115200&W", &result, 1000, 5) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" failed");
 		return false;
 	};
@@ -103,7 +103,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		Reboot module if module failed to detect SIM Card in 10s with AT+CPIN?
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"Query SIM Card Status\"");
-	if (_atCommandInterface.executeSimple("AT+CPIN?", &result, 2000, 3) != 0) {	
+	if (_atCommandInterface.executeSimple("AT+CPIN?", &result, 1000, 3) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"Query SIM Card Status\" failed");
 		return false;
 	};
@@ -115,7 +115,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 			2. Reboot the module if it failed to register to GSM network in 30s.
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"GSM Network\"");
-	if (_atCommandInterface.executeSimple("AT+CREG?", &result, 2000, 3) != 0) {	
+	if (_atCommandInterface.executeSimple("AT+CREG?", &result, 1000, 3) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"GSM Network\" failed");
 		return false;
 	};
@@ -127,7 +127,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 			2. It is able to go to next step without registering to GPRS network in 30s
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"GPRS Network\"");
-	if (_atCommandInterface.executeSimple("AT+CGREG?", &result, 2000, 3) != 0) {	
+	if (_atCommandInterface.executeSimple("AT+CGREG?", &result, 1000, 3) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"GPRS Network\" failed");
 		return false;
 	};
@@ -145,7 +145,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	apn_config_command += "\"";
 	apn_config_command += this->_apn;
 	apn_config_command += "\"";
-	if (_atCommandInterface.executeSimple(apn_config_command.c_str(), &result, 2000, 3) != 0) {	
+	if (_atCommandInterface.executeSimple(apn_config_command.c_str(), &result, 1000, 3) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"APN configuration\" failed");
 		return false;
 	};
@@ -155,7 +155,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		Start PPP Dialling by ATD*99#
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"Start Dialing\"");
-	_atCommandInterface.executeSimple("ATD*99#", &result, 2000, 3);
+	_atCommandInterface.executeSimple("ATD*99#", &result, 1000, 3);
 	if (result.result != ATCommandsInterface::ATResult::AT_CONNECT) {
 		wd_log_error("QuectelM66CommandCoordinator --> \"Start Dialing\" failed");
 		return false;
