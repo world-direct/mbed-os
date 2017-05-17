@@ -63,6 +63,12 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 		mbed_die();
 	}
 		
+	wd_log_info("QuectelM66Interface --> RSSI: %d", this->_commandCoordinator.GetRSSI());
+	wd_log_info("QuectelM66Interface --> GSMRegistrationState: %d", this->_commandCoordinator.GetGSMRegistrationState());
+	wd_log_info("QuectelM66Interface --> GPRSRegistrationState: %d", this->_commandCoordinator.GetGPRSRegistrationState());
+	wd_log_info("QuectelM66Interface --> Bearer: %d", this->_commandCoordinator.GetBearer());
+	wd_log_info("QuectelM66Interface --> Phone-number: %s", this->_commandCoordinator.GetPhoneNumber());
+		
 }
 
 QuectelM66Interface::~QuectelM66Interface() {

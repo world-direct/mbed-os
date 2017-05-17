@@ -20,43 +20,49 @@
 #include "mbed.h"
 #include <stdint.h>
 #include <features/netsocket/nsapi_types.h>
-#include "Cellular/at/ATCommandsInterface.h"
+#include "ATCommandsInterface.h"
+#include "LinkMonitor.h"
 
 /** 
 	Coordinates power-sequence, AT-commands and PPP-connection
  */
 class QuectelM66CommandCoordinator {
 public:
+	
 	QuectelM66CommandCoordinator(IOStream* serialStream, PinName pwrKey, PinName vdd_ext, const char *apn);
 
 	virtual ~QuectelM66CommandCoordinator();
 	
-    /**
-    * Startup the M66
-    *
-    * @return true only if M66 was started correctly
-    */
 	bool startup();
 	
-	/**
-    * Shutdown the M66
-    *
-    * @return true only if M66 was shutdown correctly
-    */
 	bool shutdown();
 
-    /**
-    * Reset M66
-    *
-    * @return true only if M66 resets successfully
-    */
     bool reset();
+	
+	LinkMonitor::REGISTRATION_STATE GetGSMRegistrationState();
+	
+	LinkMonitor::REGISTRATION_STATE GetGPRSRegistrationState();
+	
+	LinkMonitor::BEARER GetBearer();
+	
+	int GetRSSI();
+	
+	char* GetPhoneNumber();
 
 private:
 	
+	QuectelM66CommandCoordinator(ATCommandsInterface* atCommandsInterface, PinName pwrKey, PinName vdd_ext, const char *apn);
+	
 	const char* _apn;
 	
-    ATCommandsInterface _atCommandInterface;
+    ATCommandsInterface* _atCommandInterface;
+	LinkMonitor* _linkMonitor;
+	int _rssi;
+	LinkMonitor::REGISTRATION_STATE _gsmRegistrationState;
+	LinkMonitor::REGISTRATION_STATE _gprsRegistrationState;
+	LinkMonitor::BEARER _bearer;
+	char _phoneNumber[16];
+	
 	DigitalOut _pwrKeyPin;
 	DigitalIn _vdd_extPin;
 	

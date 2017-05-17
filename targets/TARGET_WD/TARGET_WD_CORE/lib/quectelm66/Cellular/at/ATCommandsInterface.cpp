@@ -71,33 +71,40 @@ int ATCommandsInterface::open()
 }
 
 //Initialize AT link & start events processing
-int ATCommandsInterface::init(bool reset /* = true*/) {
+int ATCommandsInterface::init() {
   
 	m_transactionMtx.lock();
   
-	if (reset) {
-		wd_log_debug("ATCommandsInterface --> Initializing");
-		int err;
-		int tries = 5;
-		do
-		{
-			ATResult res;
-			err = executeInternal("ATZ E1 V1", this, &res);
-			if (err && tries && res.result == ATResult::AT_OK)
-			{
-				wd_log_debug("ATCommandsInterface --> No response, trying again");
-				wait_ms(500);
-			}
-		} while (err && tries--);
-		if (err)
-		{
-			wd_log_debug("ATCommandsInterface --> Error initializing %d", err);
-			m_transactionMtx.unlock();
-			return err;
+	wd_log_info("ATCommandsInterface --> Initializing");
+	int err;
+	ATResult res;
+		
+//	wd_log_info("ATCommandsInterface --> Reset PPP");
+//	err = executeSimple("ATH", &res, 1000, 3);
+//	if (err != OK) {
+//		wd_log_error("ATCommandsInterface --> Reset PPP failed");
+//		return false;
+//	}
+//	wd_log_debug("ATCommandsInterface --> Reset PPP succeeded");
+		
+	wd_log_info("ATCommandsInterface --> Setup echo");
+	int tries = 5;
+	do
+	{
+		err = executeInternal("ATZ E1 V1", this, &res);
+		if (err && tries && res.result == ATResult::AT_OK){
+			wd_log_warn("ATCommandsInterface --> Setup echo: no response, trying again");
+			wait_ms(500);
 		}
+	} while (err && tries--);
+	if (err)
+	{
+		wd_log_error("ATCommandsInterface --> Setup echo failed (%d)", err);
+		m_transactionMtx.unlock();
+		return err;
 	}
-  
-	//Enable events handling and execute events enabling commands
+	wd_log_debug("ATCommandsInterface --> Setup echo succeeded");
+		
 	enableEvents();
 	wd_log_debug("ATCommandsInterface --> AT interface initialized");
 	
@@ -148,9 +155,12 @@ bool ATCommandsInterface::isOpen()
 
 int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, uint32_t timeout/*=1000*/, uint32_t tries)
 {
+	
+	int ret = NET_UNKNOWN;
+	
 	while (tries > 0) {
 		
-		int ret = execute(command, this, pResult, timeout);
+		ret = execute(command, this, pResult, timeout);
 		
 		if (ret == OK || ret == NET_MOREINFO) {
 			return ret;
@@ -166,6 +176,9 @@ int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, u
 		}
 		
 	}
+	
+	return ret;
+	
 }
 
 int ATCommandsInterface::execute(const char* command, IATCommandsProcessor* pProcessor, ATResult* pResult, uint32_t timeout/*=1000*/)
