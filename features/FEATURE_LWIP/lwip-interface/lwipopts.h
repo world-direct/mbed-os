@@ -179,7 +179,7 @@
 
 // Debug Options
 #define NETIF_DEBUG                 LWIP_DBG_ON
-#define PBUF_DEBUG                  LWIP_DBG_ON
+#define PBUF_DEBUG                  LWIP_DBG_OFF
 #define API_LIB_DEBUG               LWIP_DBG_OFF
 #define API_MSG_DEBUG               LWIP_DBG_OFF
 #define SOCKETS_DEBUG               LWIP_DBG_OFF
@@ -189,8 +189,8 @@
 #define IP_DEBUG                    LWIP_DBG_OFF
 #define IP_REASS_DEBUG              LWIP_DBG_OFF
 #define RAW_DEBUG                   LWIP_DBG_OFF
-#define MEM_DEBUG                   LWIP_DBG_ON
-#define MEMP_DEBUG                  LWIP_DBG_ON
+#define MEM_DEBUG                   LWIP_DBG_OFF
+#define MEMP_DEBUG                  LWIP_DBG_OFF
 #define SYS_DEBUG                   LWIP_DBG_OFF
 #define TIMERS_DEBUG                LWIP_DBG_OFF
 #define TCP_DEBUG                   LWIP_DBG_OFF

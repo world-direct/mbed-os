@@ -48,7 +48,10 @@ ATCommandsInterface::ATCommandsInterface(IOStream* pStream)
 	, m_eventsProcessingMtx()
 {
 	memset(m_eventsHandlers, 0, MAX_AT_EVENTS_HANDLERS * sizeof(IATEventsHandler*));
-	//m_processingMtx.lock();
+	
+	m_transactionResult.code = 0;
+	m_transactionResult.result = ATCommandsInterface::ATResult::AT_OK;
+	
 	m_processingThread.start(mbed::Callback<void ()>(this, &ATCommandsInterface::process));
 	
 }
@@ -79,21 +82,13 @@ int ATCommandsInterface::init() {
 	int err;
 	ATResult res;
 		
-//	wd_log_info("ATCommandsInterface --> Reset PPP");
-//	err = executeSimple("ATH", &res, 1000, 3);
-//	if (err != OK) {
-//		wd_log_error("ATCommandsInterface --> Reset PPP failed");
-//		return false;
-//	}
-//	wd_log_debug("ATCommandsInterface --> Reset PPP succeeded");
-		
-	wd_log_info("ATCommandsInterface --> Setup echo");
+	wd_log_info("ATCommandsInterface --> Setup echo (ATZ E1 V1)");
 	int tries = 5;
 	do
 	{
 		err = executeInternal("ATZ E1 V1", this, &res);
 		if (err && tries && res.result == ATResult::AT_OK){
-			wd_log_warn("ATCommandsInterface --> Setup echo: no response, trying again");
+			wd_log_warn("ATCommandsInterface --> Setup echo (ATZ E1 V1): no response, trying again");
 			wait_ms(500);
 		}
 	} while (err && tries--);
@@ -916,12 +911,8 @@ void ATCommandsInterface::process() //Processing thread
 		m_inputPos = 0; //Clear input buffer
 		do
 		{
-			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Trying to send a pending command");
-			trySendCommand(); //This must be tried first as we discarded the buffer before and therefore would be blocking though there is a pending command
-			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Done");
-			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Trying to read a new line");
+			trySendCommand();
 			tryReadLine();
-			//TODO: severity solution, too many log-entries: wd_log_debug("ATCommandsInterface --> Done");
 		} while (
 			m_processingThread.signal_wait(AT_SIG_PROCESSING_STOP, 0).status != osEventSignal && 
 			m_transactionResult.result != ATCommandsInterface::ATResult::AT_CONNECT // don't consume any more if we detected the successful connect for furter ppp-communication

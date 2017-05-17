@@ -42,7 +42,7 @@ public:
 
 	  /** Initialize monitor
 	   */
-	int init();
+	int Init();
 
 	  /** Registration State
 	  */  

@@ -51,12 +51,13 @@ LinkMonitor::LinkMonitor(ATCommandsInterface* pIf)
 {
 }
 
-int LinkMonitor::init()
+int LinkMonitor::Init()
 {
   
 	// we need to make sure that we setup the operator selection to be in 'numeric' format.
 	// i.e. it is made up of a network and country code when returned by the modem e.g. Operator = 23415. This allows easy logic parsing for
 	// setting up other network parameters in future.
+	
 	//	wd_log_debug("LinkMonitor --> LinkMonitor::init() being called. This should only happen once: executinging AT+COPS=0,2");  
 	//	int ret = m_pIf->executeSimple("AT+COPS=0,2", NULL, LINK_MONITOR_COPS_AT_TIMEOUT); //Configure to set the operator string to Country Code and mobile network code
 	//	if (ret != OK){

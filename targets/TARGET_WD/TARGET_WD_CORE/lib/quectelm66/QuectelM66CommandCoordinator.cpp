@@ -101,6 +101,12 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	};
 	wd_log_debug("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" succeeded");
 	
+	wd_log_info("ATCommandsInterface --> Reset PPP");
+	if (_atCommandInterface->executeSimple("ATH", &result, 1000, 3) != OK) {
+		wd_log_warn("ATCommandsInterface --> Reset PPP failed, continue anyway");
+	}
+	wd_log_debug("ATCommandsInterface --> Reset PPP succeeded");
+	
 	/*
 		Query SIM Card Status: AT+CPIN/AT+QINISTAT. 
 		Reboot module if module failed to detect SIM Card in 10s with AT+CPIN?
@@ -125,7 +131,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	wd_log_info("QuectelM66CommandCoordinator --> \"GSM Network\" and \"GPRS Network\"");
 	
 	wd_log_info("QuectelM66CommandCoordinator --> Init LinkMonitor");
-	if (_linkMonitor->init() != OK) {
+	if (_linkMonitor->Init() != OK) {
 		wd_log_error("QuectelM66CommandCoordinator --> LinkMonitor initialization failed");	
 		return false;
 	}
