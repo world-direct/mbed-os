@@ -41,16 +41,11 @@
 #include "netif/ppp/pppapi.h"
 #include "netif/ppp/pppos.h"	
 #include "emac_api.h"
+#include "pppos_utils.h"
 
-#include "serial_io.h"
-
-#if DEVICE_EMAC
-#define MBED_NETIF_INIT_FN emac_lwip_if_init
-#else
-#define MBED_NETIF_INIT_FN eth_arch_enetif_init
+#ifndef PPPOS_WRITE_TIMEOUT
+#define PPPOS_WRITE_TIMEOUT 1000
 #endif
-
-#define DHCP_TIMEOUT 15000
 
 /* Static arena of sockets */
 static struct lwip_quectelm66_socket {
@@ -65,12 +60,6 @@ static struct lwip_quectelm66_socket {
 } lwip_quectelm66_arena[MEMP_NUM_NETCONN];
 
 static bool lwip_quectelm66_connected = false;
-
-static serial_io_fns_t serial_io_fns;
-
-void mbed_set_serial_io_fns(serial_io_fns_t fns) {
-	serial_io_fns = fns;
-}
 
 static void mbed_lwip_quectelm66_arena_init(void)
 {
@@ -396,7 +385,9 @@ ppp_pcb *mbed_get_ppp_pcb() {
 
 static u32_t output_cb(ppp_pcb *pcb, u8_t *data, u32_t len, void *ctx) {
 	wd_log_debug("lwip_quectelm66_stack --> output_cb");
-	if (serial_io_fns.write(data, len, 1000) == 0) {
+	
+	pppos_context_t* ctx_cb = (pppos_context_t*)ctx;
+	if (ctx_cb->pppos_write_callback(ctx_cb, data, len, PPPOS_WRITE_TIMEOUT) == 0) {
 		return len;
 	}
 	return -1;
@@ -432,55 +423,55 @@ static void status_cb(ppp_pcb *pcb, int err_code, void *ctx) {
 			break;
 		}
 	case PPPERR_PARAM: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Invalid parameter\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Invalid parameter\n");
 			break;
 		}
 	case PPPERR_OPEN: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Unable to open PPP session\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Unable to open PPP session\n");
 			break;
 		}
 	case PPPERR_DEVICE: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Invalid I/O device for PPP\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Invalid I/O device for PPP\n");
 			break;
 		}
 	case PPPERR_ALLOC: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Unable to allocate resources\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Unable to allocate resources\n");
 			break;
 		}
 	case PPPERR_USER: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: User interrupt\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: User interrupt\n");
 			break;
 		}
 	case PPPERR_CONNECT: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Connection lost\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Connection lost\n");
 			break;
 		}
 	case PPPERR_AUTHFAIL: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Failed authentication challenge\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Failed authentication challenge\n");
 			break;
 		}
 	case PPPERR_PROTOCOL: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Failed to meet protocol\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Failed to meet protocol\n");
 			break;
 		}
 	case PPPERR_PEERDEAD: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Connection timeout\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Connection timeout\n");
 			break;
 		}
 	case PPPERR_IDLETIMEOUT: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Idle Timeout\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Idle Timeout\n");
 			break;
 		}
 	case PPPERR_CONNECTTIME: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Max connect time reached\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Max connect time reached\n");
 			break;
 		}
 	case PPPERR_LOOPBACK: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Loopback detected\n");
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Loopback detected\n");
 			break;
 		}
 	default: {
-		wd_log_debug("lwip_quectelm66_stack --> status_cb: Unknown error code %d\n", err_code);
+		wd_log_error("lwip_quectelm66_stack --> status_cb: Unknown error code %d\n", err_code);
 			break;
 		}
 	}
@@ -501,20 +492,20 @@ static void status_cb(ppp_pcb *pcb, int err_code, void *ctx) {
 		* Free the PPP control block, can only be called if PPP session is in thereturn;
 		* dead state (i.e. disconnected). You need to call ppp_close() before.
 		*/
-		wd_log_debug("Free the PPP control block");
+		wd_log_info("lwip_quectelm66_stack --> Free the PPP control block");
 		pppapi_free(pcb);
-		wd_log_debug("Done");
+		wd_log_error("lwip_quectelm66_stack --> Free the PPP control block done");
 		return;
 		
 	}
 	
-	wd_log_debug("lwip_quectelm66_stack --> Reconnect");
+	wd_log_warn("lwip_quectelm66_stack --> Reconnect");
 	u16_t holdoff = 0;
 	if (0 != pppapi_connect(pcb, holdoff)) {
-		wd_log_debug("lwip_quectelm66_stack --> Failed");
+		wd_log_error("lwip_quectelm66_stack --> Reconnect failed");
 		return;
 	}
-	wd_log_debug("lwip_quectelm66_stack --> Done");
+	wd_log_debug("lwip_quectelm66_stack --> Reconnect success");
 	
 }
 
@@ -523,22 +514,22 @@ static void ppp_notify_phase_cb(ppp_pcb *pcb, u8_t phase, void *ctx) {
 
 	  /* Session is down (either permanently or briefly) */
 	case PPP_PHASE_DEAD:
-		wd_log_debug("lwip_quectelm66_stack --> PPP_PHASE_DEAD");
+		wd_log_info("lwip_quectelm66_stack --> PPP_PHASE_DEAD");
 		break;
 
 		  /* We are between two sessions */
 	case PPP_PHASE_HOLDOFF:
-		wd_log_debug("lwip_quectelm66_stack --> PPP_PHASE_HOLDOFF");
+		wd_log_info("lwip_quectelm66_stack --> PPP_PHASE_HOLDOFF");
 		break;
 
 		  /* Session just started */
 	case PPP_PHASE_INITIALIZE:
-		wd_log_debug("lwip_quectelm66_stack --> PPP_PHASE_INITIALIZE");
+		wd_log_info("lwip_quectelm66_stack --> PPP_PHASE_INITIALIZE");
 		break;
 
 		  /* Session is running */
 	case PPP_PHASE_RUNNING:
-		wd_log_debug("lwip_quectelm66_stack --> PPP_PHASE_RUNNING");
+		wd_log_info("lwip_quectelm66_stack --> PPP_PHASE_RUNNING");
 		break;
 
 	default:
@@ -546,7 +537,7 @@ static void ppp_notify_phase_cb(ppp_pcb *pcb, u8_t phase, void *ctx) {
 	}
 }
 
-nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password)
+nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password, pppos_context_t* ctx_cb)
 {
 
 	sys_sem_new(&lwip_quectelm66_tcpip_inited, 0);
@@ -562,7 +553,7 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* user
 			&lwip_quectelm66_netif,
 			output_cb, 
 			status_cb, 
-			NULL//ctx_cb
+			ctx_cb
 		);
 		
 	wd_log_debug("lwip_quectelm66_stack --> Register notify phase callback");
@@ -597,21 +588,6 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* user
 		return pppapi_connect_ret;
 	}
 	wd_log_debug("lwip_quectelm66_stack --> Initiate PPP negotiation success");
-		
-	/*
-	if (!netif_add(&lwip_quectelm66_netif,
-#if LWIP_IPV4
-		            0, 0, 0,
-#endif
-		                            emac, MBED_NETIF_INIT_FN, tcpip_input)) {
-		return NSAPI_ERROR_DEVICE_ERROR;
-	}
-
-	netif_set_default(&lwip_quectelm66_netif);
-	*/
-
-	//netif_set_link_callback(&lwip_quectelm66_netif, mbed_lwip_quectelm66_netif_link_irq);
-	//netif_set_status_callback(&lwip_quectelm66_netif, mbed_lwip_quectelm66_netif_status_irq);
 
 #if !DEVICE_EMAC
 		eth_arch_enable_interrupts();
@@ -620,14 +596,14 @@ nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* user
 	return NSAPI_ERROR_OK;
 }
 
-nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password)
+nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password, pppos_context_t* ctx_cb)
 {
     // Check if we've already connected
 	if (lwip_quectelm66_connected) {
 		return NSAPI_ERROR_PARAMETER;
 	}
 
-	if (mbed_lwip_quectelm66_init(NULL, username, password) != NSAPI_ERROR_OK) {
+	if (mbed_lwip_quectelm66_init(NULL, username, password, ctx_cb) != NSAPI_ERROR_OK) {
 		return NSAPI_ERROR_DEVICE_ERROR;
 	}
 

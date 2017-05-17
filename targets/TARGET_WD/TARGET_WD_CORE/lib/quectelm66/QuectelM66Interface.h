@@ -26,6 +26,7 @@
 #include "mbed.h"
 #include "QuectelM66CommandCoordinator.h"
 #include "SerialStreamAdapter.h"
+#include "pppos_utils.h"
 
 /** QuectelM66Interface class
  *  Implementation of the NetworkInterface for the Quectel M66 GSM modem
@@ -153,9 +154,12 @@ private:
 	const char* _username;
 	const char* _password;
 	
+	pppos_context_t _pppos_ctx;
+	
 	uint8_t _serialBuffer[QUECTEL_M66_READ_BUFFER_SIZE];
 	
 	void serial_read_thread_entry();
+	static int pppos_write_wrapper(pppos_context_t* pppos_context, uint8_t* buf, size_t length, uint32_t timeout = osWaitForever);
 
 };
 

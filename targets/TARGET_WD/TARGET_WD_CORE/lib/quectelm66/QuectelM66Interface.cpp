@@ -52,6 +52,9 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 	wd_log_debug("QuectelM66Interface --> ctor");
 		
 	this->_serialStreamAdapter = serialStreamAdapter;	
+	
+	this->_pppos_ctx.serial_stream_adapter = serialStreamAdapter;
+	this->_pppos_ctx.pppos_write_callback = &QuectelM66Interface::pppos_write_wrapper;
 		
 	this->_readProcessingThread.start(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_thread_entry));
 		
@@ -119,34 +122,22 @@ nsapi_error_t QuectelM66Interface::set_dhcp(bool dhcp) {
 	return NSAPI_ERROR_OK;
 }
 
-static SerialStreamAdapter* serialStreamAdapterWrapper;
-
-static int mbed_set_serial_io_fns_wrapper_read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */) {
-	return serialStreamAdapterWrapper->read(buf, pLength, maxLength, timeout);
-}
-
-static int mbed_set_serial_io_fns_wrapper_write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
-	return serialStreamAdapterWrapper->write(buf, length, timeout);
+int QuectelM66Interface::pppos_write_wrapper(pppos_context_t* pppos_context, uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
+	return ((SerialStreamAdapter*)(pppos_context->serial_stream_adapter))->write(buf, length, timeout);
 }
 
 nsapi_error_t QuectelM66Interface::connect() {
 	wd_log_info("QuectelM66Interface --> connect");
 	
-	serialStreamAdapterWrapper = this->_serialStreamAdapter;
-	
 	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_START_SIGNAL);
-	
-	serial_io_fns fns;
-	fns.read = mbed_set_serial_io_fns_wrapper_read;
-	fns.write = mbed_set_serial_io_fns_wrapper_write;
-	mbed_set_serial_io_fns(fns);
 	
 	if (mbed_lwip_quectelm66_bringup(
             _ip_address[0] ? _ip_address : 0,
             _netmask[0] ? _netmask : 0,
             _gateway[0] ? _gateway : 0,
 			this->_username,
-			this->_password
+			this->_password,
+			&(this->_pppos_ctx)
 		) != NSAPI_ERROR_OK) {
 			return NSAPI_ERROR_NO_CONNECTION;
 	}

@@ -22,6 +22,7 @@
 
 #include "nsapi.h"
 #include "emac_api.h"
+#include "pppos_utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,11 +30,10 @@ extern "C" {
 
 	#include "netif/ppp/pppapi.h"
 	#include "netif/ppp/pppos.h"
-	#include "serial_io.h"
 	
 	// Access to lwip through the nsapi
-	nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password);
-	nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password);
+	nsapi_error_t mbed_lwip_quectelm66_init(emac_interface_t *emac, const char* username, const char* password, pppos_context_t* ctx_cb);
+	nsapi_error_t mbed_lwip_quectelm66_bringup(const char *ip, const char *netmask, const char *gw, const char* username, const char* password, pppos_context_t* ctx_cb);
 	nsapi_error_t mbed_lwip_quectelm66_bringdown(void);
 
 	char *mbed_lwip_quectelm66_get_ip_address(char *buf, int buflen);
@@ -41,7 +41,6 @@ extern "C" {
 	char *mbed_lwip_quectelm66_get_gateway(char *buf, int buflen);
 
 	ppp_pcb *mbed_get_ppp_pcb(void);
-	void mbed_set_serial_io_fns(serial_io_fns_t fns);
 	
 	extern nsapi_stack_t lwip_quectelm66_stack;
 
