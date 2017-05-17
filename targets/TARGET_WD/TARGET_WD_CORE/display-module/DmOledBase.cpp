@@ -2,312 +2,169 @@
 ___________________INCLUDES____________________________
 ******************************************************/
 #include "DmOledBase.h"
-
+#include "BitIO.h"
+#include "font.h"
 
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
-#define FONT_CHAR_WIDTH		8
-#define FONT_CHAR_HEIGHT	16
-extern uint8_t font[];
-
-#define read_font_line(__char, __line) \
-      font[((uint16_t)(__char))*FONT_CHAR_HEIGHT+(__line)]
+//#define FONT_CHAR_WIDTH		8
+//#define FONT_CHAR_HEIGHT	16
+//extern uint8_t font[];
+//
+//#define read_font_line(__char, __line) \
+//      font[((uint16_t)(__char))*FONT_CHAR_HEIGHT+(__line)]
 
 	
 /******************************************************
 ___________________IMPLEMENTATION______________________
 ******************************************************/
-void DmOledBase::select(){
-	_pinCS->write(1);
-}
-
-void DmOledBase::deSelect(){
-	_pinCS->write(0);
-}
-
-void DmOledBase::setPixel(uint16_t x, uint16_t y, uint16_t color ) {
-	if ((x < 0) || (x >= _width) || (y < 0) || (y >= _height)) 
-		return;
-	
-	select();
-	setAddress(x, y, x, y);
-	sendData(color);
-	deSelect();
-}
-
-void DmOledBase::clearScreen(uint16_t color) {
-	select();
-	setAddress(0, 0, _width-1, _height-1);
-	for(uint16_t i=0; i<_height; i++) {
-		for(uint16_t j=0; j<_width; j++) {
-			sendData(color);
-		}
-	}
-	deSelect();
+void DmOledBase::drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
+	int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+    
+    if (steep)
+    {
+        swap(x0, y0);
+        swap(x1, y1);
+    }
+    
+    if (x0 > x1)
+    {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+    
+    int16_t dx, dy;
+    dx = x1 - x0;
+    dy = abs(y1 - y0);
+    
+    int16_t err = dx / 2;
+    int16_t ystep;
+    
+    if (y0 < y1)
+        ystep = 1;
+    else
+        ystep = -1;
+    
+    for (; x0<=x1; x0++)
+    {
+        if (steep)
+            setPixel(y0, x0, color);
+        else
+            setPixel(x0, y0, color);
+ 
+        err -= dy;
+        if (err < 0)
+        {
+            y0 += ystep;
+            err += dx;
+        }
+    }
 }
 
 void DmOledBase::drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color) {
-	select();
-	setAddress(x, y, x + length, y);
- 
-	for (int i = 0; i <= length; i++) {
-		sendData(color);
-	}
-	deSelect();
+	drawLine(x, y, x+length-1, y, color);
 }
  
 void DmOledBase::drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color) {
-	select();
-	setAddress(x, y, x, y + length);
- 
-	for (int i = 0; i <= length; i++) {
-		sendData(color);
-	}
-	deSelect();
+	drawLine(x, y, x, y+length-1, color);
 }
 
-void DmOledBase::drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
-	int x = x1-x0;
-	int y = y1-y0;
-	int dx = abs(x), sx = x0<x1 ? 1 : -1;
-	int dy = -abs(y), sy = y0<y1 ? 1 : -1;
-	int err = dx+dy, e2;  /* error value e_xy             */
-	for (;;) {
-		setPixel(x0,y0,color);
-		e2 = 2*err;
-		if (e2 >= dy) {      /* e_xy+e_x > 0                 */
-			if (x0 == x1) {
-			break;
-			}
-			err += dy; x0 += sx;
-		}
-		if (e2 <= dx) { /* e_xy+e_y < 0   */
-			if (y0 == y1) {
-			break;
-			}
-			err += dx; y0 += sy;
-		}
-	}
+void DmOledBase::drawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+	drawHorizontalLine(x, y, width, color);
+	drawHorizontalLine(x, y+height-1, width, color);
+	drawVerticalLine(x, y, height, color);
+	drawVerticalLine(x+width-1, y, height, color);
 }
  
-void DmOledBase::drawRectangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
-	// Make sure x0,y0 are in the top left corner
-	if(x0 > x1) {
-		x0 = x0^x1;
-		x1 = x0^x1;
-		x0 = x0^x1;
-	}
-	if(y0 > y1) {
-		y0 = y0^y1;
-		y1 = y0^y1;
-		y0 = y0^y1;
-	}
- 
-	drawHorizontalLine(x0, y0, x1-x0, color);
-	drawHorizontalLine(x0, y1, x1-x0, color);
-	drawVerticalLine(x0, y0, y1-y0, color);
-	drawVerticalLine(x1, y0, y1-y0, color);
+void DmOledBase::fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color) {
+	for (int16_t i=x; i<x+width; i++)
+        drawVerticalLine(i, y, height, color); 
 }
  
-void DmOledBase::fillRectangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
-	unsigned long numPixels=0;
-	unsigned long i=0;
- 
-	// Make sure x0,y0 are in the top left corner
-	if(x0 > x1) {
-		x0 = x0^x1;
-		x1 = x0^x1;
-		x0 = x0^x1;
-	}
-	if(y0 > y1) {
-		y0 = y0^y1;
-		y1 = y0^y1;
-		y0 = y0^y1;
-	}
- 
-	x0 = constrain(x0, 0, _width-1);
-	x1 = constrain(x1, 0, _width-1);
-	y0 = constrain(y0, 0, _height-1);
-	y1 = constrain(y1, 0, _height-1);
- 
-	numPixels = (x1-x0+1);
-	numPixels = numPixels*(y1-y0+1);
+void DmOledBase::fillScreen(uint16_t color) {
+	fillRectangle(0, 0, _width, _height, color);
+}
+
+size_t DmOledBase::writeChar(uint8_t c) {
 	
-	select();
-	setAddress(x0,y0,x1,y1);/* start to write to display ra */
- 
-	for(i=0; i < numPixels; i++) {
-		sendData(color);
-	}
-	deSelect();
-}
- 
-void DmOledBase::drawCircle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color) {
-	int x = -r, y = 0, err = 2-2*r, e2;
-	do {
-		setPixel(x0-x, y0+y, color);
-		setPixel(x0+x, y0+y, color);
-		setPixel(x0+x, y0-y, color);
-		setPixel(x0-x, y0-y, color);
-		e2 = err;
-		if (e2 <= y) {
-			err += ++y*2+1;
-			if (-x == y && e2 <= x) {
-			e2 = 0;
-			}
-		}
-		if (e2 > x) {
-			err += ++x * 2 + 1;
-		}
-	} while (x <= 0);
-}
- 
-void DmOledBase::fillCircle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color) {
-	int x = -r, y = 0, err = 2-2*r, e2;
-	do {
-		drawVerticalLine(x0-x, y0-y, 2*y, color);
-		drawVerticalLine(x0+x, y0-y, 2*y, color);
- 
-		e2 = err;
-		if (e2 <= y) {
-			err += ++y * 2 + 1;
-			if (-x == y && e2 <= x) {
-			e2 = 0;
-			}
-		}
-		if (e2 > x) {
-			err += ++x*2+1;
-		}
-	} while (x <= 0);
-}
- 
-void DmOledBase::drawTriangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color) {
-	drawLine(x0, y0, x1, y1, color);
-	drawLine(x0, y0, x2, y2, color);
-	drawLine(x1, y1, x2, y2, color);
-}
- 
-void DmOledBase::drawPoint(uint16_t x, uint16_t y, uint16_t radius) {
-	if (radius == 0) {
-		select();
- 
-		setAddress(x,y,x,y);
-		sendData(_fgColor);
- 
-		deSelect();
-	} else {
-		fillRectangle(x-radius,y-radius,x+radius,y+radius, _fgColor);
-	}
-}
- 
-void DmOledBase::drawChar(uint16_t x, uint16_t y, char ch, bool transparent) {
-	select();
- 
-	uint8_t temp;
-	uint8_t pos,t;
- 
-	if ((x > (_width - FONT_CHAR_WIDTH)) || (y > (_height - FONT_CHAR_HEIGHT))) {
-		return;
-	}
- 
-	ch=ch-' ';
-	if (!transparent) { // Clear background
-		setAddress(x,y,x+FONT_CHAR_WIDTH-1,y+FONT_CHAR_HEIGHT-1);
-		for(pos=0;pos<FONT_CHAR_HEIGHT;pos++) {
-			temp = read_font_line(ch, pos);
-			for(t=0;t<FONT_CHAR_WIDTH;t++) {
-			if (temp & 0x01) {
-				sendData(_fgColor);
-			}
-			else {
-				sendData(_bgColor);
-			}
-			temp>>=1;
-			}
-			y++;
-		}
-	}
-	else { //Draw directly without clearing background
-		for(pos=0;pos<FONT_CHAR_HEIGHT;pos++) {
-			temp = read_font_line(ch, pos);
-			for(t=0;t<FONT_CHAR_WIDTH;t++) {
-			if (temp & 0x01) {
-				setAddress(x + t, y + pos, x + t, y + pos);
-				sendData(_fgColor);
-				//drawPoint(x + t, y + pos);
-			}
-			temp>>=1;
-			}
-		}
-	}
- 
-	deSelect();
-}
- 
-void DmOledBase::drawNumber(uint16_t x, uint16_t y, int num, int digitsToShow, bool leadingZeros) {
-	bool minus = false;
-	if (num < 0) {
-		num = -num;
-		minus = true;
-	}
-	for (int i = 0; i < digitsToShow; i++) {
-		char c = ' ';
-		if ((num == 0) && (i > 0)) {
-			if (leadingZeros) {
-			c = '0';
-			if (minus && (i == (digitsToShow-1))) {
-				c = '-';
-			}
-			} else if (minus) {
-			c = '-';
-			minus = false;
-			}
-		} else {
-			c = '0' + (num % 10);
-		}
-		drawChar(x + FONT_CHAR_WIDTH*(digitsToShow - i - 1), y, c, false);
-		num = num / 10;
-	}
-}
- 
-void DmOledBase::drawString(uint16_t x, uint16_t y, const char *p) {
-	while(*p!='\0') {
-		if(x > (_width - FONT_CHAR_WIDTH)) {
-			x = 0;
-			y += FONT_CHAR_HEIGHT;
-		}
-		if(y > (_height - FONT_CHAR_HEIGHT)) {
-			y = x = 0;
-		}
-		drawChar(x, y, *p, false);
-		x += FONT_CHAR_WIDTH;
-		p++;
-	}
-}
- 
-void DmOledBase::drawStringCentered(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const char *p) {
-	int len = strlen(p);
-	uint16_t tmp = len * FONT_CHAR_WIDTH;
-	if (tmp <= width) {
-		x += (width - tmp)/2;
-	}
-	if (FONT_CHAR_HEIGHT <= height) {
-		y += (height - FONT_CHAR_HEIGHT)/2;
-	}
-	drawString(x, y, p);
+	if (c == '\n')
+    {
+        cursorY += textsize*8;
+        cursorX = 0;
+    }
+    else if (c == '\r')
+        cursorX = 0;
+    else
+    {
+        drawChar(cursorX, cursorY, c, _fgColor, _bgColor, textsize);
+        cursorX += textsize*6;
+        if (wrap && (cursorX > (_width - textsize*6)))
+        {
+            cursorY += textsize*8;
+            cursorX = 0;
+        }
+    }
+    return 1;
 }
 
-void DmOledBase::drawImage(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint16_t* data) {
-  const uint16_t* p = data;
+void DmOledBase::drawChar(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg, uint8_t size) {
+	if(
+        (x >= _width) ||			// Clip right
+        (y >= _height) ||			// Clip bottom
+        ((x + 5 * size - 1) < 0) || // Clip left
+        ((y + 8 * size - 1) < 0)	// Clip top
+        )
+    return;
+    
+    for (int8_t i=0; i<6; i++ )
+    {
+        uint8_t line = 0;
  
-  select();
+        if (i == 5) 
+            line = 0x0;
+        else 
+            line = font[(ch*5)+i];
+            
+        for (int8_t j = 0; j<8; j++)
+        {
+            if (line & 0x1)
+            {
+                if (size == 1) // default size
+                    setPixel(x+i, y+j, color);
+                else // big size
+                    fillRectangle(x+(i*size), y+(j*size), size, size, color);
+            }
+            line >>= 1;
+        }
+    }
+}
  
-  setAddress(x,y,x+width-1,y+height-1);
-  for (int i = width*height; i > 0; i--) {
-    sendData(*p);
-    p++;
-  }
- 
-  deSelect();
+void DmOledBase::drawBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* bitmap, uint16_t color) {
+	for (int16_t j=0; j<height; j++)
+	{
+		for (int16_t i=0; i<width; i++ )
+		{
+			if (bitmap[i + (j/8)*width] & BIT_VALUE(j%8))
+				setPixel(x+i, y+j, color);
+		}
+	}
+}
+
+void DmOledBase::setRotation(uint8_t r) {
+	r %= 4;  // cant be higher than 3
+    rotation = r;
+    switch (r)
+    {
+        case 0:
+        case 2:
+            _width = _rawWidth;
+            _height = _rawHeight;
+            break;
+        case 1:
+        case 3:
+            _width = _rawHeight;
+            _height = _rawWidth;
+            break;
+    }
 }

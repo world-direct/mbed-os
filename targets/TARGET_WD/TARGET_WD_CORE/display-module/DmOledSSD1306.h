@@ -1,6 +1,16 @@
-/******************************************************
-Library for Monochrome OLEDs based on SSD1306 driver.
-******************************************************/
+/*
+ * DmLed.h
+ *
+ * Copyright (C) 2017 world-direct.at, MIT License
+ *
+ * Created:	12.05.2017
+ * Author:	Patrick Frischmann
+ * EMail:	patrick.frischmann@world-direct.at
+ *
+ * Description:
+ *        Library for Monochrome OLEDs based on SSD1306 driver.
+ *
+ */ 
 #ifndef DMOLEDSSL1306_H
 #define DMOLEDSSL1306_H
 
@@ -33,7 +43,7 @@ ___________________DEFINES_____________________________
 //#define SSD1306_SPI_USE_NSCK			// uncomment if negated SCK signal is used
 
 // Colors
-//#define BLACK		0
+#define BLACK		0
 #define WHITE		1
 #define INVERSE		2
 
@@ -94,23 +104,32 @@ public:
 	virtual ~DmOledSSD1306();
 	virtual void init(void);
 	
-	virtual void refreshDisplay(void);
+	void refresh(void);
 	void clearDisplay(void);
-	void invertDisplay(uint8_t i);
+	void loadLogo(void);
 	
-private:
-	void enterCommandMode(void);
-	void enterDataMode(void);
+	void invertDisplay(bool invert = true);
+	void dim(bool dim = true);
+	
 	void setPixel(uint16_t x, uint16_t y, uint16_t color);
 	
+	virtual void drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
+	virtual void drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
+	
+private:
+	void select(void);
+	void deSelect(void);
+	void enterCommandMode(void);
+	void enterDataMode(void);
+	
 	void writeBus(uint8_t data);
+	void sendCommand(uint8_t index);
+	void sendData(uint16_t data);
 	
-	virtual void setAddress(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-	virtual void sendCommand(uint8_t index);
-	virtual void sendData(uint16_t data);
+	inline void drawVerticalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
+	inline void drawHorizontalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
 	
-	static const uint16_t _width;
-	static const uint16_t _height;
+	DigitalOut* _pinCS;
 	DigitalOut* _pinDC;
 	DigitalOut* _pinRST;
 	SPI* _spi;
