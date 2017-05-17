@@ -1,30 +1,21 @@
 ﻿/*
- * ubirch#1 M66 Modem AT command parser.
+ * QuectelM66CommandCoordinator.cpp
  *
- * @author Niranjan Rao
- * @date 2017-02-09
+ * Copyright (C) 2017 world-direct.at, MIT License
  *
- * @copyright &copy; 2015, 2016 ubirch GmbH (https://ubirch.com)
+ * Created: 21.04.2017
+ * Author:	Simon Pfeifhofer
+ * EMail:	simon.pfeifhofer@world-direct.at
  *
- * ```
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Description:
+ *	 Contains a coordinator which
+ *		(a) encapsulates the startup-sequence for the modem and 
+ *		(b) starts the PPP-communication by dialling.
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ```
- */
+ */ 
 
 #include <cctype>
-//#include <targets/TARGET_Freescale/TARGET_KSDK2_MCUS/TARGET_K82F/drivers/fsl_rtc.h>
 #include <string>
-#include "mbed_debug.h"
 #include "QuectelM66CommandCoordinator.h"
 #include "SerialStreamAdapter.h"
 #include "wd_logging.h"

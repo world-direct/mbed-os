@@ -1,3 +1,17 @@
+/*
+ * SerialStreamAdapter.h
+ *
+ * Copyright (C) 2017 world-direct.at, MIT License
+ *
+ * Created: 21.04.2017
+ * Author:	Simon Pfeifhofer
+ * EMail:	simon.pfeifhofer@world-direct.at
+ *
+ * Description:
+ *		Creates an IOStream-adapter for a BufferedSerial-instance.
+ *
+ */ 
+
 #include "SerialStreamAdapter.h"
 #include "wd_logging.h"
 #include "Cellular/core/errors.h"

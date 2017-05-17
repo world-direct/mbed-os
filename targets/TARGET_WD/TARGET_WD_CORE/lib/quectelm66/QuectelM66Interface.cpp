@@ -1,35 +1,28 @@
 /*
- * ubirch#1 M66 Modem core functionality interface.
+ * QuectelM66Interface.cpp
  *
- * @author Niranjan Rao
- * @date 2017-02-09
+ * Copyright (C) 2017 world-direct.at, MIT License
  *
- * @copyright &copy; 2015, 2016 ubirch GmbH (https://ubirch.com)
+ * Created: 21.04.2017
+ * Author:	Simon Pfeifhofer
+ * EMail:	simon.pfeifhofer@world-direct.at
  *
- * ```
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Description:
+ *	 Contains the NetworkInterface implementation for the modem.
+ *   Uses the QuectelM66CommandCoordinator for the power-on sequence and PPP-dialing.
+ *   Uses LWIP PPPOS for the PPP-communication.
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ```
- */
+ */ 
 
 #include <string.h>
 #include "wd_logging.h"
 
 #include "QuectelM66Interface.h"
 #include "SerialStreamAdapter.h"
-#include "SerialBuffer/BufferedSerial.h"
+#include "BufferedSerial.h"
 
 extern "C" {
-	#include "lwip/lwip_quectelm66_stack.h"
+	#include "lwip_quectelm66_stack.h"
 }
 
 
@@ -141,8 +134,6 @@ nsapi_error_t QuectelM66Interface::connect() {
 	
 	serialStreamAdapterWrapper = this->_serialStreamAdapter;
 	
-	//this->_serialStreamAdapter->attach(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_notify), SerialBase::RxIrq);
-	
 	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_START_SIGNAL);
 	
 	serial_io_fns fns;
@@ -164,26 +155,18 @@ nsapi_error_t QuectelM66Interface::connect() {
 	
 }
 
-//void QuectelM66Interface::serial_read_notify() {
-//	
-//	//wd_log_debug("QuectelM66Interface --> Performing serial-read notification for ppp");
-//	//_readNotificationQueue.put(this);
-//	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_DATA_SIGNAL);
-//	
-//}
-
 void QuectelM66Interface::serial_read_thread_entry() {
 	
 	wd_log_debug("QuectelM66Interface --> serial_read_thread_entry");
 	
 	this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_START_SIGNAL);
 	this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_STOP_SIGNAL);
-	//this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_DATA_SIGNAL);
 	
 	do {
 	
 		this->_readProcessingThread.signal_wait(QUECTEL_M66_PPP_READ_START_SIGNAL);
 		wd_log_debug("QuectelM66Interface --> QUECTEL_M66_PPP_READ_START_SIGNAL received");
+		this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_START_SIGNAL);
 	
 		int size;
 		do {
@@ -196,6 +179,7 @@ void QuectelM66Interface::serial_read_thread_entry() {
 			
 		} while (this->_readProcessingThread.signal_wait(QUECTEL_M66_PPP_READ_STOP_SIGNAL, 0).status != osEventSignal);
 		wd_log_debug("QuectelM66Interface --> QUECTEL_M66_PPP_READ_STOP_SIGNAL received");
+		this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_STOP_SIGNAL);
 	
 	} while (true);
 		

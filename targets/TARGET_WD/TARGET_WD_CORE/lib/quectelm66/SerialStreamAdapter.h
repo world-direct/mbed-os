@@ -8,8 +8,7 @@
  * EMail:	simon.pfeifhofer@world-direct.at
  *
  * Description:
- *		Creates an IOStream-adapter for a BufferedSerial-instance. 
- *		to be able to use PPP with the M66ATParser.
+ *		Creates an IOStream-adapter for a BufferedSerial-instance.
  *
  */ 
 

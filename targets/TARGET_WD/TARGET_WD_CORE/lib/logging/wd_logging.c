@@ -1,3 +1,17 @@
+/*
+ * wd_logging.c
+ *
+ * Copyright (C) 2017 world-direct.at, MIT License
+ *
+ * Created: 21.04.2017
+ * Author:	Simon Pfeifhofer
+ * EMail:	simon.pfeifhofer@world-direct.at
+ *
+ * Description:
+ *	 Contains logging-helpers.
+ *
+ */ 
+
 #include "wd_logging.h"
 
 void wd_log(int level, const char *format, va_list args) {
