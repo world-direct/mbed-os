@@ -92,7 +92,7 @@ void analogin_init(analogin_t *obj, PinName pin)
 #endif
     // Configure ADC
     AdcHandle.Instance = (ADC_TypeDef *)(obj->adc);
-    AdcHandle.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;
+    AdcHandle.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4;
     AdcHandle.Init.Resolution            = ADC_RESOLUTION12b;
     AdcHandle.Init.ScanConvMode          = DISABLE;
     AdcHandle.Init.ContinuousConvMode    = DISABLE;
