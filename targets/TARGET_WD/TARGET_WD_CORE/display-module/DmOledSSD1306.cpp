@@ -89,7 +89,15 @@ ___________________IMPLEMENTATION______________________
 DmOledSSD1306::DmOledSSD1306(PinName mosi, PinName sck, PinName cs, PinName dc, PinName rst) : DmOledBase(SSD1306_LCDWIDTH, SSD1306_LCDHEIGHT) {
 	_pinCS = new DigitalOut(cs, 1);
 	_pinDC = new DigitalOut(dc, 0);
-	_pinRST = new DigitalOut(rst, 1);	// initialize with output high
+	
+	if(rst == NC){
+		_useReset = false;
+		_pinRST = NULL;
+	} else {
+		_useReset = true;
+		_pinRST = new DigitalOut(rst, 1);	// initialize with output high
+	}
+	
 	_spi = new SPI(mosi, NC, sck);
 	#ifdef SSD1306_SPI_USE_NSCK
 	_spi->format(8, 3);					// mode 3 as we use nSCK!
@@ -187,6 +195,7 @@ void DmOledSSD1306::dim(bool dim) {
 	sendCommand(dim ? 0 : 0xCF);
 }
 
+// TODO: async SPI transfer with cb
 void DmOledSSD1306::refresh(void) {
 	
 	sendCommand(SSD1306_COLUMNADDR);
@@ -224,14 +233,15 @@ void DmOledSSD1306::init(void){
 	setTextColor(BLACK, WHITE);
 	
 	// power-on sequence
-	_pinRST->write(1);
-	// VDD (3.3V) goes high upon start-up, lets just chill for a ms
-	wait_ms(1);
-	_pinRST->write(0);
-	wait_ms(10);
-	_pinRST->write(1);
-	wait_ms(1);
-	
+	if (_useReset) {
+		_pinRST->write(1);
+		// VDD (3.3V) goes high upon start-up, lets just chill for a ms
+		wait_ms(1);
+		_pinRST->write(0);
+		wait_ms(10);
+		_pinRST->write(1);
+		wait_ms(1);
+	}
 	// init sequence
 	sendCommand(SSD1306_DISPLAYOFF);
 	
@@ -541,4 +551,54 @@ void DmOledSSD1306::drawVerticalLineInternal(uint16_t x, uint16_t y, uint16_t le
 	}
 }
 
+void DmOledSSD1306::startScrollRight(uint8_t start, uint8_t stop) {
+	sendCommand(SSD1306_RIGHT_HORIZONTAL_SCROLL);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(start);
+	sendCommand(0x00);	// Time interval - 5 frames.
+	sendCommand(stop);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(0xFF);	// Dummy byte.
+	sendCommand(SSD1306_ACTIVATE_SCROLL);
+}
 
+void DmOledSSD1306::startScrollLeft(uint8_t start, uint8_t stop) {
+	sendCommand(SSD1306_LEFT_HORIZONTAL_SCROLL);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(start);
+	sendCommand(0x00);	// Time interval - 5 frames.
+	sendCommand(stop);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(0xFF);	// Dummy byte.
+	sendCommand(SSD1306_ACTIVATE_SCROLL);
+}
+
+void DmOledSSD1306::startScrollDiagRight(uint8_t start, uint8_t stop) {
+//	sendCommand(SSD1306_SET_VERTICAL_SCROLL_AREA);
+//	sendCommand(0x00);	// No. of rows in top fixed area.
+//	sendCommand(SSD1306_LCDHEIGHT);	// No. of rows in scroll area for vertical scrolling.
+	sendCommand(SSD1306_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(start);
+	sendCommand(0x00);	// Time interval - 5 frames.
+	sendCommand(stop);
+	sendCommand(0x01);	// Vertical scrolling offset - 1 row.
+	sendCommand(SSD1306_ACTIVATE_SCROLL);
+}
+
+void DmOledSSD1306::startScrollDiagLeft(uint8_t start, uint8_t stop) {
+	sendCommand(SSD1306_SET_VERTICAL_SCROLL_AREA);
+	sendCommand(0x00);	// No. of rows in top fixed area.
+	sendCommand(SSD1306_LCDHEIGHT);	// No. of rows in scroll area for vertical scrolling.
+	sendCommand(SSD1306_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL);
+	sendCommand(0x00);	// Dummy byte.
+	sendCommand(start);
+	sendCommand(0x00);	// Time interval - 5 frames.
+	sendCommand(stop);
+	sendCommand(0x01);	// Vertical scrolling offset - 1 row.
+	sendCommand(SSD1306_ACTIVATE_SCROLL);
+}
+
+void DmOledSSD1306::stopScroll(void) {
+	sendCommand(SSD1306_DEACTIVATE_SCROLL);
+}

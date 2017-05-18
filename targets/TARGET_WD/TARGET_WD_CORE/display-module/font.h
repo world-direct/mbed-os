@@ -1,3 +1,16 @@
+/*
+ * font.h
+ *
+ * Copyright (C) 2017 world-direct.at, MIT License
+ *
+ * Created:	15.05.2017
+ * Author:	Patrick Frischmann
+ * EMail:	patrick.frischmann@world-direct.at
+ *
+ * Description:
+ *        Simple font.
+ *
+ */
 static unsigned char font[] = {
     0x00, 0x00, 0x00, 0x00, 0x00,   
     0x3E, 0x5B, 0x4F, 0x5B, 0x3E,     

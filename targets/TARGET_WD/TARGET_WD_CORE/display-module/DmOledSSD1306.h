@@ -100,20 +100,106 @@ ___________________DECLARATION_________________________
 ******************************************************/
 class DmOledSSD1306 : public DmOledBase {
 public:
-	DmOledSSD1306(PinName mosi, PinName sck, PinName cs, PinName dc, PinName rst);
+	DmOledSSD1306(PinName mosi, PinName sck, PinName cs, PinName dc, PinName rst = NC);
 	virtual ~DmOledSSD1306();
+	
+	/** @brief Initialize display functionality (needs to be called before any further access).
+	 *
+     */
 	virtual void init(void);
 	
+	/** @brief Refresh the display, i.e. load previously modified buffer contents into GDDRAM.
+	 *
+     */
 	void refresh(void);
+	
+	/** @brief Clear the display buffer contents (needs @ref refresh() afterwards).
+	 *
+     */
 	void clearDisplay(void);
+	
+	/** @brief Load the company logo into the buffer (needs @ref refresh() afterwards).
+	 *
+     */
 	void loadLogo(void);
 	
+	/** @brief Invert the display colors.
+	 *
+	 * @param invert Specify if invert or revert should be performed.
+     */
 	void invertDisplay(bool invert = true);
+	
+	/** @brief Dim the display brightness (Reduce contrast).
+	 *
+	 * @param dim Specify if dim or revert should be performed.
+     */
 	void dim(bool dim = true);
 	
+	/** @brief Start scrolling to the right.
+	 *
+	 *	Overall, we have 8 pages to scroll through (0-7).
+	 *
+	 * @param start Row where to start.
+	 * @param stop Row where to stop.
+     */
+	void startScrollRight(uint8_t start, uint8_t stop);
+	
+	/** @brief Start scrolling to the left.
+	 *
+	 *	Overall, we have 8 pages to scroll through (0-7).
+	 *
+	 * @param start Row where to start.
+	 * @param stop Row where to stop.
+     */
+	void startScrollLeft(uint8_t start, uint8_t stop);
+
+	/** @brief Start a diagonal scroll to the right.
+	 *
+	 *	Overall, we have 8 pages to scroll through (0-7).
+	 *
+	 * @param start Row where to start.
+	 * @param stop Row where to stop.
+     */
+	void startScrollDiagRight(uint8_t start, uint8_t stop);
+	
+	/** @brief Start a diagonal scroll to the left.
+	 *
+	 *	Overall, we have 8 pages to scroll through (0-7).
+	 *
+	 * @param start Row where to start.
+	 * @param stop Row where to stop.
+     */
+	void startScrollDiagLeft(uint8_t start, uint8_t stop);
+	
+	/** @brief Stop scrolling. After execution RAM data needs to be rewritten.
+	 *
+     */
+	void stopScroll(void);
+	
+	/** @brief Set a pixel to a specified color. This is the basic operation for more advanced operations.
+	 *
+	 * @param x Distance on x-axis for coordinate discription.
+	 * @param y Distance on y-axis for coordinate discription.
+	 * @param color Color code (for monochromatic display we may only use black or white).
+     */
 	void setPixel(uint16_t x, uint16_t y, uint16_t color);
 	
+	/** @brief Draw a line in vertical direction.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param length Length of the line to be drawn.
+	 * @param color Color code (for monochromatic display we may only use black or white).
+     */
 	virtual void drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
+	
+	/** @brief Draw a line in horizontal direction.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param length Length of the line to be drawn.
+	 * @param color Color code (for monochromatic display we may only use black or white).
+     */
 	virtual void drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
 	
 private:
@@ -129,6 +215,7 @@ private:
 	inline void drawVerticalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
 	inline void drawHorizontalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
 	
+	bool _useReset;
 	DigitalOut* _pinCS;
 	DigitalOut* _pinDC;
 	DigitalOut* _pinRST;

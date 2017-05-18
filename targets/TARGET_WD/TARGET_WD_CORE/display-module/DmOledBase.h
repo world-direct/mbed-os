@@ -59,32 +59,133 @@ public:
 	void setWidth(uint16_t width) { _width = width; }
 	void setHeight(uint16_t height) { _height = height; }
 	
+	/** @brief Set the color of the text.
+	 *
+	 * @param background Background color.
+	 * @param foreground Foreground color.
+     */
 	void setTextColor(uint16_t background, uint16_t foreground) { _bgColor = background; _fgColor = foreground; }
+
+	/** @brief Set the cursor for text start position.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+     */
 	inline void setTextCursor(int16_t x, int16_t y) { cursorX = x; cursorY = y; };
+	
+	/** @brief Set the size of the text.
+	 *
+	 * @param s Size discriptor (default = 1).
+     */
 	inline void setTextSize(uint8_t s) { textsize = (s > 0) ? s : 1; };
 	
+	/** @brief Set a pixel to a specified color. This is the basic operation for more advanced operations. Needs to be implemented in derived class.
+	 *
+	 * @param x Distance on x-axis for coordinate discription.
+	 * @param y Distance on y-axis for coordinate discription.
+	 * @param color Color code (for monochromatic display we may only use black or white).
+     */
 	virtual void setPixel(uint16_t x, uint16_t y, uint16_t color) = 0;
-	virtual void invertDisplay(bool invert = true) {};	// optional
+	
+	/** @brief Invert the display colors. Implementation is optional
+	 *
+	 * @param invert Specify if invert or revert should be performed.
+     */
+	virtual void invertDisplay(bool invert = true) {};
 	
 	// Stream implementation - provides printf() interface
 	virtual int _putc(int value) { return writeChar(value); };
     virtual int _getc() { return -1; };
 	
+	/** @brief Draw a line.
+	 *
+	 * @param x0 Distance of starting point on x-axis for coordinate discription.
+	 * @param y0 Distance of starting point on y-axis for coordinate discription.
+	 * @param x1 Distance of end point on x-axis for coordinate discription.
+	 * @param y1 Distance of end point on y-axis for coordinate discription.
+	 * @param color Color code.
+     */
 	virtual void drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+	
+	/** @brief Draw a line in vertical direction. Improved implementation may be provided in derived class.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param length Length of the line to be drawn.
+	 * @param color Color code.
+     */
 	virtual void drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
+	
+	/** @brief Draw a line in hoizontal direction. Improved implementation may be provided in derived class.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param length Length of the line to be drawn.
+	 * @param color Color code.
+     */
 	virtual void drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, uint16_t color);
  
+	/** @brief Draw a rectangle. Improved implementation may be provided in derived class.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param width Width of the rectangle.
+	 * @param height Height of the rectangle.
+	 * @param color Color code.
+     */
 	virtual void drawRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
+	
+	/** @brief Draw and fill rectangle. Improved implementation may be provided in derived class.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param width Width of the rectangle.
+	 * @param height Height of the rectangle.
+	 * @param color Color code.
+     */
 	virtual void fillRectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
  
+	/** @brief Fill the whole screen with a specified color.
+	 *
+	 * @param color Color code.
+     */
 	virtual void fillScreen(uint16_t color);
 	
+	/** @brief Draw a character.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param ch The character to be drawn.
+	 * @param color Color code.
+	 * @param bg The background color.
+	 * @param size The size of the character.
+     */
 	void drawChar(uint16_t x, uint16_t y, char ch, uint16_t color, uint16_t bg, uint8_t size);
+	
+	/** @brief Write a character.
+	 *
+	 * @param c The character to write.
+	 *
+	 * @retval 1.
+     */
 	size_t writeChar(uint8_t c);
 	
+	/** @brief Draw a bitmap.
+	 *
+	 * @param x Distance of starting point on x-axis for coordinate discription.
+	 * @param y Distance of starting point on y-axis for coordinate discription.
+	 * @param width Width of the bitmap.
+	 * @param height Height of the bitmap.
+	 * @param bitmap The bitmap to draw.
+	 * @param color Color code.
+     */
 	void drawBitmap(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* bitmap, uint16_t color);
  
-    void setRotation(uint8_t r); // Set the display rotation, 1, 2, 3, or 4
+	/** @brief Set the display rotation.
+	 *
+	 * @param r Rotation specifier (1, 2, 3 or 4)
+     */
+    void setRotation(uint8_t r);
     inline uint8_t getRotation(void) { rotation %= 4; return rotation; };
 	
 protected:
