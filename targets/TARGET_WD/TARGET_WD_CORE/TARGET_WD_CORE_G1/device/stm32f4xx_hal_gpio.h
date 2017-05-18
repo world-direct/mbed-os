@@ -53,6 +53,7 @@
 /** @addtogroup GPIO
   * @{
   */ 
+	 
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup GPIO_Exported_Types GPIO Exported Types

@@ -65,8 +65,6 @@
 #error "Either IPv4 or IPv6 must be preferred."
 #endif
 
-//#define LWIP_DEBUG
-
 #if NO_SYS == 0
 #include "cmsis_os.h"
 
@@ -180,7 +178,7 @@
 #define LWIP_ND6_QUEUEING           0
 
 // Debug Options
-#define NETIF_DEBUG                 LWIP_DBG_OFF
+#define NETIF_DEBUG                 LWIP_DBG_ON
 #define PBUF_DEBUG                  LWIP_DBG_OFF
 #define API_LIB_DEBUG               LWIP_DBG_OFF
 #define API_MSG_DEBUG               LWIP_DBG_OFF
@@ -204,7 +202,7 @@
 #define TCP_OUTPUT_DEBUG            LWIP_DBG_OFF
 #define TCP_RST_DEBUG               LWIP_DBG_OFF
 #define TCP_QLEN_DEBUG              LWIP_DBG_OFF
-#define UDP_DEBUG                   LWIP_DBG_OFF
+#define UDP_DEBUG                   LWIP_DBG_ON
 #define TCPIP_DEBUG                 LWIP_DBG_OFF
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF

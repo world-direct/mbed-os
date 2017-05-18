@@ -198,8 +198,6 @@ typedef struct
   * @{
   */
 
-#define RTC_LSI		1
-	 
 /** @defgroup RTC_Hour_Formats RTC Hour Formats
   * @{
   */ 

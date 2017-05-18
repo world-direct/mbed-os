@@ -31,14 +31,20 @@ using std::memmove;
 
 #include "ATCommandsInterface.h"
 
-ATCommandsInterface::ATCommandsInterface(IOStream* pStream) :
-   m_pStream(pStream), m_open(false), m_transactionState(IDLE), m_env2AT(), m_AT2Env(), m_processingMtx(),
-   m_processingThread(&ATCommandsInterface::staticCallback, this, (osPriority)AT_THREAD_PRIORITY, 4*192),
-   m_eventsMgmtMtx(), m_eventsProcessingMtx()
+ATCommandsInterface::ATCommandsInterface(IOStream* pStream)
+	: m_pStream(pStream)
+	, m_open(false)
+	, m_transactionState(IDLE)
+	, m_env2AT()
+	, m_AT2Env()
+	, m_processingMtx()
+	, m_processingThread(&ATCommandsInterface::staticCallback, this, (osPriority)AT_THREAD_PRIORITY, 4 * 192)
+	, m_eventsMgmtMtx()
+	, m_eventsProcessingMtx()
 {
-  memset(m_eventsHandlers, 0, MAX_AT_EVENTS_HANDLERS * sizeof(IATEventsHandler*));
-
-  m_processingMtx.lock();
+	memset(m_eventsHandlers, 0, MAX_AT_EVENTS_HANDLERS * sizeof(IATEventsHandler*));
+	
+	m_processingMtx.lock();
 }
 
 //Open connection to AT Interface in order to execute command & register/unregister events

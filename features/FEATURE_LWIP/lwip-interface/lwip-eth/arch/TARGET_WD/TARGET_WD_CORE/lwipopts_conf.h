@@ -64,4 +64,7 @@
  */
 #define MEMP_NUM_TCPIP_MSG_INPKT    16
 
+
+#define LWIP_DEBUG
+
 #endif
