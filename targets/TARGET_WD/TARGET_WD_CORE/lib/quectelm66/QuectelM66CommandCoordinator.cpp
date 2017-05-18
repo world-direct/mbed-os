@@ -60,19 +60,32 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// 1. Power OFF : Pull Power Key from high to low, then cut off power after 12s. 
 	// 2. Power ON : Pull Power Key to low within 1s. 
 	// 3. Pull Power Key back to high when finishing Power OFF or Power ON.
-	wd_log_info("QuectelM66CommandCoordinator --> Power On the Module");
-	_pwrKeyPin = 0;
-	wait_ms(1000);
-	_pwrKeyPin = 1;
+	wd_log_info("QuectelM66CommandCoordinator --> Power On the Module (if necessary power off)");
+	
+	if (_vdd_extPin){
+		
+		wd_log_debug("QuectelM66CommandCoordinator --> Power down");
+		_pwrKeyPin = 1;
+		wait_ms(900);
+		_pwrKeyPin = 0;
+		do {
+			wd_log_info("QuectelM66CommandCoordinator --> Waiting until VDD_EXT goes down");
+			wait_ms(100);	
+		} while (_vdd_extPin);
+		wd_log_debug("QuectelM66CommandCoordinator --> Modem powered down");
+		
+	}
+	
+	wd_log_debug("QuectelM66CommandCoordinator --> Power up");
+	
+	// wait for 100ms to allow VBAT to get stable
 	wait_ms(100);
-	_pwrKeyPin = 0;
+	
+	_pwrKeyPin = 1;
 	do {
-		wd_log_info("QuectelM66CommandCoordinator --> Waiting until VDD_EXT signals");
+		wd_log_info("QuectelM66CommandCoordinator --> Waiting until VDD_EXT goes up");
 		wait_ms(100);	
 	} while (_vdd_extPin == 0);
-	wait_ms(1000);
-	_pwrKeyPin = 1;
-	wd_log_debug("QuectelM66CommandCoordinator --> Waiting until VDD_EXT signals succeeded");
 	
 	// ====== AT ========
 	// Open ATCommandsInterface

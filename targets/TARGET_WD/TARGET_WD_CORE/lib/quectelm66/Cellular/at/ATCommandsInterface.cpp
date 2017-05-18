@@ -326,7 +326,7 @@ int ATCommandsInterface::tryReadLine()
 	size_t readLen = 0;
 	if (ret == OK)
 	{
-		ret = m_pStream->read((uint8_t*)m_inputBuf + m_inputPos, &readLen, AT_INPUT_BUF_SIZE - 1 - m_inputPos, 1000); 
+		ret = m_pStream->read((uint8_t*)m_inputBuf + m_inputPos, &readLen, AT_INPUT_BUF_SIZE - 1 - m_inputPos, 100); 
 	}
 	if (ret == OK)
 	{
