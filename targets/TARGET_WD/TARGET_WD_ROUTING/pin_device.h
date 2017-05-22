@@ -27,86 +27,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************
  */
-#ifndef MBED_COMMON_OBJECTS_H
-#define MBED_COMMON_OBJECTS_H
+#ifndef MBED_PIN_DEVICE_H
+#define MBED_PIN_DEVICE_H
 
 #include "cmsis.h"
-#include "PortNames.h"
-#include "PeripheralNames.h"
-#include "PinNames.h"
+#include "stm32f1xx_ll_gpio.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+extern const uint32_t ll_pin_defines[16];
 
-struct serial_s {
-    UARTName uart;
-    int index;
-    uint32_t baudrate;
-    uint32_t databits;
-    uint32_t stopbits;
-    uint32_t parity;
-    PinName pin_tx;
-    PinName pin_rx;
-#if DEVICE_SERIAL_ASYNCH
-    uint32_t events;
-#endif
-#if DEVICE_SERIAL_FC
-    uint32_t hw_flow_ctl;
-    PinName pin_rts;
-    PinName pin_cts;
-#endif
-};
-	
-	
-struct spi_s {
-	SPI_HandleTypeDef handle;
-	IRQn_Type spiIRQ;
-	SPIName spi;
-	PinName pin_miso;
-	PinName pin_mosi;
-	PinName pin_sclk;
-	PinName pin_ssel;
-#ifdef DEVICE_SPI_ASYNCH
-	uint32_t event;
-	uint8_t transfer_type;
-#endif
-};
-
-struct i2c_s {
-	/*  The 1st 2 members I2CName i2c
-		*  and I2C_HandleTypeDef handle should
-		*  be kept as the first members of this struct
-		*  to have get_i2c_obj() function work as expected
-		*/
-	I2CName  i2c;
-	I2C_HandleTypeDef handle;
-	uint8_t index;
-	int hz;
-	PinName sda;
-	PinName scl;
-	IRQn_Type event_i2cIRQ;
-	IRQn_Type error_i2cIRQ;
-	uint8_t XferOperation;
-	volatile uint8_t event;
-#if DEVICE_I2CSLAVE
-	uint8_t slave;
-	volatile uint8_t pending_slave_tx_master_rx;
-	volatile uint8_t pending_slave_rx_maxter_tx;
-#endif
-#if DEVICE_I2C_ASYNCH
-	uint32_t address;
-	uint8_t stop;
-	uint8_t available_events;
-#endif
-};
-
-#define GPIO_IP_WITHOUT_BRR
-#include "gpio_object.h"
-
-#ifdef __cplusplus
+/* Family specific implementations */
+static inline void stm_pin_DisconnectDebug(PinName pin)
+{
+    /* empty for now */
 }
-#endif
+
+static inline void stm_pin_PullConfig(GPIO_TypeDef *gpio, uint32_t ll_pin, uint32_t pull_config)
+{
+	switch (pull_config) {
+	case GPIO_PULLUP:
+		LL_GPIO_SetPinPull(gpio, ll_pin, LL_GPIO_PULL_UP);
+		break;
+	case GPIO_PULLDOWN:
+		LL_GPIO_SetPinPull(gpio, ll_pin, LL_GPIO_PULL_DOWN);
+		break;
+	default:
+		LL_GPIO_SetPinPull(gpio, ll_pin, LL_GPIO_PULL_NO);
+		break;
+	}
+}
+
+static inline void stm_pin_SetAFPin(GPIO_TypeDef *gpio, PinName pin, uint32_t afnum)
+{
+	uint32_t ll_pin  = ll_pin_defines[STM_PIN(pin)];
+
+	if (STM_PIN(pin) > 7)
+		LL_GPIO_SetAFPin_8_15(gpio, ll_pin, afnum);
+	else
+		LL_GPIO_SetAFPin_0_7(gpio, ll_pin, afnum);
+}
 
 #endif
-

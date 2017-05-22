@@ -31,7 +31,24 @@
   *    When HSE is used as system clock source, directly or through PLL, and you
   *    are using different crystal you have to adapt the HSE value to your own
   *    configuration.
-  *        
+  *
+  * This file configures the system clock as follows:
+  *-----------------------------------------------------------------------------
+  * System clock source                | 1- PLL_HSE_EXTC        | 3- PLL_HSI
+  *                                    | (external 8 MHz clock) | (internal 8 MHz)
+  *                                    | 2- PLL_HSE_XTAL        |
+  *                                    | (external 8 MHz xtal)  |
+  *-----------------------------------------------------------------------------
+  * SYSCLK(MHz)                        | 72                     | 64
+  *-----------------------------------------------------------------------------
+  * AHBCLK (MHz)                       | 72                     | 64
+  *-----------------------------------------------------------------------------
+  * APB1CLK (MHz)                      | 36                     | 32
+  *-----------------------------------------------------------------------------
+  * APB2CLK (MHz)                      | 72                     | 64
+  *-----------------------------------------------------------------------------
+  * USB capable (48 MHz precise clock) | NO                     | NO
+  *-----------------------------------------------------------------------------
   ******************************************************************************
   * @attention
   *
@@ -75,6 +92,7 @@
   */
 
 #include "stm32f1xx.h"
+#include "hal_tick.h"
 
 /**
   * @}
