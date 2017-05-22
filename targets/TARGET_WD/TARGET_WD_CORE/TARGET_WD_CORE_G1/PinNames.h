@@ -32,9 +32,6 @@
 
 #include "cmsis.h"
 #include "PinNamesTypes.h"
-#include "main.h"
-
-// TODO: map pins correctly (see main.h)!!!
 
 #ifdef __cplusplus
 extern "C" {
@@ -163,7 +160,6 @@ typedef enum {
     PH_0  = 0x70,
     PH_1  = 0x71,
 
-	
 	// ADC internal channels
     ADC_TEMP = 0xF0,
     ADC_VREF = 0xF1,
@@ -174,9 +170,11 @@ typedef enum {
     SERIAL_RX   = PE_7, // Virtual Com Port
     USBTX       = PE_8, // Virtual Com Port
     USBRX       = PE_7, // Virtual Com Port
+	
 	I2C_SCL     = PB_8,
     I2C_SDA     = PB_9,
-    SPI_MOSI    = PB_5,
+    
+	SPI_MOSI    = PB_5,
     SPI_MISO    = PA_6,
     SPI_SCK     = PA_5,
     SPI_CS0     = PD_12,
@@ -185,8 +183,33 @@ typedef enum {
 	SPI_CS3     = PD_15,
 	SPI_CS4     = PC_6,
 	
-	LED1        = RGBLED1_GN_Pin,
-	LED_RED		= PE_12,	// for mbed_die() error signalling
+	N_WAKEUP	= PD_9,
+	OLED_A0		= PD_10,
+	
+	GSM_NetLig	= PE_2,
+	GSM_RFTxMon = PE_3,
+	GSM_nReset	= PE_6,
+	GSM_RI		= PC_13,
+	GSM_CTS		= PA_0,
+	GSM_RXD		= PA_3,
+	GSM_PWRMON	= PB_14,
+	GSM_ON_OFF	= PB_15,
+	
+	ETH_RXER	= PC_14,
+	ETH_nINT	= PE_4,
+	BUS_nINT	= PE_5,
+		
+	ONEWIRE_TxH	= PB_0,
+	ONEWIRE_Tx	= PB_1,
+	ONEWIRE_Rx	= PB_2,
+	
+	BUS_LED		= PE_10,
+	RGBLED1_BL	= PE_11,
+	LED_RED		= PE_12,	// RGBLED1_RT; for mbed_die() error signalling
+	LED1        = PE_13,	// RGBLED1_GN
+	RGBLED2_BL	= PE_14,
+	RGBLED2_RT	= PE_15,
+	RGBLED2_GN	= PB_10,
 	
     // Not connected
     NC = (int)0xFFFFFFFF
