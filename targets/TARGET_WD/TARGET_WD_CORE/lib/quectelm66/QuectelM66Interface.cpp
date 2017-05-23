@@ -60,7 +60,7 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 		
 	if (!this->_commandCoordinator.startup()) {
 		wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
-		mbed_die();
+		NVIC_SystemReset();
 	}
 		
 	wd_log_info("QuectelM66Interface --> RSSI: %d", this->_commandCoordinator.GetRSSI());
@@ -77,7 +77,7 @@ QuectelM66Interface::~QuectelM66Interface() {
 	
 	if (!this->_commandCoordinator.shutdown()) {
 		wd_log_debug("QuectelM66Interface --> Interface couldn't be brought down, system reset");
-		mbed_die();
+		NVIC_SystemReset();
 	}
 	
 }
