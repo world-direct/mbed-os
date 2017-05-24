@@ -38,7 +38,6 @@
 #include <string.h>
 #include "PeripheralPins.h"
 #include "mbed_error.h"
-#include "stm32f4xx_hal.h"
 
 #define UART_NUM (7)
 static uint32_t serial_irq_ids[UART_NUM] = {0};

@@ -6,8 +6,7 @@
 #include <string.h>
 #include "cmsis_os.h"
 #include "mbed_interface.h"
-#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx.h"
-#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal.h"
+#include "cmsis.h"
 
 #define RECV_TASK_PRI           (osPriorityHigh)
 #define PHY_TASK_PRI            (osPriorityLow)

@@ -34,4 +34,21 @@
 
 #endif
 
+#if defined(TARGET_WD_ROUTINGMAX_G1)
+
+#ifndef INITIAL_SP
+#define INITIAL_SP              (0x20030000UL)
+#endif
+#ifndef OS_TASKCNT
+#define OS_TASKCNT              14
+#endif
+#ifndef OS_MAINSTKSIZE
+#define OS_MAINSTKSIZE          256
+#endif
+#ifndef OS_CLOCK
+#define OS_CLOCK                72000000
+#endif
+
+#endif
+
 #endif  // MBED_MBED_RTX_H
