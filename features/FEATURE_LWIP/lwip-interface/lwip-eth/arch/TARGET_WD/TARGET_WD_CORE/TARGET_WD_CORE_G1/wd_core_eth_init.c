@@ -1,6 +1,5 @@
 #include <string.h>
-#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx.h"
-#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal.h"
+#include "cmsis.h"
 #include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/25AA02E48_EEPROM.h"
 #include "toolchain.h"
 
