@@ -171,6 +171,9 @@ typedef enum {
     USBTX       = PE_8, // Virtual Com Port
     USBRX       = PE_7, // Virtual Com Port
 	
+	BUS_RxD0	= PC_11,
+	BUS_TxD0	= PC_10,
+	
 	I2C_SCL     = PB_8,
     I2C_SDA     = PB_9,
     
@@ -192,10 +195,11 @@ typedef enum {
 	GSM_RI		= PC_13,
 	GSM_CTS		= PA_0,
 	GSM_RXD		= PA_3,
+	GSM_TXD		= PD_5,
 	GSM_PWRMON	= PB_14,
 	GSM_ON_OFF	= PB_15,
 	
-	ETH_RXER	= PC_14,
+	ETH_RXER	= PB_10,
 	ETH_nINT	= PE_4,
 	BUS_nINT	= PE_5,
 		
@@ -205,11 +209,13 @@ typedef enum {
 	
 	BUS_LED		= PE_10,
 	RGBLED1_BL	= PE_11,
-	LED_RED		= PE_12,	// RGBLED1_RT; for mbed_die() error signalling
-	LED1        = PE_13,	// RGBLED1_GN
+	LED_RED		= PE_12,	// for mbed_die() error signalling
+	RGBLED1_RT	= LED_RED,
+	LED1        = PE_13,
+	RGBLED1_GN	= LED1,
 	RGBLED2_BL	= PE_14,
 	RGBLED2_RT	= PE_15,
-	RGBLED2_GN	= PB_10,
+	RGBLED2_GN	= PE_9,
 	
     // Not connected
     NC = (int)0xFFFFFFFF
