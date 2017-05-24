@@ -39,7 +39,6 @@
 #include "pinmap.h"
 #include "PeripheralPins.h"
 #include "i2c_device.h" // family specific defines
-#include "TARGET_WD_CORE_G1/device/stm32f4xx_hal_i2c.h"
 
 #ifndef DEBUG_STDIO
 #   define DEBUG_STDIO 0

@@ -42,20 +42,18 @@
 #include "stm32f1xx.h"
 #include "cmsis_nvic.h"
    
-#define TIM_MST      TIM5
-#define TIM_MST_IRQ  TIM5_IRQn
-#define TIM_MST_RCC  __TIM5_CLK_ENABLE()
+#define TIM_MST      TIM4
+#define TIM_MST_IRQ  TIM4_IRQn
+#define TIM_MST_RCC  __TIM4_CLK_ENABLE()
 
-#define TIM_MST_RESET_ON   __TIM5_FORCE_RESET()
-#define TIM_MST_RESET_OFF  __TIM5_RELEASE_RESET()
+#define TIM_MST_RESET_ON   __TIM4_FORCE_RESET()
+#define TIM_MST_RESET_OFF  __TIM4_RELEASE_RESET()
 
-#define TIM_MST_16BIT  0 // 1=16-bit timer, 0=32-bit timer
+#define TIM_MST_16BIT  1 // 1=16-bit timer, 0=32-bit timer
 
 #define TIM_MST_PCLK  1 // Select the peripheral clock number (1 or 2)
 
 #define HAL_TICK_DELAY (1000) // 1 ms
-
-void HAL_SuspendTick(void);
 
 #ifdef __cplusplus
 }

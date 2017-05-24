@@ -32,7 +32,6 @@
 #include "rtc_api.h"
 #include "rtc_api_hal.h"
 #include "mbed_error.h"
-#include "targets/TARGET_WD/TARGET_WD_CORE/TARGET_WD_CORE_G1/device/stm32f4xx_hal_rtc.h"
 
 static RTC_HandleTypeDef RtcHandle;
 
@@ -120,16 +119,16 @@ void rtc_init(void)
 	    // Enable RTC
 	__HAL_RCC_RTC_ENABLE();
 
-#if TARGET_STM32F1
+#if TARGET_WD_ROUTINGMAX /* STM32F1 */
 	RtcHandle.Init.AsynchPrediv = RTC_AUTO_1_SECOND;
-#else /* TARGET_STM32F1 */
+#else /* TARGET_WD_ROUTINGMAX */
 	RtcHandle.Init.HourFormat     = RTC_HOURFORMAT_24;
 	RtcHandle.Init.AsynchPrediv   = RTC_ASYNCH_PREDIV;
 	RtcHandle.Init.SynchPrediv    = RTC_SYNCH_PREDIV;
 	RtcHandle.Init.OutPut         = RTC_OUTPUT_DISABLE;
 	RtcHandle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
 	RtcHandle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
-#endif /* TARGET_STM32F1 */
+#endif /* TARGET_WD_ROUTINGMAX */
 
 	if (HAL_RTC_Init(&RtcHandle) != HAL_OK) {
 		error("RTC error: RTC initialization failed.");
@@ -217,7 +216,12 @@ time_t rtc_read(void)
 	timeinfo.tm_min  = timeStruct.Minutes;
 	timeinfo.tm_sec  = timeStruct.Seconds;
 	// Daylight Saving Time information is not available
-	timeinfo.tm_isdst  = RTC_DAYLIGHTSAVING_NONE;
+	timeinfo.tm_isdst = 
+		#if RTC_DAYLIGHTSAVING_NONE
+			RTC_DAYLIGHTSAVING_NONE;
+		#else
+			-1;	
+		#endif // RTC_DAYLIGHTSAVING_NONE
 
     // Convert to timestamp
 	time_t t = mktime(&timeinfo);
@@ -251,11 +255,11 @@ void rtc_write(time_t t)
 	timeStruct.Minutes        = timeinfo->tm_min;
 	timeStruct.Seconds        = timeinfo->tm_sec;
 
-#if !(TARGET_STM32F1)
+#if !(TARGET_WD_ROUTINGMAX)
 	timeStruct.TimeFormat     = RTC_HOURFORMAT_24;
 	timeStruct.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	timeStruct.StoreOperation = RTC_STOREOPERATION_RESET;
-#endif /* TARGET_STM32F1 */
+#endif /* TARGET_WD_ROUTINGMAX */
 
 	    // Change the RTC current date/time
 	HAL_RTC_SetDate(&RtcHandle, &dateStruct, FORMAT_BIN);
@@ -264,15 +268,19 @@ void rtc_write(time_t t)
 
 int rtc_isenabled(void)
 {
-	if ((RTC->ISR & RTC_ISR_INITS) == RTC_ISR_INITS && 
-		(
-			(RTC->DR & RTC_DR_YU_Msk) != 0 || 
-			(RTC->DR & RTC_DR_YT_Msk) != 0)) {	// safety check as we are in trouble if year = 0
+	#if DEVICE_LOWPOWERTIMER
+		if ((RTC->ISR & RTC_ISR_INITS) == RTC_ISR_INITS && 
+			(
+				(RTC->DR & RTC_DR_YU_Msk) != 0 || 
+				(RTC->DR & RTC_DR_YT_Msk) != 0)) {	// safety check as we are in trouble if year = 0
+			return 1;
+		}
+		else {
+			return 0;
+		}
+	#else /* DEVICE_LOWPOWERTIMER */
 		return 1;
-	}
-	else {
-		return 0;
-	}
+	#endif /* DEVICE_LOWPOWERTIMER */
 }
 
 #if DEVICE_LOWPOWERTIMER

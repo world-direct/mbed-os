@@ -2646,5 +2646,15 @@
     "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "I2CSLAVE", "I2C_ASYNCH", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT", "LOWPOWERTIMER", "ERROR_RED" ],
     "features": [ "LWIP" ],
     "release_versions": [ "5" ]
+  },
+  "WD_ROUTINGMAX_G1": {
+    "inherits": [ "Target" ],
+    "core": "Cortex-M3",
+    "supported_toolchains": [ "GCC_ARM" ],
+    "default_toolchain": "GCC_ARM",
+    "extra_labels": [ "WD", "WD_ROUTING", "WD_ROUTINGMAX" ],
+    "macros": ["RTC_LSI=1"],
+    "device_has": [ "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT" ],
+    "release_versions": [ "5" ]
   }
 }

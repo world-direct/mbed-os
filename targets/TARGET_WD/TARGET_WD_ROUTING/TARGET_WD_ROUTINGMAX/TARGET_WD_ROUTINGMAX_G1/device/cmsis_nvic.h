@@ -34,9 +34,9 @@
 
 // STM32F103RFT6
 // CORE: 16 vectors = 64 bytes from 0x00 to 0x3F
-// MCU Peripherals: 103 vectors
+// MCU Peripherals: 60 vectors
 
-#define NVIC_NUM_VECTORS      (16 + 103)
+#define NVIC_NUM_VECTORS      76
 #define NVIC_USER_IRQ_OFFSET  16
 
 #include "cmsis.h"
@@ -45,8 +45,8 @@
 extern "C" {
 #endif
 
-void __NVIC_SetVector(IRQn_Type IRQn, uint32_t vector);
-uint32_t __NVIC_GetVector(IRQn_Type IRQn);
+void NVIC_SetVector(IRQn_Type IRQn, uint32_t vector);
+uint32_t NVIC_GetVector(IRQn_Type IRQn);
 
 #ifdef __cplusplus
 }

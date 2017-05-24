@@ -138,6 +138,7 @@ typedef enum {
 	ONEWIRE_Rx	= PC_12,
 	
 	BUS_LED		= PB_8,
+	LED1		= BUS_LED,
 	
 	USB_ID		= PA_15,
 	

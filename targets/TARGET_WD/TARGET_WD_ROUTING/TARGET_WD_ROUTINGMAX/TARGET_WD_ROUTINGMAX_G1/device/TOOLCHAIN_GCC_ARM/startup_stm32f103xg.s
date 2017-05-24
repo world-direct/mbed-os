@@ -109,7 +109,6 @@ LoopFillZerobss:
   bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
-  bl SystemInitPre
   bl HAL_InitPre
 #if defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED)
   ldr r0, =uvisor_init

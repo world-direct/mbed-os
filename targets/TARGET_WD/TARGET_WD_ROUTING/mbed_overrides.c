@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library
- *******************************************************************************
- * Copyright (c) 2017, STMicroelectronics
+ * Copyright (c) 2014, STMicroelectronics
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,46 +24,14 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *******************************************************************************
  */
-#ifndef MBED_GPIO_IRQ_DEVICE_H
-#define MBED_GPIO_IRQ_DEVICE_H
+#include "cmsis.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "stm32f1xx_ll_exti.h"
-
-// Number of EXTI irq vectors (EXTI0, EXTI1, EXTI2, EXTI3, EXTI4, EXTI5_9, EXTI10_15)
-#define CHANNEL_NUM (7)
-
-#define EXTI_IRQ0_NUM_LINES 1
-#define EXTI_IRQ1_NUM_LINES 1
-#define EXTI_IRQ2_NUM_LINES 1
-#define EXTI_IRQ3_NUM_LINES 1
-#define EXTI_IRQ4_NUM_LINES 1
-#define EXTI_IRQ5_NUM_LINES 5
-#define EXTI_IRQ6_NUM_LINES 6
-
-// Max pins for one line (max with EXTI10_15)
-#define MAX_PIN_LINE (EXTI_IRQ6_NUM_LINES)
-
-/*  Structure to describe how the HW EXTI lines are defined in this HW */
-typedef struct exti_lines {
-    uint32_t gpio_idx;   // an index entry for each EXIT line
-    uint32_t irq_index;  // the IRQ index
-    IRQn_Type  irq_n;    // the corresponding EXTI IRQn
-} exti_lines_t;
-
-// Used to return the index for channels array.
-extern const exti_lines_t pin_lines_desc[];
-
-/* In F1 family target, SYSCFG is named AFIO */
-#define SYSCFG AFIO
-
-#ifdef __cplusplus
+// This function is called after RAM initialization and before main.
+void mbed_sdk_init()
+{
+    // Update the SystemCoreClock variable.
+    SystemCoreClockUpdate();
+    // Need to restart HAL driver after the RAM is initialized
+    HAL_Init();
 }
-#endif
-
-#endif

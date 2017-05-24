@@ -1,6 +1,8 @@
+// The 'features' section in 'target.json' is now used to create the device's hardware preprocessor switches.
+// Check the 'features' section of the target description in 'targets.json' for more details.
 /* mbed Microcontroller Library
  *******************************************************************************
- * Copyright (c) 2017, STMicroelectronics
+ * Copyright (c) 2014, STMicroelectronics
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,44 +29,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************
  */
-#ifndef MBED_GPIO_IRQ_DEVICE_H
-#define MBED_GPIO_IRQ_DEVICE_H
+#ifndef MBED_DEVICE_H
+#define MBED_DEVICE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//=======================================
+#define DEVICE_ID_LENGTH       24
 
-#include "stm32f1xx_ll_exti.h"
-
-// Number of EXTI irq vectors (EXTI0, EXTI1, EXTI2, EXTI3, EXTI4, EXTI5_9, EXTI10_15)
-#define CHANNEL_NUM (7)
-
-#define EXTI_IRQ0_NUM_LINES 1
-#define EXTI_IRQ1_NUM_LINES 1
-#define EXTI_IRQ2_NUM_LINES 1
-#define EXTI_IRQ3_NUM_LINES 1
-#define EXTI_IRQ4_NUM_LINES 1
-#define EXTI_IRQ5_NUM_LINES 5
-#define EXTI_IRQ6_NUM_LINES 6
-
-// Max pins for one line (max with EXTI10_15)
-#define MAX_PIN_LINE (EXTI_IRQ6_NUM_LINES)
-
-/*  Structure to describe how the HW EXTI lines are defined in this HW */
-typedef struct exti_lines {
-    uint32_t gpio_idx;   // an index entry for each EXIT line
-    uint32_t irq_index;  // the IRQ index
-    IRQn_Type  irq_n;    // the corresponding EXTI IRQn
-} exti_lines_t;
-
-// Used to return the index for channels array.
-extern const exti_lines_t pin_lines_desc[];
-
-/* In F1 family target, SYSCFG is named AFIO */
-#define SYSCFG AFIO
-
-#ifdef __cplusplus
-}
-#endif
+#include "objects.h"
 
 #endif

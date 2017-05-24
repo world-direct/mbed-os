@@ -1,6 +1,6 @@
 /* mbed Microcontroller Library
  *******************************************************************************
- * Copyright (c) 2017, STMicroelectronics
+ * Copyright (c) 2016, STMicroelectronics
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,44 +27,89 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************
  */
-#ifndef MBED_GPIO_IRQ_DEVICE_H
-#define MBED_GPIO_IRQ_DEVICE_H
+#ifndef MBED_COMMON_OBJECTS_H
+#define MBED_COMMON_OBJECTS_H
+
+#include "cmsis.h"
+#include "PortNames.h"
+#include "PeripheralNames.h"
+#include "PinNames.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stm32f1xx_ll_exti.h"
+struct serial_s {
+    UARTName uart;
+    int index;
+    uint32_t baudrate;
+    uint32_t databits;
+    uint32_t stopbits;
+    uint32_t parity;
+    PinName pin_tx;
+    PinName pin_rx;
+#if DEVICE_SERIAL_ASYNCH
+    uint32_t events;
+#endif
+#if DEVICE_SERIAL_FC
+    uint32_t hw_flow_ctl;
+    PinName pin_rts;
+    PinName pin_cts;
+#endif
+};
+	
+#ifdef DEVICE_SPI
+struct spi_s {
+	SPI_HandleTypeDef handle;
+	IRQn_Type spiIRQ;
+	SPIName spi;
+	PinName pin_miso;
+	PinName pin_mosi;
+	PinName pin_sclk;
+	PinName pin_ssel;
+#ifdef DEVICE_SPI_ASYNCH
+	uint32_t event;
+	uint8_t transfer_type;
+#endif
+};
+#endif // DEVICE_SPI
 
-// Number of EXTI irq vectors (EXTI0, EXTI1, EXTI2, EXTI3, EXTI4, EXTI5_9, EXTI10_15)
-#define CHANNEL_NUM (7)
+#ifdef DEVICE_I2C
+struct i2c_s {
+	/*  The 1st 2 members I2CName i2c
+		*  and I2C_HandleTypeDef handle should
+		*  be kept as the first members of this struct
+		*  to have get_i2c_obj() function work as expected
+		*/
+	I2CName  i2c;
+	I2C_HandleTypeDef handle;
+	uint8_t index;
+	int hz;
+	PinName sda;
+	PinName scl;
+	IRQn_Type event_i2cIRQ;
+	IRQn_Type error_i2cIRQ;
+	uint8_t XferOperation;
+	volatile uint8_t event;
+#if DEVICE_I2CSLAVE
+	uint8_t slave;
+	volatile uint8_t pending_slave_tx_master_rx;
+	volatile uint8_t pending_slave_rx_maxter_tx;
+#endif
+#if DEVICE_I2C_ASYNCH
+	uint32_t address;
+	uint8_t stop;
+	uint8_t available_events;
+#endif
+};
+#endif // DEVICE_I2C
 
-#define EXTI_IRQ0_NUM_LINES 1
-#define EXTI_IRQ1_NUM_LINES 1
-#define EXTI_IRQ2_NUM_LINES 1
-#define EXTI_IRQ3_NUM_LINES 1
-#define EXTI_IRQ4_NUM_LINES 1
-#define EXTI_IRQ5_NUM_LINES 5
-#define EXTI_IRQ6_NUM_LINES 6
-
-// Max pins for one line (max with EXTI10_15)
-#define MAX_PIN_LINE (EXTI_IRQ6_NUM_LINES)
-
-/*  Structure to describe how the HW EXTI lines are defined in this HW */
-typedef struct exti_lines {
-    uint32_t gpio_idx;   // an index entry for each EXIT line
-    uint32_t irq_index;  // the IRQ index
-    IRQn_Type  irq_n;    // the corresponding EXTI IRQn
-} exti_lines_t;
-
-// Used to return the index for channels array.
-extern const exti_lines_t pin_lines_desc[];
-
-/* In F1 family target, SYSCFG is named AFIO */
-#define SYSCFG AFIO
+#define GPIO_IP_WITHOUT_BRR
+#include "gpio_object.h"
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+
