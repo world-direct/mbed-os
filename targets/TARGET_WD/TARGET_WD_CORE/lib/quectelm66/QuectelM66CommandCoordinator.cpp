@@ -29,7 +29,7 @@ QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(IOStream* serialStrea
 }
 
 QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(ATCommandsInterface* atCommandsInterface, PinName pwrKey, PinName vdd_ext, const char *apn):
-	_pwrKeyPin(pwrKey)
+	_pwrKeyPin(pwrKey, 0)
 	, _vdd_extPin(vdd_ext)
 	, _apn(apn){
 	
@@ -60,32 +60,40 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// 1. Power OFF : Pull Power Key from high to low, then cut off power after 12s. 
 	// 2. Power ON : Pull Power Key to low within 1s. 
 	// 3. Pull Power Key back to high when finishing Power OFF or Power ON.
-	wd_log_info("QuectelM66CommandCoordinator --> Power On the Module (if necessary power off)");
 	
-	if (_vdd_extPin){
+	// Restart sequence according to M66 Hardware Design Manual (see 3.4.3. Restart)!
+	wd_log_info("QuectelM66CommandCoordinator --> Power On / Restart the Module"); 
+	
+	if (_vdd_extPin){ // modem is always powered so output should be at high level in any case
 		
-		wd_log_debug("QuectelM66CommandCoordinator --> Power down");
-		_pwrKeyPin = 1;
-		wait_ms(900);
+		wd_log_debug("QuectelM66CommandCoordinator --> Turn off");
+		_pwrKeyPin = 1;	//_pwrKeyPin = 1 -> Modem PWRKEY input = 0!
+		wait_ms(850); // 0.7s < Pulldown < 1s
 		_pwrKeyPin = 0;
+		wd_log_info("QuectelM66CommandCoordinator --> Start waiting until VDD_EXT goes down (may take up to 12s)");
 		do {
-			wd_log_info("QuectelM66CommandCoordinator --> Waiting until VDD_EXT goes down");
+			wd_log_debug("...still waiting...");
 			wait_ms(100);	
 		} while (_vdd_extPin);
 		wd_log_debug("QuectelM66CommandCoordinator --> Modem powered down");
 		
 	}
 	
-	wd_log_debug("QuectelM66CommandCoordinator --> Power up");
+	// wait for at least 500ms after detecting the low level of VDD_EXT
+	wait_ms(1000);
 	
-	// wait for 100ms to allow VBAT to get stable
-	wait_ms(100);
+	wd_log_debug("QuectelM66CommandCoordinator --> Power up / Restart");
 	
 	_pwrKeyPin = 1;
+	wd_log_info("QuectelM66CommandCoordinator --> Start waiting until VDD_EXT goes up");
 	do {
-		wd_log_info("QuectelM66CommandCoordinator --> Waiting until VDD_EXT goes up");
+		wd_log_debug("...still waiting...");
 		wait_ms(100);	
 	} while (_vdd_extPin == 0);
+	wd_log_debug("QuectelM66CommandCoordinator --> Give the Modem some time to boot");
+	wait_ms(1500); // wait for at least 1s before releasing power-key
+	_pwrKeyPin = 0;
+	wd_log_debug("QuectelM66CommandCoordinator --> Modem powered up");
 	
 	// ====== AT ========
 	// Open ATCommandsInterface
@@ -115,7 +123,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	wd_log_debug("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" succeeded");
 	
 	wd_log_info("ATCommandsInterface --> Reset PPP");
-	if (_atCommandInterface->executeSimple("ATH", &result, 1000, 3) != OK) {
+	if (_atCommandInterface->executeSimple("ATH", &result, 1000, 90) != OK) {	// may take up to 90 seconds!
 		wd_log_warn("ATCommandsInterface --> Reset PPP failed, continue anyway");
 	}
 	wd_log_debug("ATCommandsInterface --> Reset PPP succeeded");
