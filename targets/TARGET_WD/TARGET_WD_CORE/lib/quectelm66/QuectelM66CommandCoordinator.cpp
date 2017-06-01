@@ -132,6 +132,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		Query SIM Card Status: AT+CPIN/AT+QINISTAT. 
 		Reboot module if module failed to detect SIM Card in 10s with AT+CPIN?
 	*/
+	wait_ms(2000); // we need to give the modem some time as SIM was busy on fast restarts (AT+CPIN? +CME ERROR: 14 (SIM busy))
 	wd_log_info("QuectelM66CommandCoordinator --> \"Query SIM Card Status\"");
 	if (_atCommandInterface->executeSimple("AT+CPIN?", &result, 1000, 10) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"Query SIM Card Status\" failed");
