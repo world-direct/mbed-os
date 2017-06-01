@@ -24,10 +24,6 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
-#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-#define swap(a, b) { int16_t t = a; a = b; b = t; }
-
-// Colors
 #define BLACK		0
 #define WHITE		1
 
@@ -36,6 +32,10 @@ ___________________DEFINES_____________________________
 ___________________DECLARATION_________________________
 ******************************************************/
 class DmOledBase : public Stream {
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#define swap_pixel(a, b) { int16_t t = a; a = b; b = t; }
+	
 public:
 	DmOledBase(const uint16_t width, const uint16_t height) :
 		_rawWidth(width), 

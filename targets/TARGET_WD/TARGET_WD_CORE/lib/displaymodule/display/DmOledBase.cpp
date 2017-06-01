@@ -24,14 +24,14 @@ void DmOledBase::drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, ui
     
     if (steep)
     {
-        swap(x0, y0);
-        swap(x1, y1);
+        swap_pixel(x0, y0);
+        swap_pixel(x1, y1);
     }
     
     if (x0 > x1)
     {
-        swap(x0, x1);
-        swap(y0, y1);
+        swap_pixel(x0, x1);
+        swap_pixel(y0, y1);
     }
     
     int16_t dx, dy;

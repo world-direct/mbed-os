@@ -159,7 +159,7 @@ void DmOledSSD1306::setPixel(uint16_t x, uint16_t y, uint16_t color) {
 	 // check rotation, move pixel around if necessary
 	switch (getRotation()) {
 	case 1:
-		swap(x, y);
+		swap_pixel(x, y);
 		x = _rawWidth - x - 1;
 		break;
 	case 2:
@@ -167,7 +167,7 @@ void DmOledSSD1306::setPixel(uint16_t x, uint16_t y, uint16_t color) {
 		y = _rawHeight - y - 1;
 		break;
 	case 3:
-		swap(x, y);
+		swap_pixel(x, y);
 		y = _rawHeight - y - 1;
 		break;
 	}
@@ -346,7 +346,7 @@ void DmOledSSD1306::drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, 
 	case 1:
 		// 90 degree rotation, swap x & y for rotation, then invert x
 		bSwap = true;
-		swap(x, y);
+		swap_pixel(x, y);
 		x = width() - x - 1;
 		break;
 	case 2:
@@ -358,7 +358,7 @@ void DmOledSSD1306::drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, 
 	case 3:
 		// 270 degree rotation, swap x & y for rotation, then invert y  and adjust y for w (not to become h)
 		bSwap = true;
-		swap(x, y);
+		swap_pixel(x, y);
 		y = height() - y - 1;
 		y -= (length-1);
 		break;
@@ -380,7 +380,7 @@ void DmOledSSD1306::drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, ui
 	case 1:
 		// 90 degree rotation, swap x & y for rotation, then invert x and adjust x for h (now to become w)
 		bSwap = true;
-		swap(x, y);
+		swap_pixel(x, y);
 		x = width() - x - 1;
 		x -= (length-1);
 		break;
@@ -393,7 +393,7 @@ void DmOledSSD1306::drawVerticalLine(uint16_t x, uint16_t y, uint16_t length, ui
 	case 3:
 		// 270 degree rotation, swap x & y for rotation, then invert y
 		bSwap = true;
-		swap(x, y);
+		swap_pixel(x, y);
 		y = height() - y - 1;
 		break;
 	}
