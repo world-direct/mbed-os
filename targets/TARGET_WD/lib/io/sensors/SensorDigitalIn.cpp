@@ -7,9 +7,10 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________IMPLEMENTATION______________________
 ******************************************************/
-static void donothing() {}
+static void donothing(uint16_t instanceId) {}
 
-SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection) : _interruptIn(pin) {
+SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint16_t instanceMetadata)
+	: _interruptIn(pin), _instanceMetadata(instanceMetadata) {
 	
 	if (edgeSelection == SensorDigitalIn::Rising) {
 		_interruptIn.rise(callback(this, &SensorDigitalIn::onObservingEdge));
@@ -45,7 +46,7 @@ void SensorDigitalIn::onIgnoringEdge(void) {
 }
 
 
-void SensorDigitalIn::attach(mbed::Callback<void()> func) {
+void SensorDigitalIn::attach(mbed::Callback<void(uint16_t)> func) {
 	
 	if (func){
 		_irq.attach(func);
@@ -68,7 +69,7 @@ void SensorDigitalIn::setValue(int value) {
 	int prev = this->_value;
 	this->_value = value;
 	
-	if (value != prev) _irq.call();
+	if (value != prev) _irq.call(this->_instanceMetadata);
 	
 }
 

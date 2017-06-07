@@ -74,13 +74,13 @@ public:
 	  @param pBearer pointer to store the current bearer
 	  @return 0 on success, error code on failure
 	*/
-	int GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer);
+	int GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, int timeout);
   
 	/** Get my phone number
 	  @param phoneNumber pointer to store the current phoneNumber
 	  @return 0 on success, error code on failure
 	*/
-	int GetPhoneNumber(char* phoneNumber);
+	int GetPhoneNumber(char* phoneNumber, int timeout);
 	
 protected:
   //IATCommandsProcessor

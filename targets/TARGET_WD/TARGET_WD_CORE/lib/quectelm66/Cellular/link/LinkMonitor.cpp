@@ -30,18 +30,6 @@
 #include <cstdio>
 using std::sscanf;
 
-#ifndef LINK_MONITOR_COPS_AT_TIMEOUT
-#define LINK_MONITOR_COPS_AT_TIMEOUT 10000	  
-#endif
-
-#ifndef LINK_MONITOR_STATUS_AT_TIMEOUT
-#define LINK_MONITOR_STATUS_AT_TIMEOUT 10000	  
-#endif
-
-#ifndef LINK_MONITOR_DEFAULT_AT_TIMEOUT
-#define LINK_MONITOR_DEFAULT_AT_TIMEOUT 3000	  
-#endif
-
 LinkMonitor::LinkMonitor(ATCommandsInterface* pIf)
 	: m_pIf(pIf)
 	, m_rssi(0)
@@ -53,16 +41,6 @@ LinkMonitor::LinkMonitor(ATCommandsInterface* pIf)
 
 int LinkMonitor::Init()
 {
-  
-	// we need to make sure that we setup the operator selection to be in 'numeric' format.
-	// i.e. it is made up of a network and country code when returned by the modem e.g. Operator = 23415. This allows easy logic parsing for
-	// setting up other network parameters in future.
-	
-	//	wd_log_debug("LinkMonitor --> LinkMonitor::init() being called. This should only happen once: executinging AT+COPS=0,2");  
-	//	int ret = m_pIf->executeSimple("AT+COPS=0,2", NULL, LINK_MONITOR_COPS_AT_TIMEOUT); //Configure to set the operator string to Country Code and mobile network code
-	//	if (ret != OK){
-	//		wd_log_warn("LinkMonitor --> NET_PROTOCOL error from sending the AT+COPS command to the modem. ");
-	//	}
 	return OK;
 }
 
@@ -183,13 +161,13 @@ int LinkMonitor::Init()
   return OK;
 }
 
-int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer)
+int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, int timeout)
 {
 	m_rssi = 0;
 	m_gsmRegistrationState = REGISTRATION_STATE_UNKNOWN;
 	m_gprsRegistrationState = REGISTRATION_STATE_UNKNOWN;
 	m_bearer = BEARER_UNKNOWN;
-	int ret = m_pIf->execute("AT+CREG?;+CGREG?;+COPS?;+CSQ", this, NULL, LINK_MONITOR_STATUS_AT_TIMEOUT); //Configure to get registration info & get it; get signal quality
+	int ret = m_pIf->execute("AT+CREG?;+CGREG?;+COPS?;+CSQ", this, NULL, timeout); //Configure to get registration info & get it; get signal quality
 	if (ret != OK)
 	{
 		return NET_PROTOCOL;
@@ -201,10 +179,10 @@ int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState,
 	return OK;
 }
 
-int LinkMonitor::GetPhoneNumber(char* phoneNumber) {
+int LinkMonitor::GetPhoneNumber(char* phoneNumber, int timeout) {
 	
 	*m_phoneNumber = '\0';
-	int ret = m_pIf->execute("AT+CNUM", this, NULL, LINK_MONITOR_DEFAULT_AT_TIMEOUT);
+	int ret = m_pIf->execute("AT+CNUM", this, NULL, timeout);
 	if (ret != OK)
 	{
 		return NET_PROTOCOL;
