@@ -1,14 +1,14 @@
 /******************************************************
 ___________________INCLUDES____________________________
 ******************************************************/
-#include "SensorDigitalOut.h"
+#include "ActorDigitalOut.h"
 
 
 /******************************************************
 ___________________IMPLEMENTATION______________________
 ******************************************************/
 
-void SensorDigitalOut::setValue(int value) {
+void ActorDigitalOut::setValue(int value) {
 	
 	this->_value = value;
 	_digitalOut = value;
