@@ -217,6 +217,11 @@ typedef enum {
 	RGBLED2_RT	= PE_15,
 	RGBLED2_GN	= PE_9,
 	
+	Version1	= PA_8,
+	Version2	= PC_9,
+	Version4	= PC_8,
+	Version8	= PC_7,
+	
     // Not connected
     NC = (int)0xFFFFFFFF
 } PinName;
