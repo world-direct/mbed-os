@@ -116,14 +116,14 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// 2. Fix and save baudrate by AT+IPR=xxx&W
 	wd_log_info("QuectelM66CommandCoordinator --> \"Fix and save baudrate\"");
 	ATCommandsInterface::ATResult result;
-	if (_atCommandInterface->executeSimple("AT+IPR=115200&W", &result, 1000, 5) != 0) {	
+	if (_atCommandInterface->executeSimple("AT+IPR=115200&W", &result, 100, 5 /* Acc. to spec command takes maximal up to 300 ms. 100ms * 2^(5-1) = 1600 ms should be safe. */) != 0) {
 		wd_log_error("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" failed");
 		return false;
 	};
 	wd_log_debug("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" succeeded");
 	
 	wd_log_info("ATCommandsInterface --> Reset PPP");
-	if (_atCommandInterface->executeSimple("ATH", &result, 1000, 90) != OK) {	// may take up to 90 seconds!
+	if (_atCommandInterface->executeSimple("ATH", &result, 1000, 5) != OK) {	/* Acc. to spec command takes maximal up to 5s. 1000ms * 2^(5-1) = 128 s should be safe. */
 		wd_log_warn("ATCommandsInterface --> Reset PPP failed, continue anyway");
 	}
 	wd_log_debug("ATCommandsInterface --> Reset PPP succeeded");
@@ -134,7 +134,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	*/
 	wait_ms(2000); // we need to give the modem some time as SIM was busy on fast restarts (AT+CPIN? +CME ERROR: 14 (SIM busy))
 	wd_log_info("QuectelM66CommandCoordinator --> \"Query SIM Card Status\"");
-	if (_atCommandInterface->executeSimple("AT+CPIN?", &result, 1000, 10) != 0) {	
+	if (_atCommandInterface->executeSimple("AT+CPIN?", &result, 1000, 5) != 0) {	/* Acc. to spec command takes maximal up to 90s. 1000ms * 2^(5-1) = 16s should be safe. */
 		wd_log_error("QuectelM66CommandCoordinator --> \"Query SIM Card Status\" failed");
 		return false;
 	};
@@ -160,17 +160,23 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	wd_log_debug("QuectelM66CommandCoordinator --> LinkMonitor initialization succeeded");	
 	
 	bool registered;
-	int tries = 10;
+	
+	/* Acc. to spec command +COPS? takes maximal up to 75s. 1000ms * 2^(7-1) = 128s should be safe. */
+	int tries = 7;
+	int timeout = 1000;
 	do {
 		
 		registered = true;
 		
 		wd_log_info("QuectelM66CommandCoordinator --> LinkMonitor getState (remaining tries %d)", tries);
-		if (_linkMonitor->GetState(&_rssi, &_gsmRegistrationState, &_gprsRegistrationState, &_bearer) != OK) {
+		if (_linkMonitor->GetState(&_rssi, &_gsmRegistrationState, &_gprsRegistrationState, &_bearer, 1000) != OK) {
 			wd_log_error("QuectelM66CommandCoordinator --> LinkMonitor getState failed");	
 			return false;
 		}
 		wd_log_debug("QuectelM66CommandCoordinator --> LinkMonitor getState succeeded");	
+		
+		// wait here because the states arrives asyncronously
+		wait_ms(timeout);
 	
 		wd_log_info("QuectelM66CommandCoordinator --> Check GSM registration state (HOME_NETWORK (%d) and ROAMING (%d) are allowed)", 
 			LinkMonitor::REGISTRATION_STATE_HOME_NETWORK, 
@@ -192,8 +198,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		}
 		
 		tries--;
-		
-		wait_ms(1000);
+		timeout *= 2;
 		
 	} while (!registered && tries > 0);
 		
@@ -222,14 +227,14 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	apn_config_command += "\"";
 	apn_config_command += this->_apn;
 	apn_config_command += "\"";
-	if (_atCommandInterface->executeSimple(apn_config_command.c_str(), &result, 1000, 3) != 0) {	
+	if (_atCommandInterface->executeSimple(apn_config_command.c_str(), &result, 100, 5 /* Acc. to spec command AT+CGDCONT takes maximal up to 300ms. 300ms * 2^(5-1) = 1600ms should be safe. */) != 0) {	
 		wd_log_error("QuectelM66CommandCoordinator --> \"APN configuration\" failed");
 		return false;
 	};
 	wd_log_debug("QuectelM66CommandCoordinator --> \"APN configuration\" succeeded");
 	
 	wd_log_info("QuectelM66CommandCoordinator --> \"Get phone number\"");
-	if (this->_linkMonitor->GetPhoneNumber(this->_phoneNumber) != 0) {
+	if (this->_linkMonitor->GetPhoneNumber(this->_phoneNumber, 500) != 0 /* Acc. to spec command AT+CGDCONT takes maximal up to 300ms. 500ms should be safe. */) {
 		wd_log_error("QuectelM66CommandCoordinator --> \"Get phone number\" failed");	
 	}
 	wd_log_debug("QuectelM66CommandCoordinator --> \"Get phone number\" succeeded");
@@ -238,7 +243,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		Start PPP Dialling by ATD*99#
 	*/
 	wd_log_info("QuectelM66CommandCoordinator --> \"Start Dialing\"");
-	_atCommandInterface->executeSimple("ATD*99#", &result, 1000, 3);
+	_atCommandInterface->executeSimple("ATD*99#", &result, 500, 5 /* Acc. to spec command ATD takes maximal up to 1s. 200ms * 2^(4-1) = 4s should be safe. */);
 	if (result.result != ATCommandsInterface::ATResult::AT_CONNECT) {
 		wd_log_error("QuectelM66CommandCoordinator --> \"Start Dialing\" failed");
 		return false;

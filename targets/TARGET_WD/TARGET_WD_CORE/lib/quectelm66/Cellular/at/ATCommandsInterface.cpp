@@ -170,6 +170,8 @@ int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, u
 			wd_log_error("ATCommandsInterface --> Command \"%s\" failed. It was the last try.", command, tries);	
 		}
 		
+		timeout *= 2;
+		
 	}
 	
 	return ret;
