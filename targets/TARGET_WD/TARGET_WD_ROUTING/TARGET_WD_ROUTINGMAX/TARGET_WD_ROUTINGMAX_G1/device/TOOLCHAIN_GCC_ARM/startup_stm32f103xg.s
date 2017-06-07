@@ -95,25 +95,10 @@ LoopCopyDataInit:
   adds r2, r0, r1
   cmp r2, r3
   bcc CopyDataInit
-  ldr r2, =_sbss
-  b LoopFillZerobss
 
-/* Zero fill the bss segment. */
-FillZerobss:
-  movs r3, #0
-  str r3, [r2], #4
-
-LoopFillZerobss:
-  ldr r3, = _ebss
-  cmp r2, r3
-  bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
   bl HAL_InitPre
-#if defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED)
-  ldr r0, =uvisor_init
-  blx r0
-#endif /* defined(FEATURE_UVISOR) && defined(TARGET_UVISOR_SUPPORTED) */
   bl  SystemInit   
 /* Call static constructors */
   //bl __libc_init_array
@@ -124,7 +109,10 @@ LoopFillZerobss:
   // starting main(). software_init_hook() is available and has to be called due 
   // to initializsation when using rtos.
   bl _start
-  bx  lr    
+
+LoopForever:
+  b LoopForever
+
 .size  Reset_Handler, .-Reset_Handler
 
 /**

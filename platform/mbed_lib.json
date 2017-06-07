@@ -30,6 +30,10 @@
       },
       "WD_CORE_G1": {
         "stdio-baud-rate": 115200,
+        "default-serial-baud-rate": 115200
+      },
+      "WD_ROUTINGMAX_G1": {
+        "stdio-baud-rate": 115200,
         "default-serial-baud-rate":  115200
       }
   }
