@@ -20,6 +20,8 @@ ___________________INCLUDES____________________________
 ******************************************************/
 #include "mbed.h"
 #include "BitIO.h"
+#include "mbed_events.h"
+#include "rtos.h"
 #include "platform/Callback.h"
 
 
@@ -118,6 +120,9 @@ private:
 	SPI _spi;
 	Callback<void()> _irq[IrqSourceCnt];
 	Ticker _timer;
+	
+	EventQueue _queue;
+	Thread _eventThread;
 	
 	uint8_t _srStateCache = 0xFF;
 };	

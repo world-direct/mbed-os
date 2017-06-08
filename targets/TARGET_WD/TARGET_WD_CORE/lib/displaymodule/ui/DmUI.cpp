@@ -29,6 +29,10 @@ ___________________IMPLEMENTATION______________________
 static void donothing() {}
 
 DmUI::DmUI(PinName mosi, PinName miso, PinName sck, PinName cs, PinName irq) : _pinCS(cs, 0), _pinIRQ(irq), _spi(mosi, miso, sck), _timer()  {
+	
+	// start event queue dispatch thread
+	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+	
 	_spi.format(8, 0);
 	_spi.frequency(1000000);
 	
@@ -66,7 +70,7 @@ void DmUI::onButtonPressed(void) {
 
 void DmUI::attach(Callback<void()> func, IrqSource type /* = Button1 */) {
 	if(func){
-		_irq[type].attach(func);
+		_irq[type].attach(_queue.event(func));
 	} else {
 		_irq[type].attach(donothing);
 	}
