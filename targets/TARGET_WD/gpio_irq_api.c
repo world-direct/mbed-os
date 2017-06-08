@@ -276,7 +276,9 @@ void gpio_irq_enable(gpio_irq_t *obj)
     uint32_t port_index = STM_PORT(obj->pin);
     uint32_t pin_index  = STM_PIN(obj->pin);
 
-    /*  Select Source  */
+    /*  Select Source  
+		4 bits select port pins. 0000 means PA[x] pin, 0001 PB[x] pin and so on.
+    */
     temp = SYSCFG->EXTICR[pin_index >> 2];
     CLEAR_BIT(temp, (0x0FU) << (4U * (pin_index & 0x03U)));
     SET_BIT(temp, port_index << (4U * (pin_index & 0x03U)));

@@ -5,7 +5,7 @@ M_VECTOR_RAM_SIZE = 0x400;
 #endif
 
 #if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 512k
+  #define MBED_APP_SIZE 768k
 #endif
 
 /* Specify the memory areas */
