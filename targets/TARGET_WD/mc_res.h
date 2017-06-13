@@ -11,6 +11,7 @@
 #include "mbed_error.h"
 
 typedef enum {
+	MC_RES_NOTIMPL = -2,
 	MC_RES_ERROR = -1,
 	MC_RES_OK    = 0
 } MC_RES;
