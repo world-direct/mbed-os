@@ -1,5 +1,5 @@
-#ifndef SENSORDIGITALOUT_H
-#define SENSORDIGITALOUT_H
+#ifndef ACTORDIGITALOUT_H
+#define ACTORDIGITALOUT_H
 
 /******************************************************
 ___________________INCLUDES____________________________
@@ -10,11 +10,11 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DECLARATION_________________________
 ******************************************************/
-class SensorDigitalOut {
+class ActorDigitalOut {
 public:
 	
-	SensorDigitalOut(PinName pin, int value = 0) : _digitalOut(pin, value), _value(value){};
-	~SensorDigitalOut(){};
+	ActorDigitalOut(PinName pin, int value = 0) : _digitalOut(pin, value), _value(value){};
+	~ActorDigitalOut(){};
 	
 	int getValue(void) { return _value; };
 	void setValue(int value);

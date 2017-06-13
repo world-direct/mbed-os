@@ -5,6 +5,8 @@
 ___________________INCLUDES____________________________
 ******************************************************/
 #include "mbed.h"
+#include "mbed_events.h"
+#include "rtos.h"
 #include "PinNames.h"
 
 /******************************************************
@@ -37,6 +39,8 @@ private:
 	volatile int _value = 0;
 	volatile int _edgeCounter = 0;
 	
+	EventQueue _queue;
+	Thread _eventThread;
 };
 
 #endif

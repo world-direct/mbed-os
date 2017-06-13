@@ -34,9 +34,9 @@
 
 // STM32F103RFT6
 // CORE: 16 vectors = 64 bytes from 0x00 to 0x3F
-// MCU Peripherals: 60 vectors
+// MCU Peripherals: 68 vectors
 
-#define NVIC_NUM_VECTORS      76
+#define NVIC_NUM_VECTORS      (16 + 68)
 #define NVIC_USER_IRQ_OFFSET  16
 
 #include "cmsis.h"

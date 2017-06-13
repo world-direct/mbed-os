@@ -12,6 +12,9 @@ static void donothing(uint16_t instanceId) {}
 SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint16_t instanceMetadata)
 	: _interruptIn(pin), _instanceMetadata(instanceMetadata) {
 	
+	// start event queue dispatch thread
+	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+		
 	if (edgeSelection == SensorDigitalIn::Rising) {
 		_interruptIn.rise(callback(this, &SensorDigitalIn::onObservingEdge));
 		_interruptIn.fall(callback(this, &SensorDigitalIn::onIgnoringEdge));
@@ -49,7 +52,7 @@ void SensorDigitalIn::onIgnoringEdge(void) {
 void SensorDigitalIn::attach(mbed::Callback<void(uint16_t)> func) {
 	
 	if (func){
-		_irq.attach(func);
+		_irq.attach(_queue.event(func));
 	} else {
 		_irq.attach(donothing);
 	}
