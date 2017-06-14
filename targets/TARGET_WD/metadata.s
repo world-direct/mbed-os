@@ -1,0 +1,34 @@
+.syntax unified
+.section .metadata
+.cpu cortex-m4
+.fpu softvfp
+.thumb
+
+#define EXPSTR(a) EXPSTRHLP(a)
+#define EXPSTRHLP(a) #a
+
+.global  g_metadata
+
+.g_metadata:
+.word 0x01			// metadata version
+.word 0xFFFFFFFF	// here we will insert the CRC32 of the image on the server
+
+.macro padded_string string, max
+1:
+    .ascii "\string"
+2:
+    .iflt \max - (2b - 1b)
+    .error "String too long"
+    .endif
+
+    .ifgt \max - (2b - 1b)
+    .zero \max - (2b - 1b)
+    .endif
+
+.endm
+
+
+padded_string EXPSTR(APPLICATION_NAME), 32
+padded_string EXPSTR(APPLICATION_VERSION), 16
+
+nop

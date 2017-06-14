@@ -15,14 +15,15 @@ HEAP_SIZE = 0x6000;
 #endif
 
 #if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 2048k
+  #define MBED_APP_SIZE 1024k
 #endif
 
 /* Specify the memory areas */
 MEMORY
 {
-    VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x400
-    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
+    VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
+	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
+    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x300, LENGTH = MBED_APP_SIZE - 0x300
     CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k
 }
@@ -64,6 +65,14 @@ SECTIONS
         KEEP(*(.isr_vector))
          . = ALIGN(4);
     } > VECTORS
+
+    .metadata :
+    {
+        __metadata_start = .;
+        KEEP(*(.metadata))
+         . = ALIGN(4);
+    } > METADATA
+
 
     /* Note: The uVisor expects this section at a fixed location, as specified
      *              by the porting process configuration parameter:
