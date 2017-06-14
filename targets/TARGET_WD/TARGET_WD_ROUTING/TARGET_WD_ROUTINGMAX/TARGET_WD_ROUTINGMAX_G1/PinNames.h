@@ -142,6 +142,10 @@ typedef enum {
 	
 	USB_ID		= PA_15,
 	
+	RS485_En	= PA_1,
+	RS485_Tx1	= PA_2,
+	RS485_Rx1	= PA_3,
+	
     // Not connected
     NC = (int)0xFFFFFFFF
 } PinName;
