@@ -1,10 +1,11 @@
 #include "OneWire.h"
 #include "platform/critical.h"
+#include "wd_logging.h"
 
 #define OW_DELAY_US(value) wait_us(value)
 
 OneWire::OneWire(PinName pinRx, PinName pinTx, PinName pinTxH)
-	: _pinRx(pinRx), _pinTx(pinTx, PIN_OUTPUT, OpenDrain, 0) {}
+	: _pinRx(pinRx), _pinTx(pinTx, PIN_OUTPUT, OpenDrain, 0), _pinTxH(pinTxH, 1) {}
 
 OneWire::~OneWire() {}
 
@@ -143,5 +144,103 @@ OW_STATUS_CODE OneWire::ow_command(char command, char id[]) {
 	this->ow_write_byte(command);
 	
 	return OW_OK;
+	
+}
+
+char OneWire::ow_rom_search(char diff, char id[]) {
+    char i, j, next_diff;
+    char b;
+
+    if (this->ow_reset() != OW_OK) {
+        return OW_SEARCH_STATE_PRESENCE_ERR;					// error, no device found
+	} else {
+		
+		this->ow_write_byte(OW_SEARCH_ROM);		// ROM search command
+	    
+		next_diff = OW_SEARCH_STATE_LAST_DEVICE;	// unchanged on last device
+		i = OW_ROMCODE_SIZE * 8;                // bitwise iteration
+    
+		do {
+			j = 8;                              // 8 bits
+			do {
+				b = this->ow_read_bit();        // read bit
+				if (this->ow_read_bit()) {      // read complement bit; !b = 1
+					if (b)						// 11
+						return OW_SEARCH_STATE_DATA_ERR;	
+				} else {						// !b = 0
+					if (!b) {                   // 00 = 2 devices
+						if ( diff > i || ((*id & 1) && diff != i) ) {
+							b = 1;              // now go with 1
+							next_diff = i;      // next iteration pass 0
+						}
+					}
+				}
+				this->ow_write_bit(b);			// write bit
+				*id >>= 1;
+				if (b) *id |= 0x80;				// store bit
+				--i;
+			} while ( --j );
+			id++;								// next byte
+		} while (i);
+		
+		return next_diff;						// to continue search
+		
+	}
+}
+
+OW_STATUS_CODE OneWire::ow_find_sensor(char *diff, char id[], char familyCode) {
+	
+	for (;;) // skip unwanted sensors
+    {
+        *diff = this->ow_rom_search(*diff, &id[0]);
+        if ( *diff == OW_SEARCH_STATE_PRESENCE_ERR)
+            return OW_ERROR;
+        if ( *diff == OW_SEARCH_STATE_DATA_ERR )
+            return OW_ERROR;
+        if ( *diff == OW_SEARCH_STATE_LAST_DEVICE )
+            return OW_OK ;
+        if ( id[0] == familyCode ) 
+            return OW_OK ;
+    }
+	
+}
+
+OW_STATUS_CODE OneWire::ow_search_sensors(int *nSensors, char *gSensorIDs, char familyCode) {
+	
+    char id[OW_ROMCODE_SIZE] = {};
+    char diff;
+    
+	wd_log_debug("Scanning 1-Wire bus for devices");
+	
+    diff = OW_SEARCH_STATE_SEARCH_FIRST;
+    
+	for (*nSensors = 0; (diff != OW_SEARCH_STATE_LAST_DEVICE) && (*nSensors < OW_MAXSENSORS); ++(*nSensors)) {
+        
+		if (this->ow_find_sensor(&diff, &id[0], familyCode) != OW_OK) {
+			wd_log_debug("An error occurred during search: %x", diff);
+			return OW_ERROR;
+		}
+
+        for (int i=0; i<OW_ROMCODE_SIZE; i++)
+            gSensorIDs[(*nSensors) * OW_ROMCODE_SIZE + i] = id[i];
+
+    }
+	
+    return OW_OK;
+	
+}
+
+OW_STATUS_CODE OneWire::ow_show_id(char id[], size_t n, char * text) {
+	
+	char hex[4];
+	
+	for (int i = 0; i < n; i++) {
+        if ( i == 0 ) strcat(text, " FC: ");
+        else if ( i == n-1 ) strcat(text, "CRC: ");
+        if ( i == 1 ) strcat(text, " SN: ");
+        sprintf(hex,"%2.2X ", id[i]);
+        strcat(text, hex);
+    }
+    return OW_OK;
 	
 }

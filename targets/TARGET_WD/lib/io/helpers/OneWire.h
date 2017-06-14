@@ -2,22 +2,20 @@
 
 #include "mbed.h"
 #include "PinNames.h"
-
-#define OW_MAXSENSORS				16
-
-// rom-code size including CRC
-#define OW_ROMCODE_SIZE				8
+#include <string>
 
 enum OW_STATUS_CODE {
 	OW_ERROR = 0,
 	OW_OK = 1,
-	OW_NO_DEVICE,
-	OW_START_FAIL,	
+	OW_ERROR_NO_DEVICE,
 	OW_ERROR_CRC,
-	OW_ERROR_BAD_ID,	
-	OW_BUSY	
+	OW_ERROR_BAD_ID,
+	OW_BUSY
 };
-		
+
+#define OW_MAXSENSORS				16
+#define OW_ROMCODE_SIZE				8	// rom-code size including CRC
+
 #define OW_MATCH_ROM				0x55
 #define OW_SKIP_ROM					0xCC
 #define OW_SEARCH_ROM				0xF0
@@ -26,19 +24,18 @@ enum OW_STATUS_CODE {
 #define OW_OVERDRIVE_SKIP_ROM		0x3C
 #define OW_OVERDRIVE_MATCH_ROM		0x69
 
-#define OW_SHORT_CIRCUIT			0xFF
-#define OW_SEARCH_FIRST				0xFF	// start new search
-#define OW_PRESENCE_ERR				0x01
-#define OW_DATA_ERR					0xFE
-#define OW_LAST_DEVICE				0x00	// last device found
+#define OW_SEARCH_STATE_LAST_DEVICE		0x00	// last device found
+#define OW_SEARCH_STATE_PRESENCE_ERR	0x01
+#define OW_SEARCH_STATE_DATA_ERR		0xFE
+#define OW_SEARCH_STATE_SEARCH_FIRST	0xFF	// start new search
 
 class OneWire {
 public:
 	OneWire(PinName pinRx, PinName pinTx, PinName pinTxH = NC);
 	~OneWire();
 	
-	void ow_enable_strong_pullup(void) { return _pinRx.mode(PullUp); };
-	void ow_disable_strong_pullup(void) { return _pinRx.mode(PullDefault); };
+	void ow_enable_strong_pullup(void) { return _pinTxH.write(0); };
+	void ow_disable_strong_pullup(void) { return _pinTxH.write(1); };
 	
 	/** @brief Reset the 1-Wire bus slave devices and ready them for a command.
 	 *
@@ -90,14 +87,10 @@ public:
 	OW_STATUS_CODE ow_command(char command, char id[]);
 	
 	
-//	uint8_t ow_show_id( uint8_t id[], size_t n ,char *text);
-//	uint8_t ow_test_pin (void);
-//	uint8_t search_sensors(uint8_t *nSensors,uint8_t *gSensorIDs );
-//	uint8_t ow_rom_search( uint8_t diff, uint8_t id[] );
-//	uint8_t ow_find_sensor(uint8_t *diff, uint8_t id[]);
-//	uint8_t ow_parasite_enable(void);
-//	uint8_t ow_parasite_disable(void);
-//	uint8_t ow_bit_io( uint8_t b );
+	OW_STATUS_CODE ow_find_sensor(char *diff, char id[], char familyCode);
+	OW_STATUS_CODE ow_search_sensors(int *nSensors, char *gSensorIDs, char familyCode);
+
+	OW_STATUS_CODE ow_show_id(char id[], size_t n, char * text);
 	
 	
 private:
@@ -110,7 +103,10 @@ private:
 	
 	char ow_crc_8(char * data, size_t length);
 	
+	char ow_rom_search(char diff, char id[]);
+	
 	DigitalIn _pinRx;
 	DigitalInOut _pinTx;
+	DigitalOut _pinTxH;
 };
 
