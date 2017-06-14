@@ -7,6 +7,9 @@
 
 typedef struct {
 	
+	///< Returns the total length of the image, as reported by the server.
+	size_t image_total_length;
+	
 	///< Returns the length of the data downloaded for the current image.
 	size_t image_current_length;	
 	

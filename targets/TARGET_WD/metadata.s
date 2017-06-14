@@ -10,8 +10,8 @@
 .global  g_metadata
 
 .g_metadata:
-.word 0x01			// metadata version
-.word 0xFFFFFFFF	// here we will insert the CRC32 of the image on the server
+.word 0x01020304		/* metadata magic (we dont use just 1, so that we can dedect endianess) */
+.word __image_size		/* this field may get rewritten by the platform server, to really match the size (we have current 0x10 bytes missing, maybe from uvisor?) */
 
 .macro padded_string string, max
 1:

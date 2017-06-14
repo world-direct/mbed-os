@@ -61,6 +61,9 @@ SECTIONS
 {
     .isr_vector :
     {
+
+		__image_start = .;
+
         __vector_table = .;
         KEEP(*(.isr_vector))
          . = ALIGN(4);
@@ -248,6 +251,9 @@ SECTIONS
         . = ALIGN(32);
         __uvisor_secure_end = .;
     } > FLASH
+
+	__image_end = .;
+	__image_size = __image_end - __image_start;
 
     /* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
