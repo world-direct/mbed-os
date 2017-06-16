@@ -34,7 +34,7 @@ int AnalogInManager::getValue(int inputIndex) {
 	
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return 0;
 	
-	return Median::compute(this->_measurementBuffer[inputIndex], MEASUREMENT_BUFFER_SIZE);
+	return Median<int>::compute(this->_measurementBuffer[inputIndex], MEASUREMENT_BUFFER_SIZE);
 	
 }
 
