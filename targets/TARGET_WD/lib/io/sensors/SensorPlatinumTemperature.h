@@ -6,6 +6,11 @@
 
 class SensorPlatinumTemperature {
 public:
+	enum PTUnit {
+		CELSIUS,
+		FAHRENHEIT
+	};
+	
 	SensorPlatinumTemperature(AnalogInManager * analogInManager, int inputIndex);
 	~SensorPlatinumTemperature();
 	
@@ -13,15 +18,15 @@ public:
 	void setMinRangeValue(float value) { _minRangeValue = value; };
 	float getMaxRangeValue(void) { return _maxRangeValue; };
 	void setMaxRangeValue(float value) { _maxRangeValue = value; };
-	float getCalibrationCoefficient(void) { return _calibrationCoefficient; };
-	void setCalibrationCoefficient(float value) { _calibrationCoefficient = value; };
+	PTUnit getUnit(void) { return _unit; };
+	void setUnit(PTUnit value) { _unit = value; };
 	
 	float getValue(void);
 	
 private:
-	float _minRangeValue = -50.0f; // TODO
-	float _maxRangeValue = 100.0f; // TODO
-	float _calibrationCoefficient = 1.0f; // TODO
+	float _minRangeValue = -273.15f; // TODO
+	float _maxRangeValue = 1000.0f; // TODO
+	PTUnit _unit = SensorPlatinumTemperature::CELSIUS;
 
 	AnalogInManager * _analogInManager;
 	int _inputIndex;
