@@ -74,7 +74,7 @@ uint16_t AnalogInManager::read(void) {
 
 void AnalogInManager::collectMeasurement(void) {
 	
-	// save current input selection (adc should already hold result of input value conversion)
+	// save current input selection (adc should already hold result of input value conversion, i.e. value of previously selected input)
 	int inputIndex = _currentInputSelection-1;	
 	
 	// already select next input as the adc immediately enters the capture state after a read operation
