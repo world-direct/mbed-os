@@ -31,4 +31,9 @@
 padded_string EXPSTR(APPLICATION_NAME), 32
 padded_string EXPSTR(APPLICATION_VERSION), 16
 
+#define HEXLH(S) 0x ## S
+#define HEXL(S) HEXLH(S)
+
+.octa HEXL(APPLICATION_COMMIT_ID)
+
 nop
