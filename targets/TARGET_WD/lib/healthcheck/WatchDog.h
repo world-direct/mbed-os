@@ -16,6 +16,7 @@
 #define WATCHDOG_H_
 
 #include "mbed.h"
+#include "HealthCheckBase.h"
 
 class WatchDog {
 	
@@ -37,6 +38,11 @@ class WatchDog {
 			Resets the counter to avoid a system-reset
 		*/
 		void Kick();
+	
+		/*
+			Registers a new HealthCheck
+		*/
+		void RegisterHealthCheck(HealthCheckBase * healthCheck);
 	
 };
 

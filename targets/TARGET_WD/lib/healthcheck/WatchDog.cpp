@@ -26,13 +26,17 @@ void WatchDog::Configure(uint32_t prescaler, uint32_t reload) {
 	_handle.Init.Prescaler = prescaler; // e.g.: IWDG_PRESCALER_256
 	_handle.Init.Reload = reload;		// Range: 0x0000, 0x0FFFU
 	
-	HAL_IWDG_Init(_handle);
+	HAL_IWDG_Init(&_handle);
 	
 }
 
 
 void WatchDog::Kick() {
 	
-	HAL_IWDG_Refresh(NULL);
+	HAL_IWDG_Refresh(&_handle);
+	
+}
+
+void WatchDog::RegisterHealthCheck(HealthCheckBase * healthCheck) {
 	
 }
