@@ -19,7 +19,7 @@
 class DS18B20 {
 public:
 	
-	DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback);
+	DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback, uint measurementIntervalSeconds = DS18B20_MEASUREMENT_INTERVAL_S);
 	~DS18B20();
 	
 	int getSensorCount(void) { return _sensorCount; };
@@ -30,6 +30,13 @@ public:
 	
 	
 private:
+	
+	enum TemperatureResolution {
+		Resolution_09_BIT = 0x1F,
+		Resolution_10_BIT = 0x3F,
+		Resolution_11_BIT = 0x5F,
+		Resolution_12_BIT = 0x7F
+	};
 	
 	OneWire * _oneWire;
 	Callback<void(uint64_t)> _sensorAddedCallback;
@@ -47,6 +54,7 @@ private:
 	void retrieveId(uint64_t inId, char * outId);
 	OW_STATUS_CODE convertTemperature(void);
 	OW_STATUS_CODE readMeasurements(void);
+	OW_STATUS_CODE setTemperatureResolution(TemperatureResolution resolution = Resolution_10_BIT); 
 	
 	void collectMeasurement(void);
 };
