@@ -2,7 +2,7 @@
 
 #include "AnalogInManager.h"
 
-#define INVALID_VALUE	-1
+#define INVALID_VALUE	-1000
 
 class SensorPlatinumTemperature {
 public:

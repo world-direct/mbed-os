@@ -32,7 +32,7 @@ void test_analog_in_out_set_and_read_state(uint value) {
 	}
 	
 	// wait for all measurements to refresh (mux selection + median window)
-	wait_ms(5000);
+	wait_ms(8000);
 	
 	// accuracy: DIN and DOUT each 0.25% without calibration -> 16.0f * ( 0.0025f + 0.0025f )
 	wd_log_info("check if corresponding input state matches value");
