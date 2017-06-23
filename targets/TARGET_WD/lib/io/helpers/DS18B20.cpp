@@ -1,5 +1,6 @@
 #include "DS18B20.h"
 #include <utility>
+#include "wd_logging.h"
 
 #define DS18B20_POWER_PARASITE	0x00
 #define DS18B20_POWER_EXTERN	0x01
@@ -14,11 +15,7 @@
 #define DS18B20_SP_SIZE		8	// size without crc
 #define DS18B20_TH_REG      2
 #define DS18B20_TL_REG      3
-
-#define DS18B20_9_BIT		0
-#define DS18B20_10_BIT		(1<<5)
-#define DS18B20_11_BIT		(1<<6)
-#define DS18B20_12_BIT		((1<<6)|(1<<5))
+#define DS18B20_RES_REG     4
 
 // conversion times in ms
 #define DS18B20_TCONV_12BIT      750
@@ -29,7 +26,7 @@
 #define NUM_RETRIES		3
 
 
-DS18B20::DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback)
+DS18B20::DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback, uint measurementIntervalSeconds)
 	: _sensorAddedCallback(sensorAddedCallback), _sensorRemovedCallback(sensorRemovedCallback), _ticker() {
 	
 	this->_oneWire = oneWire;
@@ -37,9 +34,7 @@ DS18B20::DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAdded
 	// start event queue dispatch thread
 	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
 		
-	this->enumerateSensors();
-		
-	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(DS18B20_MEASUREMENT_INTERVAL_S));
+	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
 }
 
 
@@ -47,7 +42,7 @@ DS18B20::~DS18B20() {}
 
 OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 	
-	char sensorIds[OW_MAXSENSORS][OW_ROMCODE_SIZE];
+	char sensorIds[OW_MAXSENSORS][OW_ROMCODE_SIZE] = {0};
 	int retry_count = NUM_RETRIES;
 	
 	// start by searching for sensors
@@ -55,6 +50,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 	do {
 		res = this->_oneWire->ow_search_sensors(&this->_sensorCount, &sensorIds[0][0], DS18B20_FAMILY_CODE);
 		if (res == OW_OK && this->_sensorCount > 0) break;
+		wait_ms(5);
 	} while (--retry_count > 0);
 	
 	// return if search was unsuccessful
@@ -118,11 +114,17 @@ float DS18B20::getValue(uint64_t id) {
 	
 }
 
+void DS18B20::setMeasurementInterval(uint measurementIntervalSeconds) {
+	this->_ticker.detach();
+	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
+}
+
 OW_STATUS_CODE DS18B20::convertTemperature(void) {
+	// Remark: The power-on reset value of the temperature register is +85C.
 	
 	if (this->_oneWire->ow_reset() == OW_OK) {
-		
 		this->_oneWire->ow_command(DS18B20_COMMAND_CONVERT_T, NULL);
+		// 1-Wire bus must be switched to the strong pullup within 10us (max) after a Convert T
 		this->_oneWire->ow_enable_strong_pullup();
 		wait_ms(DS18B20_TCONV_12BIT); // todo timer with callback?
 		this->_oneWire->ow_disable_strong_pullup();
@@ -147,7 +149,7 @@ OW_STATUS_CODE DS18B20::readMeasurements(void) {
 		
 		this->_oneWire->ow_reset();
 		this->_oneWire->ow_command(DS18B20_COMMAND_READ_SCRATCHPAD, id);
-		if (this->_oneWire->ow_read_bytes_with_crc_8(sp, DS18B20_SP_SIZE) != OW_OK) {
+		if (this->_oneWire->ow_read_bytes_with_crc_8(&sp[0], DS18B20_SP_SIZE) != OW_OK) {
 			(it->second).add(DS18B20_INVALID_VALUE);
 		} else {
 			reading = (sp[1] << 8) + sp[0];
@@ -188,6 +190,67 @@ void DS18B20::retrieveId(uint64_t inId, char * outId) {
 	
 	for (int i=0; i<OW_ROMCODE_SIZE; i++) {
 		outId[i] = (char) (inId >> (8 * (OW_ROMCODE_SIZE-1-i)));
+	}
+	
+}
+
+OW_STATUS_CODE DS18B20::setTemperatureResolution(TemperatureResolution resolution) {
+	
+	for(map<uint64_t, DS18B20MeasurementBuffer>::const_iterator it = this->_mSensors.begin(); it != this->_mSensors.end(); it++) {
+		
+		char sp[DS18B20_SP_SIZE] = {};
+		char id[OW_ROMCODE_SIZE] = {};
+		OW_STATUS_CODE res;
+		
+		this->retrieveId(it->first, id);
+		
+		// get current T_h and T_l values
+		int retry_count = NUM_RETRIES;
+		do {
+			this->_oneWire->ow_reset();
+			this->_oneWire->ow_command(DS18B20_COMMAND_READ_SCRATCHPAD, id);
+			res = this->_oneWire->ow_read_bytes_with_crc_8(sp, DS18B20_SP_SIZE);
+			if (res == OW_OK) break;
+			wait_ms(5);
+		} while (--retry_count > 0);
+		if (res != OW_OK) return res;
+		
+		// skip if current setting matches desired resolution
+		if (sp[DS18B20_RES_REG] == resolution) continue;
+		
+		// else write scratchpad values
+		char t_h = sp[DS18B20_TH_REG];
+		char t_l = sp[DS18B20_TL_REG];
+		
+		this->_oneWire->ow_reset();
+		this->_oneWire->ow_command(DS18B20_COMMAND_WRITE_SCRATCHPAD, id);
+		this->_oneWire->ow_write_byte(t_h);
+		this->_oneWire->ow_write_byte(t_l);
+		this->_oneWire->ow_write_byte(resolution);
+		
+		// verify configuration register changes
+		retry_count = NUM_RETRIES;
+		do {
+			this->_oneWire->ow_reset();
+			this->_oneWire->ow_command(DS18B20_COMMAND_READ_SCRATCHPAD, id);
+			res = this->_oneWire->ow_read_bytes_with_crc_8(sp, DS18B20_SP_SIZE);
+			if (res == OW_OK) break;
+			wait_ms(5);
+		} while (--retry_count > 0);
+		if (res != OW_OK) return res;
+		
+		if (sp[DS18B20_RES_REG] != resolution) return OW_ERROR;
+	}
+	
+	return OW_OK;
+}
+
+void DS18B20::getSensorIds(uint64_t * buffer) {
+	
+	for(map<uint64_t, DS18B20MeasurementBuffer>::const_iterator it = this->_mSensors.begin(); it != this->_mSensors.end(); it++) {
+	
+		(*buffer++) = it->first;
+		
 	}
 	
 }

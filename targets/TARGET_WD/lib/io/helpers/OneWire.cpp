@@ -5,7 +5,7 @@
 #define OW_DELAY_US(value) wait_us(value)
 
 OneWire::OneWire(PinName pinRx, PinName pinTx, PinName pinTxH)
-	: _pinRx(pinRx), _pinTx(pinTx, PIN_OUTPUT, OpenDrain, 0), _pinTxH(pinTxH, 1) {}
+	: _pinRx(pinRx, PIN_INPUT, PullNone, 0), _pinTx(pinTx, PIN_OUTPUT, OpenDrain, 0), _pinTxH(pinTxH, PIN_OUTPUT, OpenDrain, 1) {}
 
 OneWire::~OneWire() {}
 

@@ -105,8 +105,8 @@ private:
 	
 	char ow_rom_search(char diff, char id[]);
 	
-	DigitalIn _pinRx;
+	DigitalInOut _pinRx;
 	DigitalInOut _pinTx;
-	DigitalOut _pinTxH;
+	DigitalInOut _pinTxH;
 };
 

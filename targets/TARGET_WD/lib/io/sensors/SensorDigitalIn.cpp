@@ -25,6 +25,9 @@ SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint1
 	
 	_interruptIn.enable_irq();
 	_irq.attach(donothing);
+	
+	// set initial value
+	this->setValue(_interruptIn.read());
 }
 
 

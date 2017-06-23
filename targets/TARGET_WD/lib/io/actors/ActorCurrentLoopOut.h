@@ -16,8 +16,8 @@ public:
 	float getCurrentCalibrationCoefficient(void) { return _currentCalibrationCoefficient; };
 	void setCurrentCalibrationCoefficient(float value) { _currentCalibrationCoefficient = value; };
 	
-	int getValue(void) { return _value; };
-	void setValue(int value);
+	float getValue(void) { return _value; };
+	void setValue(float value);
 	
 private:
 	
@@ -28,7 +28,7 @@ private:
 	AnalogOutManager * _analogOutManager;
 	int _outputIndex;
 	
-	volatile int _value = 0;
+	volatile float _value = 0;
 	
 };
 
