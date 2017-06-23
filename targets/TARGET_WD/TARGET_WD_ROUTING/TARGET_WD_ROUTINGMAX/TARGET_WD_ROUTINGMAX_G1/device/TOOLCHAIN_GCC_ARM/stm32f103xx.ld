@@ -5,13 +5,14 @@ M_VECTOR_RAM_SIZE = 0x400;
 #endif
 
 #if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 768k
+  #define MBED_APP_SIZE 512k
 #endif
 
 /* Specify the memory areas */
 MEMORY
 {
 	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x400
+	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
     FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 96k
 }
@@ -49,10 +50,21 @@ SECTIONS
 {
 	.isr_vector :
     {
+
+		__image_start = .;
+
         __vector_table = .;
         KEEP(*(.isr_vector))
          . = ALIGN(4);
+
     } > VECTORS
+
+	.metadata :
+	{
+		__metadata_start = .;
+		KEEP(*(.metadata))
+		. = ALIGN(4);
+	} > METADATA
 
 	.interrupts_ram :
     {
@@ -102,6 +114,11 @@ SECTIONS
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } > FLASH
     __exidx_end = .;
+
+	
+	__image_end = .;
+	__image_size = __image_end - __image_start;
+
 
     __etext = .;
     _sidata = .;
