@@ -13,20 +13,40 @@
  */ 
 
 #include "WatchDog.h"
+#include "wd_logging.h"
 
 WatchDog::WatchDog(){
 	
-	
 }
 
-
-void WatchDog::Configure(uint32_t prescaler, uint32_t reload) {
+void WatchDog::Start(uint32_t prescaler /* = IWDG_PRESCALER_256 */, uint32_t reload /* = 0x0FFFU */, float healthCheckIntervalSeconds /*= 5*/, char * context /*= NULL*/) {
+	
+	_context = context;
+	
+	/*
+		Watchdog calculation:
+			
+			General:
+				Timeout = (Clock ^ (-1)) * Prescaler * Downcounter
+			
+			Example (based on default-settings):
+				Clock:			32		kHz
+				Prescaler:		256		(0xF)
+				Downcounter:	4096	(0xFFF)
+				Timeout = (32000 (1/s))^(-1) * 256 * 4096 = 32,768 seconds
+			
+	*/
 	
 	_handle.Instance = IWDG;
 	_handle.Init.Prescaler = prescaler; // e.g.: IWDG_PRESCALER_256
 	_handle.Init.Reload = reload;		// Range: 0x0000, 0x0FFFU
 	
 	HAL_IWDG_Init(&_handle);
+	
+	_healthCheckTicker.attach(
+		mbed::Callback<void()>(this, &WatchDog::Check),
+		healthCheckIntervalSeconds
+	);
 	
 }
 
@@ -38,5 +58,28 @@ void WatchDog::Kick() {
 }
 
 void WatchDog::RegisterHealthCheck(HealthCheckBase * healthCheck) {
+	
+	_healthChecks.push_back(healthCheck);
+	
+}
+
+void WatchDog::Check(){
+	
+	for (vector<HealthCheckBase*>::iterator it = _healthChecks.begin(); it != _healthChecks.end(); ++it) {
+		
+		if((*it)->GetState(this->_context) != HealthCheckBase::HEALTHIE){
+			
+			// HealthCheck failed, system is in an unhealthy state --> danger of reset
+			wd_log_warn("WatchDog --> Failed");
+			return;
+			
+		}
+		
+	}
+	
+	// All checks succeeded
+	// Kick the watchdog to avoid reset
+	wd_log_info("WatchDog --> Kick");
+	Kick();
 	
 }

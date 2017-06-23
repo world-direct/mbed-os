@@ -17,22 +17,27 @@
 
 #include "mbed.h"
 #include "HealthCheckBase.h"
+#include <vector>
 
 class WatchDog {
 	
 	private:
 	
 		IWDG_HandleTypeDef _handle;
+		Ticker _healthCheckTicker;
+		vector<HealthCheckBase *> _healthChecks;
+		char * _context;
+	
+		void Check();
 	
 	public:
 	
-
 		WatchDog();
 	
 		/* 
 			Configures the Watchdog
 		*/
-		void Configure(uint32_t prescaler, uint32_t reload);
+		void Start(uint32_t prescaler = IWDG_PRESCALER_256, uint32_t reload = 0x0FFFU, float healthCheckIntervalSeconds = 5, char * context = NULL);
 	
 		/* 
 			Resets the counter to avoid a system-reset
