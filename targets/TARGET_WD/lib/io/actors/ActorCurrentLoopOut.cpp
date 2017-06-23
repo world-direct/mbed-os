@@ -16,7 +16,7 @@ ActorCurrentLoopOut::~ActorCurrentLoopOut() {}
 *
 * \param value		Value in 4 - 20 mA.
 */
-void ActorCurrentLoopOut::setValue(int value) {
+void ActorCurrentLoopOut::setValue(float value) {
 	
 	if (value < _minRangeValue) {
 		value = _minRangeValue;
@@ -26,7 +26,7 @@ void ActorCurrentLoopOut::setValue(int value) {
 	
 	this->_value = value;
 		
-	float dac_value = ((float)(value * 1000.0f)) / this->_currentCalibrationCoefficient;
+	float dac_value = (value * 1000.0f) / this->_currentCalibrationCoefficient;
 		
 	_analogOutManager->setValue(this->_outputIndex, (int)dac_value);
 	
