@@ -114,6 +114,11 @@ float DS18B20::getValue(uint64_t id) {
 	
 }
 
+void DS18B20::setMeasurementInterval(uint measurementIntervalSeconds) {
+	this->_ticker.detach();
+	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
+}
+
 OW_STATUS_CODE DS18B20::convertTemperature(void) {
 	// Remark: The power-on reset value of the temperature register is +85C.
 	
@@ -238,4 +243,14 @@ OW_STATUS_CODE DS18B20::setTemperatureResolution(TemperatureResolution resolutio
 	}
 	
 	return OW_OK;
+}
+
+void DS18B20::getSensorIds(uint64_t * buffer) {
+	
+	for(map<uint64_t, DS18B20MeasurementBuffer>::const_iterator it = this->_mSensors.begin(); it != this->_mSensors.end(); it++) {
+	
+		(*buffer++) = it->first;
+		
+	}
+	
 }

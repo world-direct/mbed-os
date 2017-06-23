@@ -23,11 +23,13 @@ public:
 	~DS18B20();
 	
 	int getSensorCount(void) { return _sensorCount; };
+	void getSensorIds(uint64_t * buffer);
 	
 	OW_STATUS_CODE enumerateSensors(void);
 	
 	float getValue(uint64_t id);
 	
+	void setMeasurementInterval(uint measurementIntervalSeconds);
 	
 private:
 	

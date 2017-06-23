@@ -22,71 +22,72 @@
 #include <vector>
 #include <algorithm>
 
-#include "OneWire.h"
-#include "DS18B20.h"
+#include "io.h"
 
 using namespace utest::v1;
 
-static OneWire oneWire(ONEWIRE_Rx, ONEWIRE_Tx, ONEWIRE_TxH);
-
-static const uint64_t referenceOneWireIds[2] = {0x28771ED40400004C, 0x28A31199050000ED};
+static const uint64_t referenceOneWireIds[2] = {0x28FF1F8002160369, 0x28A3953C05000011};
 static vector<uint64_t> detectedOneWireIds;
 
-static void onewireSensorAdded(uint64_t id){
-	wd_log_info("Added OneWire sensor with id %.8X%.8X", (uint32_t)(id >> 32), (uint32_t)(id));
-	detectedOneWireIds.push_back(id);
-}
-
-static void onewireSensorRemoved(uint64_t id){
-	wd_log_info("Removed OneWire sensor with id %.8X%.8X", (uint32_t)(id >> 32), (uint32_t)(id));
-	for (vector<uint64_t>::iterator it = detectedOneWireIds.begin(); it != detectedOneWireIds.end(); it++) {
-		if ((*it) == id) {
-			detectedOneWireIds.erase(it);
-			break;
-		} 
+int retrieve_onewire_ids(void) {
+	int sensorCount = routingmax_io.OneWireDS18B20.getSensorCount();
+	uint64_t sensorIds[sensorCount];
+	routingmax_io.OneWireDS18B20.getSensorIds(sensorIds);
+	
+	for (int i=0; i<sensorCount; i++) {
+		detectedOneWireIds.push_back(sensorIds[i]);
 	}
+	
+	return sensorCount;
 }
-
-// create DS18B20 sensor with specified measurement interval of 1 second
-DS18B20 OneWireDS18B20 = DS18B20(&oneWire, &onewireSensorAdded, &onewireSensorRemoved, 1);
 
 void test_onewire_enumeration() {
 	
-	OW_STATUS_CODE res = OneWireDS18B20.enumerateSensors();
+	OW_STATUS_CODE res = routingmax_io.OneWireDS18B20.enumerateSensors();
 	wait_ms(200); // safety wait
 	
 	// enumeration successful?
 	TEST_ASSERT_TRUE(res == OW_OK);
 	
+	// retrieve detected sensor IDs
+	int sensorCount = retrieve_onewire_ids();
+	
 	// all sensors detected?
-	for (int i = 0; i<2; i++){ // iterate through reference sensors
+	for (int i = 0; i<sensorCount; i++){ // iterate through reference sensors
 		
 		TEST_ASSERT_TRUE_MESSAGE(find(detectedOneWireIds.begin(), detectedOneWireIds.end(), referenceOneWireIds[i]) != detectedOneWireIds.end(), 
 			"Could not find given 1-Wire sensor on bus!");
 		
 	}
 	
+	detectedOneWireIds.clear();
 }
 
 void test_onewire_temperature(){
 	
-	OW_STATUS_CODE res = OneWireDS18B20.enumerateSensors();
+	// set measurement interval of DS18B20 sensor to 1 second
+	routingmax_io.OneWireDS18B20.setMeasurementInterval(1); 
+	
+	OW_STATUS_CODE res = routingmax_io.OneWireDS18B20.enumerateSensors();
 	wait_ms(200); // safety wait
 	
 	// enumeration successful?
 	TEST_ASSERT_TRUE(res == OW_OK);
 	
+	retrieve_onewire_ids();
+	
 	wait_ms(6000); // wait 6 seconds to collect measurements
 	
 	for (vector<uint64_t>::const_iterator it = detectedOneWireIds.begin(); it != detectedOneWireIds.end(); it++) {
 		
-		float temperatureValue = OneWireDS18B20.getValue(*it);
+		float temperatureValue = routingmax_io.OneWireDS18B20.getValue(*it);
 		wd_log_info("1-Wire %.8X%.8X temperature: %f", (uint32_t)((*it) >> 32), (uint32_t)(*it), temperatureValue);
 		
 		TEST_ASSERT_FLOAT_WITHIN_MESSAGE(10.0f, 25.0f, temperatureValue, "Temperature value on 1-wire sensor is not within expected range (15C - 35C)!");
 		
 	}
 	
+	detectedOneWireIds.clear();
 }
 
 utest::v1::status_t greentea_failure_handler(const Case *const source, const failure_t reason) {
