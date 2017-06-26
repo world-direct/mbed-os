@@ -12,6 +12,7 @@ ___________________DEFINES_____________________________
 #define BUTTON3_BIT			0x2
 #define BUTTON4_BIT			0x3
 #define LIGHTSENSOR_MASK	0x30
+#define HW_VERSION_MASK		0xC0
 
 #define LED1	0x0
 #define LED2	0x1
@@ -39,7 +40,16 @@ DmUI::DmUI(PinName mosi, PinName miso, PinName sck, PinName cs, PinName irq) : _
 	led1_off();
 	led2_off();
 	
-	_pinIRQ.fall(this, &DmUI::onButtonPressed);
+	// read hw version with 3 retries
+	for (int i=0; i<3; i++) {
+		int inputRegisterState = shift();
+		if (inputRegisterState >= 0) {
+			this->_hwVersion = (uint8_t)((inputRegisterState & HW_VERSION_MASK) >> 6);
+			break;
+		}		
+	}
+	
+	_pinIRQ.fall(callback(this, &DmUI::onButtonPressed));
 	_pinIRQ.enable_irq();
 	
 	for (int i = 0; i < sizeof _irq / sizeof _irq[0]; i++) {
@@ -146,4 +156,16 @@ void DmUI::led2_on(uint32_t color) {
 
 void DmUI::led2_off(void) {
 	led_off(LED2);
+}
+
+uint8_t DmUI::getLightSensorState(void){
+	
+	// read light sensor State with 3 retries
+	for (int i=0; i<3; i++) {
+		int inputRegisterState = shift();
+		if (inputRegisterState >= 0) {
+			return (uint8_t)((inputRegisterState & LIGHTSENSOR_MASK) >> 4);
+		}		
+	}
+	
 }

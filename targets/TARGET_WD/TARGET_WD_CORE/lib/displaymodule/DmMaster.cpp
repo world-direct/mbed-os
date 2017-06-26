@@ -35,11 +35,11 @@ void DmMaster::startDemo(void) {
 	UI.attach(callback(this, &DmMaster::_toggleLedColor_Green), DmUI::Button3);	
 	UI.attach(callback(this, &DmMaster::_toggleLedColor_Blue), DmUI::Button4);	
 	
-	UI.startPolling(300);
+//	UI.startPolling(300);
 }
 
 void DmMaster::stopDemo(void) {
-	UI.stopPolling();
+//	UI.stopPolling();
 	UI.detach(DmUI::Button1);
 	UI.detach(DmUI::Button2);
 	UI.detach(DmUI::Button3);
@@ -64,7 +64,9 @@ void DmMaster::toggleLedSelection(void) {
 	Led1Active = !Led1Active;
 	Display.clearDisplay();
 	Display.setTextCursor(0,0);
-	Display.printf("LED %d selected", Led1Active ? 1 : 2);
+	Display.printf("LED %d selected\n", Led1Active ? 1 : 2);
+	uint8_t ls = UI.getLightSensorState();
+	Display.printf("LIGHT SENSOR value: %d", ls);
 	Display.refresh();
 }
 
