@@ -107,6 +107,9 @@ public:
 	 */
 	void led2_off(void);
 	
+	uint8_t getHwVersion(void) { return _hwVersion; };
+	uint8_t getLightSensorState(void);
+	
 protected:
 	void onButtonPressed(void);
 	
@@ -125,6 +128,7 @@ private:
 	Thread _eventThread;
 	
 	uint8_t _srStateCache = 0xFF;
+	uint8_t _hwVersion;
 };	
 
 #endif // !DMUI_H
