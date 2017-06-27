@@ -107,6 +107,9 @@ struct i2c_s {
 #define GPIO_IP_WITHOUT_BRR
 #include "gpio_object.h"
 
+/* STM32F1 HAL doesn't provide this API called in rtc_api.c */
+#define __HAL_RCC_RTC_CLKPRESCALER(__RTCCLKSource__)
+	
 #ifdef __cplusplus
 }
 #endif
