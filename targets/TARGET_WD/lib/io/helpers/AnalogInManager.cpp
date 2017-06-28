@@ -1,5 +1,8 @@
 #include "AnalogInManager.h"
 #include "Median.h"
+#include <cmath>
+
+static void donothing(uint16_t instanceId) {}
 
 AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel1, PinName muxSel2, PinName spiMiso, PinName spiSck, PinName spiCs)
 	: _inputCount(inputCount), _muxSel0(muxSel0, 0), _muxSel1(muxSel1, 0), _muxSel2(muxSel2, 0), _pinCs(spiCs, 1), _spi(NC, spiMiso, spiSck), _ticker() {
@@ -8,25 +11,59 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 	this->_measurementBuffer = new int *[inputCount];
 
 	for( int i = 0 ; i < inputCount ; i++ ) {
-		this->_measurementBuffer[i] = new int[MEASUREMENT_BUFFER_SIZE]();
+		this->_measurementBuffer[i] = new int[AIN_MEASUREMENT_BUFFER_SIZE]();
 	}
 		
 	this->_measurementPosition = new int[inputCount]();
+	this->_currentValue = new int[inputCount]();
+	this->_valueChangedTolerance = new int[inputCount]();
+	
+	this->_irq = new Callback<void(uint16_t)>[inputCount]();
 		
+	// value-change callback handling
+	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+	for (int i = 0; i < inputCount; i++) {
+        _irq[i] = donothing;
+		_valueChangedTolerance[i] = AIN_DEFAULT_VALUE_CHANGED_TOLERANCE;
+    }
+
 	this->read(); // initiate first conversion
-	this->_ticker.attach(callback(this, &AnalogInManager::collectMeasurement), ((float) MEASUREMENT_INTERVAL_MS)/1000.0f );
+	this->_ticker.attach(callback(this, &AnalogInManager::collectMeasurement), ((float) AIN_MEASUREMENT_INTERVAL_MS)/1000.0f );
 		
 }
+
 
 AnalogInManager::~AnalogInManager() {
 	
 	// free allocated memory for dynamic buffers
-	for( int i = 0 ; i < MEASUREMENT_BUFFER_SIZE ; i++ ) {
+	for( int i = 0 ; i < AIN_MEASUREMENT_BUFFER_SIZE ; i++ ) {
 		delete [] this->_measurementBuffer[i];
 	}
 	delete [] this->_measurementBuffer;
-	
 	delete [] this->_measurementPosition;
+	delete [] this->_currentValue;
+	delete [] this->_valueChangedTolerance;
+	delete [] this->_irq;
+}
+
+
+void AnalogInManager::attach(int inputIndex, Callback<void(uint16_t)> func) {
+	
+	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
+	
+	if (func){
+		_irq[inputIndex] = _queue.event(func);
+	} else {
+		_irq[inputIndex] = donothing;
+	}
+	
+}
+
+
+void AnalogInManager::detach(int inputIndex) {
+	
+	_irq[inputIndex] = donothing;
+	
 }
 
 
@@ -34,7 +71,7 @@ int AnalogInManager::getValue(int inputIndex) {
 	
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return 0;
 	
-	return Median<int>::compute(this->_measurementBuffer[inputIndex], MEASUREMENT_BUFFER_SIZE);
+	return this->_currentValue[inputIndex];
 	
 }
 
@@ -72,6 +109,7 @@ uint16_t AnalogInManager::read(void) {
 	
 }
 
+
 void AnalogInManager::collectMeasurement(void) {
 	
 	// save current input selection (adc should already hold result of input value conversion, i.e. value of previously selected input)
@@ -88,7 +126,15 @@ void AnalogInManager::collectMeasurement(void) {
 	_measurementBuffer[inputIndex][_measurementPosition[inputIndex]] = adc_val;
 	wd_log_debug("AIN read -> input %d, value %d", inputIndex, adc_val);
 	
-	if (_measurementPosition[inputIndex]++ >= MEASUREMENT_BUFFER_SIZE)
+	if (_measurementPosition[inputIndex]++ >= AIN_MEASUREMENT_BUFFER_SIZE)
 		_measurementPosition[inputIndex] = 0;
+	
+	// detect value change
+	int previousValue = this->_currentValue[inputIndex];
+	this->_currentValue[inputIndex] = Median<int>::compute(this->_measurementBuffer[inputIndex], AIN_MEASUREMENT_BUFFER_SIZE);
+	
+	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex]) {
+		_irq->call(inputIndex);
+	}
 	
 }
