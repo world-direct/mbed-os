@@ -149,8 +149,12 @@ OW_STATUS_CODE DS18B20::readMeasurements(void) {
 		
 		this->_oneWire->ow_reset();
 		this->_oneWire->ow_command(DS18B20_COMMAND_READ_SCRATCHPAD, id);
+		
+		// [Error] DS18B20.cpp@153,42: passing 'const MeasurementBuffer<float, 9>' as 'this' argument of 'void MeasurementBuffer<T, size>::add(T) [with T = float; int size = 9]' discards qualifiers [-fpermissive]
+		MeasurementBuffer<float, DS18B20_MEASUREMENT_BUFFER_SIZE> second = it->second;
+		
 		if (this->_oneWire->ow_read_bytes_with_crc_8(&sp[0], DS18B20_SP_SIZE) != OW_OK) {
-			(it->second).add(DS18B20_INVALID_VALUE);
+			second.add(DS18B20_INVALID_VALUE);
 		} else {
 			reading = (sp[1] << 8) + sp[0];
 	
@@ -160,7 +164,7 @@ OW_STATUS_CODE DS18B20::readMeasurements(void) {
 	
 			result = (float)reading / 16.0f;
 			
-			(it->second).add(result);
+			second.add(result);
 		}
 	}
 	

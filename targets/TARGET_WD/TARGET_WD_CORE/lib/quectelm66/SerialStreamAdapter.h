@@ -31,14 +31,14 @@ class SerialStreamAdapter : public IOStream
 	public: 
 		
 		SerialStreamAdapter(BufferedSerial* bufferedSerial);
-		virtual int abortRead() override;
-		virtual int read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */) override;
-		virtual int waitAvailable(uint32_t timeout /* = osWaitForever */) override;
-		virtual int abortWrite() override;
-		virtual int waitSpace(uint32_t timeout /* = osWaitForever */) override;
-		virtual int write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) override;
-		virtual size_t space() override;
-		virtual size_t available() override;
+		virtual int abortRead();
+		virtual int read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */);
+		virtual int waitAvailable(uint32_t timeout /* = osWaitForever */);
+		virtual int abortWrite();
+		virtual int waitSpace(uint32_t timeout /* = osWaitForever */);
+		virtual int write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */);
+		virtual size_t space();
+		virtual size_t available();
 		virtual void attach(Callback<void()> func, RawSerial::IrqType type);
 	
 };

@@ -165,7 +165,8 @@ void QuectelM66Interface::serial_read_thread_entry() {
 		wd_log_debug("QuectelM66Interface --> QUECTEL_M66_PPP_READ_START_SIGNAL received");
 		this->_readProcessingThread.signal_clr(QUECTEL_M66_PPP_READ_START_SIGNAL);
 	
-		int size;
+		// [Error] QuectelM66Interface.cpp@171,103: invalid conversion from 'int*' to 'size_t* {aka unsigned int*}'
+		size_t size;
 		do {
 		
 			if (this->_serialStreamAdapter->read(this->_serialBuffer, &size, QUECTEL_M66_READ_BUFFER_SIZE, 1000) == 0) {
