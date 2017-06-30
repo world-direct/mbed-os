@@ -2,7 +2,7 @@
 
 #include "AnalogInManager.h"
 
-#define INVALID_VALUE	0
+#define CURRENT_LOOP_INVALID_VALUE	0
 
 class SensorCurrentLoopIn {
 public:
