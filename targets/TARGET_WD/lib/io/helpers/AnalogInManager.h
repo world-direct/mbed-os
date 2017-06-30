@@ -5,6 +5,7 @@
 #include "rtos.h"
 #include "PinNames.h"
 #include "wd_logging.h"
+#include "MeasurementBuffer.h"
 
 #define AIN_MEASUREMENT_BUFFER_SIZE				9
 #define AIN_MEASUREMENT_INTERVAL_MS				100	// experienced several faulty reads (0xFF) at an interval of 50ms
@@ -33,9 +34,10 @@ private:
 	int _inputCount;
 	int _currentInputSelection = 1;
 	
-	int ** _measurementBuffer = 0;
-	int * _measurementPosition = 0;
-	int * _currentValue = 0;
+	typedef MeasurementBuffer<uint16_t, AIN_MEASUREMENT_BUFFER_SIZE> AINMeasurementBuffer;
+	AINMeasurementBuffer * _measurementBuffers;
+	
+	uint16_t * _currentValue = 0;
 	int * _valueChangedTolerance = 0;
 	
 	Callback<void(uint16_t)> * _irq;
