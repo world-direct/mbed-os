@@ -34,4 +34,4 @@ extern struct RoutingmaxIO {
 	ActorCurrentLoopOut AOUTs[AOUTCount];
 } routingmax_io;
 
-extern uint8_t routingmax_version;
+extern uint8_t board_hw_version;
