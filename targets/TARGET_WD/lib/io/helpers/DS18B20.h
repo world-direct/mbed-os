@@ -10,7 +10,7 @@
 #include "MeasurementBuffer.h"
 
 
-#define DS18B20_INVALID_VALUE				-1000
+#define DS18B20_INVALID_VALUE				-999.99
 #define DS18B20_FAMILY_CODE					0x28
 //#define DS18B20_ENUMERATION_REFRESH_INTERVAL
 #define DS18B20_MEASUREMENT_BUFFER_SIZE		9
@@ -19,7 +19,7 @@
 class DS18B20 {
 public:
 	
-	DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback, uint measurementIntervalSeconds = DS18B20_MEASUREMENT_INTERVAL_S);
+	DS18B20(OneWire * oneWire, uint measurementIntervalSeconds = DS18B20_MEASUREMENT_INTERVAL_S);
 	~DS18B20();
 	
 	int getSensorCount(void) { return _sensorCount; };
@@ -30,6 +30,8 @@ public:
 	float getValue(uint64_t id);
 	
 	void setMeasurementInterval(uint measurementIntervalSeconds);
+	void attachSensorAddedCallback(Callback<void(uint64_t)> cb);
+	void attachSensorRemovedCallback(Callback<void(uint64_t)> cb);
 	
 private:
 	
