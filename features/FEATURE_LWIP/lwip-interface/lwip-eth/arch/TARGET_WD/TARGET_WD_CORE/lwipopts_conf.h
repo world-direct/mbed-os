@@ -64,14 +64,16 @@
  */
 #define MEMP_NUM_TCPIP_MSG_INPKT    16
 
-#define PPP_SUPPORT 1
-#define PPPOS_SUPPORT 1
-#define LWIP_PPP_API 1
-#define PAP_SUPPORT 1
-#define PPP_NOTIFY_PHASE 1
-#define NO_SYS 0
-#define PPP_INPROC_IRQ_SAFE 0
-
-#define LWIP_DEBUG
+#define PPP_SUPPORT					1
+#define PPPOS_SUPPORT				1
+#define LWIP_PPP_API				1
+#define PAP_SUPPORT					1
+#define PPP_NOTIFY_PHASE			1
+#define NO_SYS						0
+#define PPP_INPROC_IRQ_SAFE			0
+#define LWIP_DEBUG					1
+#define ICMP_STATS					1
+#define CHECKSUM_GEN_ICMP			0
+#define LWIP_CHECKSUM_CTRL_PER_NETIF 1
 
 #endif
