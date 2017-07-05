@@ -9,7 +9,7 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 	
 	// allocate memory for dynamic buffers
 	this->_measurementBuffers = new AINMeasurementBuffer[inputCount]();
-	this->_currentValue = new int[inputCount]();
+	this->_currentValue = new uint16_t[inputCount]();
 	this->_valueChangedTolerance = new int[inputCount]();
 	this->_irq = new Callback<void(uint16_t)>[inputCount]();
 		
@@ -122,5 +122,11 @@ void AnalogInManager::collectMeasurement(void) {
 	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex]) {
 		_irq->call(inputIndex);
 	}
+	
+}
+
+int AnalogInManager::getMAD(int inputIndex) {
+	
+	return this->_measurementBuffers[inputIndex].MAD();
 	
 }

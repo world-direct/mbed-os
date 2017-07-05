@@ -17,7 +17,7 @@ float SensorPlatinumTemperature::adc2Temperature(uint16_t adc) {
 	
 	uint64_t rv = this->_ptType == SensorPlatinumTemperature::PT1000 ? 2700 : 3300;
 	
-	int32_t resistance = (uint64_t)((uint64_t)(rv * (uint64_t)adc) / (uint64_t)((uint64_t)0x10000 - adc));
+	int32_t resistance = (uint64_t)((uint64_t)(rv * (uint64_t)adc) / (uint64_t)((uint64_t)0x10000 - (uint64_t)adc));
 	resistance *=  512;
 	
 	int64_t tx100 = (((int64_t)13300 * resistance) - (int64_t)6809600000) / 0x40000;

@@ -22,9 +22,6 @@
 #define DOUTCount	3
 #define AOUTCount	2
 
-extern void sensorAdded(uint64_t id);
-extern void sensorRemoved(uint64_t id);
-
 extern struct RoutingmaxIO {
 	SensorDigitalIn DINs[DINCount];
 	SensorCurrentLoopIn AINs[AINCount];

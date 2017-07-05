@@ -25,6 +25,8 @@ public:
 	
 	float getValue(void);
 	
+	float getMAD(void);
+	
 private:
 	float _minRangeValue = 3.8f;
 	float _maxRangeValue = 20.5f;
@@ -32,6 +34,9 @@ private:
 	
 	AnalogInManager * _analogInManager;
 	int _inputIndex;
+	
+	float adc2mA(int adc);
+	int mA2adc(float mA);
 	
 };
 

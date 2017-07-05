@@ -25,6 +25,8 @@ public:
 	
 	int getValue(int inputIndex);
 	
+	int getMAD(int inputIndex);
+	
 private:
 	
 	void selectNextInput(void);
