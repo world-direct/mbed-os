@@ -2,7 +2,7 @@
 
 #include "AnalogInManager.h"
 
-#define INVALID_VALUE	-1
+#define CURRENT_LOOP_INVALID_VALUE	0
 
 class SensorCurrentLoopIn {
 public:
@@ -16,14 +16,27 @@ public:
 	float getCurrentCalibrationCoefficient(void) { return _currentCalibrationCoefficient; };
 	void setCurrentCalibrationCoefficient(float value) { _currentCalibrationCoefficient = value; };
 	
+	// tolerance in respect to mA value
+	float getValueChangedTolerance(void);
+	void setValueChangedTolerance(float value);
+	
+	void attach(Callback<void(uint16_t)> func);
+	void detach(void);
+	
 	float getValue(void);
+	
+	float getMAD(void);
 	
 private:
 	float _minRangeValue = 3.8f;
 	float _maxRangeValue = 20.5f;
 	float _currentCalibrationCoefficient = 0.3357f;
-
+	
 	AnalogInManager * _analogInManager;
 	int _inputIndex;
+	
+	float adc2mA(int adc);
+	int mA2adc(float mA);
+	
 };
 
