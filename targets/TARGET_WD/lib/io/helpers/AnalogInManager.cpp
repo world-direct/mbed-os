@@ -1,11 +1,10 @@
 #include "AnalogInManager.h"
 #include <cmath>
 
-
 static void donothing(uint16_t instanceId) {}
 
 AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel1, PinName muxSel2, PinName spiMiso, PinName spiSck, PinName spiCs)
-	: _inputCount(inputCount), _muxSel0(muxSel0, 0), _muxSel1(muxSel1, 0), _muxSel2(muxSel2, 0), _pinCs(spiCs, 1), _spi(NC, spiMiso, spiSck), _ticker(), _queue(inputCount * EVENTS_EVENT_SIZE) {
+	: _inputCount(inputCount), _muxSel0(muxSel0, 0), _muxSel1(muxSel1, 0), _muxSel2(muxSel2, 0), _pinCs(spiCs, 1), _spi(NC, spiMiso, spiSck), _ticker(), _queue(&IOEventQueue::getInstance()) {
 	
 	// allocate memory for dynamic buffers
 	this->_measurementBuffers = new AINMeasurementBuffer[inputCount]();
@@ -13,8 +12,6 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 	this->_valueChangedTolerance = new int[inputCount]();
 	this->_irq = new Callback<void(uint16_t)>[inputCount]();
 		
-	// value-change callback handling
-	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
 	for (int i = 0; i < inputCount; i++) {
         _irq[i] = donothing;
 		_valueChangedTolerance[i] = AIN_DEFAULT_VALUE_CHANGED_TOLERANCE;
@@ -41,7 +38,7 @@ void AnalogInManager::attach(int inputIndex, Callback<void(uint16_t)> func) {
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
 	
 	if (func){
-		_irq[inputIndex] = _queue.event(func);
+		_irq[inputIndex] = _queue->event(func);
 	} else {
 		_irq[inputIndex] = donothing;
 	}

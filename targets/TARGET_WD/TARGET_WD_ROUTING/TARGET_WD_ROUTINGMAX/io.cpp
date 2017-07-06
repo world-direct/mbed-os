@@ -8,10 +8,10 @@ RoutingmaxIO routingmax_io = {
 	.DINs = {
 		SensorDigitalIn(In1), 
 		SensorDigitalIn(In2),
-		SensorDigitalIn(In3),
-		SensorDigitalIn(In4),
+		SensorDigitalIn(In3, SensorDigitalIn::None),
+		SensorDigitalIn(In4, SensorDigitalIn::None),
 		SensorDigitalIn(In5),
-		SensorDigitalIn(In6),
+		SensorDigitalIn(In6, SensorDigitalIn::None),
 		SensorDigitalIn(In7),
 		SensorDigitalIn(In8),
 		SensorDigitalIn(In9),

@@ -10,12 +10,11 @@ ___________________IMPLEMENTATION______________________
 static void donothing(uint16_t instanceId) {}
 
 SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint16_t instanceMetadata)
-	: _interruptIn(pin), _instanceMetadata(instanceMetadata) {
-	
-	// start event queue dispatch thread
-	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+	: _interruptIn(pin), _instanceMetadata(instanceMetadata), _ticker(), _queue(&IOEventQueue::getInstance()) {
 		
-	if (edgeSelection == SensorDigitalIn::Rising) {
+	if (edgeSelection == SensorDigitalIn::None) {
+		_ticker.attach(callback(this, &SensorDigitalIn::onPollingTick), 0.05f);
+	} else if (edgeSelection == SensorDigitalIn::Rising) {
 		_interruptIn.rise(callback(this, &SensorDigitalIn::onObservingEdge));
 		_interruptIn.fall(callback(this, &SensorDigitalIn::onIgnoringEdge));
 	} else {
@@ -24,7 +23,7 @@ SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint1
 	}
 	
 	_interruptIn.enable_irq();
-	_irq.attach(donothing);
+	_irq = donothing;
 	
 	// set initial value
 	this->setValue(_interruptIn.read());
@@ -34,6 +33,7 @@ SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint1
 SensorDigitalIn::~SensorDigitalIn(){
 	
 	_interruptIn.disable_irq();
+	_ticker.detach();
 	
 }
 
@@ -51,13 +51,21 @@ void SensorDigitalIn::onIgnoringEdge(void) {
 	
 }
 
+void SensorDigitalIn::onPollingTick(void) {
+	
+	int value = this->_interruptIn.read();
+	if (value > this->_value) this->_edgeCounter ++;
+	this->setValue(value);
+	
+}
+
 
 void SensorDigitalIn::attach(mbed::Callback<void(uint16_t)> func) {
 	
 	if (func){
-		_irq.attach(_queue.event(func));
+		_irq = _queue->event(func);
 	} else {
-		_irq.attach(donothing);
+		_irq = donothing;
 	}
 	
 }
@@ -65,7 +73,7 @@ void SensorDigitalIn::attach(mbed::Callback<void(uint16_t)> func) {
 
 void SensorDigitalIn::detach(void) {
 	
-	_irq.attach(donothing);
+	_irq = donothing;
 	
 }
 
@@ -78,5 +86,3 @@ void SensorDigitalIn::setValue(int value) {
 	if (value != prev) _irq.call(this->_instanceMetadata);
 	
 }
-
-

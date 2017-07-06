@@ -1,8 +1,7 @@
 #pragma once
 
 #include "mbed.h"
-#include "mbed_events.h"
-#include "rtos.h"
+#include "IOEventQueue.h"
 #include "PinNames.h"
 #include "wd_logging.h"
 #include "MeasurementBuffer.h"
@@ -50,9 +49,6 @@ private:
 	DigitalOut _pinCs;
 	SPI _spi;
 	Ticker _ticker;
-	
-	EventQueue _queue;
-	Thread _eventThread;
-	
+	IOEventQueue * _queue;
 };
 

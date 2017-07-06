@@ -28,13 +28,10 @@
 static void donothing(uint64_t id) {}
 
 DS18B20::DS18B20(OneWire * oneWire, uint measurementIntervalSeconds)
-	: _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(OW_MAXSENSORS * EVENTS_EVENT_SIZE)  {
+	: _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance())  {
 	
 	this->_oneWire = oneWire;
 
-	// start event queue dispatch thread
-	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
-		
 	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
 }
 
@@ -123,7 +120,7 @@ void DS18B20::setMeasurementInterval(uint measurementIntervalSeconds) {
 void DS18B20::attachSensorAddedCallback(Callback<void(uint64_t)> cb) {
 	
 	if (cb){
-		this->_sensorAddedCallback= _queue.event(cb);
+		this->_sensorAddedCallback= _queue->event(cb);
 	} else {
 		this->_sensorAddedCallback = donothing;
 	}
@@ -133,7 +130,7 @@ void DS18B20::attachSensorAddedCallback(Callback<void(uint64_t)> cb) {
 void DS18B20::attachSensorRemovedCallback(Callback<void(uint64_t)> cb) {
 	
 	if (cb){
-		this->_sensorRemovedCallback = _queue.event(cb);
+		this->_sensorRemovedCallback = _queue->event(cb);
 	} else {
 		this->_sensorRemovedCallback = donothing;
 	}
