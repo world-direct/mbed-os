@@ -24,8 +24,8 @@ MEMORY
     VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
 	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
     FLASH (rx)   : ORIGIN = MBED_APP_START + 0x300, LENGTH = MBED_APP_SIZE - 0x300
-    CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K
-    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k
+    CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K /* len: 0x10000 */
+    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k /* len : 0x30000 */
 }
 
 /* Linker script to place sections and symbol values. Should be used together
