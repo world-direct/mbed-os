@@ -2,7 +2,7 @@
 
 #include "AnalogInManager.h"
 
-#define INVALID_VALUE	-1000
+#define INVALID_VALUE	-999.99f
 
 class SensorPlatinumTemperature {
 public:
@@ -11,7 +11,12 @@ public:
 		FAHRENHEIT
 	};
 	
-	SensorPlatinumTemperature(AnalogInManager * analogInManager, int inputIndex);
+	enum PTType {
+		PT100,
+		PT1000
+	};
+	
+	SensorPlatinumTemperature(AnalogInManager * analogInManager, int inputIndex, PTType ptType);
 	~SensorPlatinumTemperature();
 	
 	float getMinRangeValue(void) { return _minRangeValue; };
@@ -24,10 +29,13 @@ public:
 	float getValue(void);
 	
 private:
-	float _minRangeValue = -273.15f; // TODO
-	float _maxRangeValue = 1000.0f; // TODO
-	PTUnit _unit = SensorPlatinumTemperature::CELSIUS;
-
+	float adc2Temperature(uint16_t adc);
+	
+	float _minRangeValue; // TODO
+	float _maxRangeValue; // TODO
+	PTUnit _unit;
+	PTType _ptType;
+	
 	AnalogInManager * _analogInManager;
 	int _inputIndex;
 };

@@ -22,6 +22,7 @@
 #include <features/netsocket/nsapi_types.h>
 #include "ATCommandsInterface.h"
 #include "LinkMonitor.h"
+#include "BasicInformationsProcessor.h"
 
 /** 
 	Coordinates power-sequence, AT-commands and PPP-connection
@@ -33,7 +34,9 @@ public:
 
 	virtual ~QuectelM66CommandCoordinator();
 	
-	bool startup();
+	bool startupPPP();
+	
+	bool startupAT();
 	
 	bool shutdown();
 
@@ -48,6 +51,12 @@ public:
 	int GetRSSI();
 	
 	char* GetPhoneNumber();
+	
+	char* GetICCID();
+	
+	char* GetIMEI();
+	
+	bool TestATOK();
 
 private:
 	
@@ -57,6 +66,7 @@ private:
 	
     ATCommandsInterface* _atCommandInterface;
 	LinkMonitor* _linkMonitor;
+	BasicInformationsProcessor* _basicInformationsProcessor;
 	int _rssi;
 	LinkMonitor::REGISTRATION_STATE _gsmRegistrationState;
 	LinkMonitor::REGISTRATION_STATE _gprsRegistrationState;
@@ -67,6 +77,8 @@ private:
 	DigitalIn _vdd_extPin;
 	
 	bool pppPreparation();
+	void executePowerOnSequence();
+	bool setupATCommandInterface();
 	
 };
 

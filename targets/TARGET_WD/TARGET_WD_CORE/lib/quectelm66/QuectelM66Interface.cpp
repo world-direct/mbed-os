@@ -33,11 +33,11 @@ extern "C" {
 #define M66_MISC_TIMEOUT    500
 
 
-QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password)
-	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, username, password) {
+QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password, InitializationMode initializationMode)
+	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, username, password, initializationMode) {
 	}
 
-QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password)
+QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password, InitializationMode initializationMode)
 	: _commandCoordinator(serialStreamAdapter, pwrKey, vdd_ext, apn)
 	, _dhcp(true)
 	, _ip_address()
@@ -47,22 +47,37 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 	, _username(username)
 	, _password(password)
 	, _readProcessingThread(osPriorityNormal)
-	, _readNotificationQueue(){
+	, _readNotificationQueue()
+	, _initializationMode(initializationMode){
 		
 	wd_log_debug("QuectelM66Interface --> ctor");
 		
 	this->_serialStreamAdapter = serialStreamAdapter;	
-	
-	this->_pppos_ctx.serial_stream_adapter = serialStreamAdapter;
-	this->_pppos_ctx.pppos_write_callback = &QuectelM66Interface::pppos_write_wrapper;
 		
 	this->_readProcessingThread.start(mbed::Callback<void()>(this, &QuectelM66Interface::serial_read_thread_entry));
+	
+	switch (_initializationMode){
 		
-	if (!this->_commandCoordinator.startup()) {
-		wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
-		NVIC_SystemReset();
+		case COMMAND_MODE:	
+		
+			// Command mode (AT) only initialization
+			if (!this->_commandCoordinator.startupAT()) {
+				wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
+				NVIC_SystemReset();
+			}
+			break;
+			
+		case DATA_MODE:
+			
+			// Data mode (PPP) initialization
+			if (!this->_commandCoordinator.startupPPP()) {
+				wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
+				NVIC_SystemReset();
+			}
+			break;
+			
 	}
-		
+	
 	wd_log_info("QuectelM66Interface --> RSSI: %d", this->_commandCoordinator.GetRSSI());
 	wd_log_info("QuectelM66Interface --> GSMRegistrationState: %d", this->_commandCoordinator.GetGSMRegistrationState());
 	wd_log_info("QuectelM66Interface --> GPRSRegistrationState: %d", this->_commandCoordinator.GetGPRSRegistrationState());
@@ -188,6 +203,18 @@ nsapi_error_t QuectelM66Interface::disconnect() {
 	nsapi_error_t ret = mbed_lwip_quectelm66_bringdown();
 	this->_readProcessingThread.signal_set(QUECTEL_M66_PPP_READ_STOP_SIGNAL);
 	return ret;
+}
+
+char* QuectelM66Interface::GetICCID(){
+	return this->_commandCoordinator.GetICCID();
+}
+	
+char* QuectelM66Interface::GetIMEI(){
+	return this->_commandCoordinator.GetIMEI();
+}
+	
+bool QuectelM66Interface::TestATOK(){
+	return this->_commandCoordinator.TestATOK();
 }
 
 NetworkStack *QuectelM66Interface::get_stack() {

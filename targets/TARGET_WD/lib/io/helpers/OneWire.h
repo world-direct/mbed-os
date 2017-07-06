@@ -13,7 +13,7 @@ enum OW_STATUS_CODE {
 	OW_BUSY
 };
 
-#define OW_MAXSENSORS				16
+#define OW_MAXSENSORS				8
 #define OW_ROMCODE_SIZE				8	// rom-code size including CRC
 
 #define OW_MATCH_ROM				0x55

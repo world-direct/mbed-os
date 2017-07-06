@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <iterator>
+#include <cmath>
 
 template <typename T, int size>
 class MeasurementBuffer {
@@ -20,30 +21,44 @@ public:
 	
 	T get() {
 		std::list<T> bufCpy (buf);
+		return _median(bufCpy);
+	};
+	
+	T MAD() {
+		T median = get();
+		std::list<T> tmp;
 		
-		if (bufCpy.size() > 0) {
-			
-			
-			bufCpy.sort();
+		for (typename std::list<T>::const_iterator it = buf.begin(); it != buf.end(); it++) {
+			tmp.push_back(abs(*it-median));
+		}
+		return _median(tmp);
+	};
+
+private:
+	std::list<T> buf;
+	
+	T _median(std::list<T> & b) {
 		
-			if (bufCpy.size() % 2 == 0 ) {
-				typename std::list<T>::const_iterator it1 = bufCpy.begin();
-				std::advance(it1, (bufCpy.size() / 2) - 1);
-				typename std::list<T>::const_iterator it2 = bufCpy.begin();
-				std::advance(it2, bufCpy.size() / 2);
+		if (b.size() > 0) {
+			
+			b.sort();
+		
+			if (b.size() % 2 == 0 ) {
+				typename std::list<T>::const_iterator it1 = b.begin();
+				std::advance(it1, (b.size() / 2) - 1);
+				typename std::list<T>::const_iterator it2 = b.begin();
+				std::advance(it2, b.size() / 2);
 				
 				return (*it1 + *it2) / 2;
 			} else {
-				typename std::list<T>::const_iterator it = bufCpy.begin();
-				std::advance(it, (bufCpy.size() - 1) / 2);
+				typename std::list<T>::const_iterator it = b.begin();
+				std::advance(it, (b.size() - 1) / 2);
 				return *it;
 			}
 		}
 		
 		return T();
+		
 	};
-
-private:
-	std::list<T> buf;
 	
 };

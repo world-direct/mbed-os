@@ -35,6 +35,11 @@ class QuectelM66Interface : public NetworkInterface
 {
 public:
 	
+	enum InitializationMode {
+		COMMAND_MODE,	// AT-commands
+		DATA_MODE		// PPP-communication
+	};
+	
     /* QuectelM66Interface
      * @param tx        TX pin
      * @param rx        RX pin
@@ -44,7 +49,7 @@ public:
      * @param username  username (used for PAP-authentication over PPP)
      * @param password  password (used for PAP-authentication over PPP)
      */
-	QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password);
+	QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password, InitializationMode initializationMode = DATA_MODE);
 	
 	virtual ~QuectelM66Interface();
 
@@ -117,10 +122,16 @@ public:
 	*/
 	virtual nsapi_error_t disconnect();
 	
+	virtual char* GetICCID();
+	
+	virtual char* GetIMEI();
+	
+	virtual bool TestATOK();
+	
 
 protected:
 	
-	QuectelM66Interface(SerialStreamAdapter *serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase);
+	QuectelM66Interface(SerialStreamAdapter *serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *userName, const char *passPhrase, InitializationMode initializationMode);
 	
 	friend class Socket;
 	friend class UDPSocket;
@@ -138,6 +149,8 @@ protected:
 	
 
 private:
+	
+	InitializationMode _initializationMode;
 	
 	QuectelM66CommandCoordinator _commandCoordinator;
 	SerialStreamAdapter* _serialStreamAdapter;

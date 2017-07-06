@@ -11,29 +11,27 @@
 #define DS18B20_COMMAND_COPY_SCRATCHPAD			0x48
 #define DS18B20_COMMAND_RECALL_E2				0xB8
 
-#define DS18B20_COPYSP_DELAY      10 /* ms */
-#define DS18B20_SP_SIZE		8	// size without crc
-#define DS18B20_TH_REG      2
-#define DS18B20_TL_REG      3
-#define DS18B20_RES_REG     4
+#define DS18B20_COPYSP_DELAY    10 /* ms */
+#define DS18B20_SP_SIZE			8	// size without crc
+#define DS18B20_TH_REG			2
+#define DS18B20_TL_REG			3
+#define DS18B20_RES_REG			4
 
 // conversion times in ms
-#define DS18B20_TCONV_12BIT      750
-#define DS18B20_TCONV_11BIT      DS18B20_TCONV_12_BIT/2
-#define DS18B20_TCONV_10BIT      DS18B20_TCONV_12_BIT/4
-#define DS18B20_TCONV_9BIT       DS18B20_TCONV_12_BIT/8
+#define DS18B20_TCONV_12BIT     750
+#define DS18B20_TCONV_11BIT     DS18B20_TCONV_12_BIT/2
+#define DS18B20_TCONV_10BIT     DS18B20_TCONV_12_BIT/4
+#define DS18B20_TCONV_9BIT      DS18B20_TCONV_12_BIT/8
 
-#define NUM_RETRIES		3
+#define NUM_RETRIES				3
 
+static void donothing(uint64_t id) {}
 
-DS18B20::DS18B20(OneWire * oneWire, const Callback<void(uint64_t)> & sensorAddedCallback, const Callback<void(uint64_t)> & sensorRemovedCallback, uint measurementIntervalSeconds)
-	: _sensorAddedCallback(sensorAddedCallback), _sensorRemovedCallback(sensorRemovedCallback), _ticker() {
+DS18B20::DS18B20(OneWire * oneWire, uint measurementIntervalSeconds)
+	: _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance())  {
 	
 	this->_oneWire = oneWire;
 
-	// start event queue dispatch thread
-	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
-		
 	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
 }
 
@@ -60,7 +58,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 	if (this->_sensorCount == 0) {
 		
 		for(map<uint64_t, DS18B20MeasurementBuffer>::const_iterator it = this->_mSensors.begin(); it != this->_mSensors.end(); it++) {
-			_queue.call(this->_sensorRemovedCallback, it->first);
+			this->_sensorRemovedCallback.call(it->first);
 		}
 		
 		this->_mSensors.clear();
@@ -81,7 +79,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 		}
 		
 		if (!stillPresent) {
-			_queue.call(this->_sensorRemovedCallback, it->first);
+			this->_sensorRemovedCallback.call(it->first);
 			this->_mSensors.erase(it->first);
 		}
 	}
@@ -95,7 +93,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 		if(this->_mSensors.find(id) == this->_mSensors.end()) {
 			
 			this->_mSensors.insert(make_pair<uint64_t, DS18B20MeasurementBuffer>(id, DS18B20MeasurementBuffer()));
-			_queue.call(this->_sensorAddedCallback, id);
+			this->_sensorAddedCallback.call(id);
 		}
 		
 	}
@@ -117,6 +115,26 @@ float DS18B20::getValue(uint64_t id) {
 void DS18B20::setMeasurementInterval(uint measurementIntervalSeconds) {
 	this->_ticker.detach();
 	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
+}
+
+void DS18B20::attachSensorAddedCallback(Callback<void(uint64_t)> cb) {
+	
+	if (cb){
+		this->_sensorAddedCallback= _queue->event(cb);
+	} else {
+		this->_sensorAddedCallback = donothing;
+	}
+	
+}
+
+void DS18B20::attachSensorRemovedCallback(Callback<void(uint64_t)> cb) {
+	
+	if (cb){
+		this->_sensorRemovedCallback = _queue->event(cb);
+	} else {
+		this->_sensorRemovedCallback = donothing;
+	}
+	
 }
 
 OW_STATUS_CODE DS18B20::convertTemperature(void) {

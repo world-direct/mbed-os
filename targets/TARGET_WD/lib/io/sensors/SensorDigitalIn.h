@@ -5,9 +5,8 @@
 ___________________INCLUDES____________________________
 ******************************************************/
 #include "mbed.h"
-#include "mbed_events.h"
-#include "rtos.h"
 #include "PinNames.h"
+#include "IOEventQueue.h"
 
 /******************************************************
 ___________________DECLARATION_________________________
@@ -16,7 +15,8 @@ class SensorDigitalIn {
 public:
 	enum EdgeSelection {
         Falling = 1,
-        Rising = 2
+        Rising = 2,
+		None	// Polling instead of interrupt
     };
 	
 	SensorDigitalIn(PinName pin, EdgeSelection edgeSelection = Rising, uint16_t instanceMetadata = 0);
@@ -32,6 +32,7 @@ private:
 	void setValue(int value);
 	void onObservingEdge(void);
 	void onIgnoringEdge(void);
+	void onPollingTick(void);
 	
 	Callback<void(uint16_t)> _irq;
 	InterruptIn _interruptIn;
@@ -39,8 +40,8 @@ private:
 	volatile int _value = 0;
 	volatile int _edgeCounter = 0;
 	
-	EventQueue _queue;
-	Thread _eventThread;
+	Ticker _ticker;
+	IOEventQueue * _queue;
 };
 
 #endif
