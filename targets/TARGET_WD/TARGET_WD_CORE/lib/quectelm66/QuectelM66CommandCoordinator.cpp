@@ -35,6 +35,7 @@ QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(ATCommandsInterface* 
 	
 		this->_atCommandInterface = atCommandsInterface;
 		this->_linkMonitor = new LinkMonitor(atCommandsInterface);
+		this->_basicInformationsProcessor = new BasicInformationsProcessor(atCommandsInterface);
 		
 }
 
@@ -45,9 +46,7 @@ QuectelM66CommandCoordinator::~QuectelM66CommandCoordinator() {
 	
 }
 
-bool QuectelM66CommandCoordinator::pppPreparation() {
-	
-	wd_log_debug("QuectelM66CommandCoordinator --> pppPreparation");
+void QuectelM66CommandCoordinator::executePowerOnSequence(){
 	
 	// ====== PPP ========
 	// "3 Procedure for PPP Setup" 
@@ -64,7 +63,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	// Restart sequence according to M66 Hardware Design Manual (see 3.4.3. Restart)!
 	wd_log_info("QuectelM66CommandCoordinator --> Power On / Restart the Module"); 
 	
-	if (_vdd_extPin){ // modem is always powered so output should be at high level in any case
+	if (_vdd_extPin) { // modem is always powered so output should be at high level in any case
 		
 		wd_log_debug("QuectelM66CommandCoordinator --> Turn off");
 		_pwrKeyPin = 1;	//_pwrKeyPin = 1 -> Modem PWRKEY input = 0!
@@ -95,6 +94,10 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	_pwrKeyPin = 0;
 	wd_log_debug("QuectelM66CommandCoordinator --> Modem powered up");
 	
+}
+
+bool QuectelM66CommandCoordinator::setupATCommandInterface(){
+	
 	// ====== AT ========
 	// Open ATCommandsInterface
 	wd_log_info("QuectelM66CommandCoordinator --> Open AT-Interface");	
@@ -110,6 +113,20 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		return false;
 	}
 	wd_log_debug("QuectelM66CommandCoordinator --> Init AT-Interface succeeded");
+	
+	return true;
+	
+}
+
+bool QuectelM66CommandCoordinator::pppPreparation() {
+	
+	wd_log_debug("QuectelM66CommandCoordinator --> pppPreparation");
+	
+	this->executePowerOnSequence();
+	
+	if (!this->setupATCommandInterface()){
+		return false;
+	}
 	
 	// ====== PPP ========
 	// 1.Synchronization between TE and TA 
@@ -261,9 +278,22 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 	
 }
 
-bool QuectelM66CommandCoordinator::startup() {
+bool QuectelM66CommandCoordinator::startupAT(){
 	
-	wd_log_debug("QuectelM66CommandCoordinator --> startup");
+	wd_log_debug("QuectelM66CommandCoordinator --> startupAT");
+	
+	this->executePowerOnSequence();
+	if (!this->setupATCommandInterface()) {
+		return false;
+	}
+	
+	return true;
+	
+}
+
+bool QuectelM66CommandCoordinator::startupPPP() {
+	
+	wd_log_debug("QuectelM66CommandCoordinator --> startupPPP");
 	
 	if (!this->pppPreparation()) {
 		return false;
@@ -306,4 +336,25 @@ int QuectelM66CommandCoordinator::GetRSSI() {
 
 char* QuectelM66CommandCoordinator::GetPhoneNumber() {
 	return this->_phoneNumber;
+}
+
+char* QuectelM66CommandCoordinator::GetICCID(){
+	return this->_basicInformationsProcessor->GetICCID();
+}
+	
+char* QuectelM66CommandCoordinator::GetIMEI(){
+	return this->_basicInformationsProcessor->GetIMEI();
+}
+	
+bool QuectelM66CommandCoordinator::TestATOK(){
+	
+	ATCommandsInterface::ATResult result;
+	if (_atCommandInterface->executeSimple("AT", &result, 1000, 1) != 0) {
+		return false;
+	}
+	if (result.result != ATCommandsInterface::ATResult::AT_OK) {
+		return false;
+	}
+	return true;
+	
 }
