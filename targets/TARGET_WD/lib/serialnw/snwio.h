@@ -10,6 +10,10 @@
 #define SNWIO_H_
 
 #include <stddef.h>
+#include "PinNames.h"
+
+// includes for private: members
+#include "serial_api.h"
 
 struct snwio_stats {
 
@@ -24,18 +28,22 @@ struct snwio_stats {
 class snwio {
 
 	public:
-		snwio(void);
+		snwio(PinName tx, PinName rx, int baud);
+
 		void start();
 		int transmit_frame(void * data, size_t len);
 		snwio_stats stats_get(void);
 		snwio_stats stats_reset(void);
+		virtual ~snwio();
 
 	protected:
-		virtual ~snwio();
 		virtual void handle_frame(void * data, size_t len);
 
 	private:
 		snwio_stats m_stats;
+		serial_t m_serial;
+		void p_initrx();
+		void p_tx(void * data, size_t len);
 };
 
 
