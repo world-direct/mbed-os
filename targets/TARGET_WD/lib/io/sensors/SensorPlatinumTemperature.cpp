@@ -1,7 +1,7 @@
 #include "SensorPlatinumTemperature.h"
 
 SensorPlatinumTemperature::SensorPlatinumTemperature(AnalogInManager * analogInManager, int inputIndex, PTType ptType)
-	: _inputIndex(inputIndex), _minRangeValue(-273.15f), _maxRangeValue(1000.0f), _unit(SensorPlatinumTemperature::CELSIUS), _ptType(ptType) {
+	: _inputIndex(inputIndex), _minRangeValue(-50.0f), _maxRangeValue(150.0f), _unit(SensorPlatinumTemperature::CELSIUS), _ptType(ptType) {
 
 	this->_analogInManager = analogInManager;
 }
