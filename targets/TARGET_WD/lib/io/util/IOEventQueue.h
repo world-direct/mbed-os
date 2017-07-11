@@ -19,6 +19,10 @@ class IOEventQueue {
 			return _queue.event(cb);
 		}
 
+		template <typename R, typename A0, typename A1>
+		Event<void(A0, A1)> event(mbed::Callback<R(A0, A1)> cb) {
+			return _queue.event(cb);
+		}
 	
 	private:
 		IOEventQueue() : _queue(IO_EVENT_QUEUE_SIZE * EVENTS_EVENT_SIZE) {

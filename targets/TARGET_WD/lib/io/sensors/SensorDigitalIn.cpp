@@ -10,7 +10,7 @@ ___________________IMPLEMENTATION______________________
 static void donothing(uint16_t instanceId) {}
 
 SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint16_t instanceMetadata)
-	: _interruptIn(pin), _instanceMetadata(instanceMetadata), _ticker(), _queue(&IOEventQueue::getInstance()) {
+	: _interruptIn(pin), _instanceMetadata(instanceMetadata), _ticker(), _queue(&IOEventQueue::getInstance()), _value(0), _edgeCounter(0) {
 		
 	if (edgeSelection == SensorDigitalIn::None) {
 		_ticker.attach(callback(this, &SensorDigitalIn::onPollingTick), 0.05f);
@@ -38,18 +38,30 @@ SensorDigitalIn::~SensorDigitalIn(){
 }
 
 
-void SensorDigitalIn::onObservingEdge(void) {
+void SensorDigitalIn::onEdge(bool countEdge) {
 	
-	this->_edgeCounter++;
-	this->setValue(_interruptIn.read());
+	// exit irq context and execute confirmation in event queue thread
+	Callback<void(bool, int)> e = _queue->event(callback(this, &SensorDigitalIn::confirmEdge));
+	e.call(countEdge, this->_interruptIn.read());
 	
 }
 
-void SensorDigitalIn::onIgnoringEdge(void) {
+
+void SensorDigitalIn::confirmEdge(bool countEdge, int value) {
 	
-	this->setValue(_interruptIn.read());
+	wait_us(250);	// important: wait in event-queue thread (exit irq)!
+	
+	// we need to confirm interrupt state here in case of noise, hence the delayed, repeated read operation
+	if (value == this->_interruptIn.read()) {
+		
+		if (countEdge) this->_edgeCounter++;
+		
+		this->setValue(value);
+		
+	}
 	
 }
+
 
 void SensorDigitalIn::onPollingTick(void) {
 	

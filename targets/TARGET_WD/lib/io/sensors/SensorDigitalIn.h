@@ -30,17 +30,22 @@ public:
 	
 private:
 	void setValue(int value);
-	void onObservingEdge(void);
-	void onIgnoringEdge(void);
+	
+	void onEdge(bool countEdge);
+	void onObservingEdge(void) { onEdge(true); }
+	void onIgnoringEdge(void) { onEdge(false); }
+	void confirmEdge(bool countEdge, int value);
+	
 	void onPollingTick(void);
 	
 	Callback<void(uint16_t)> _irq;
 	InterruptIn _interruptIn;
 	uint16_t _instanceMetadata;
-	volatile int _value = 0;
-	volatile int _edgeCounter = 0;
+	int _value;
+	int _edgeCounter;
 	
 	Ticker _ticker;
+	Timeout _confirmationDelay;
 	IOEventQueue * _queue;
 };
 
