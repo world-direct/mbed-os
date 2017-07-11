@@ -6,6 +6,7 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
+#define DISPLAY_REFRESH_INTERVAL_MS		250
 
 	
 /******************************************************
@@ -13,19 +14,20 @@ ___________________IMPLEMENTATION______________________
 ******************************************************/
 
 DmMaster::DmMaster(PinName mosi, PinName miso, PinName sck, PinName csDisplay, PinName csPeripheral, PinName oledA0, PinName wakeup) :
-	Display(mosi, sck, csDisplay, oledA0), UI(mosi, miso, sck, csPeripheral, wakeup) {
-	Display.init();
+	Display(mosi, sck, csDisplay, oledA0), UI(mosi, miso, sck, csPeripheral, wakeup), _refreshTicker() {
+		Display.init();
+		_refreshTicker.attach(callback(this, &DmMaster::refreshDisplay), ((float) DISPLAY_REFRESH_INTERVAL_MS)/1000.0f );
 }
 
 void DmMaster::printLogo(void) {
 	Display.loadLogo();
-	Display.refresh();
+	this->refreshDisplay();
 }
 
 void DmMaster::cls(void) {
 	Display.clearDisplay();
 	Display.setTextCursor(0,0);
-	Display.refresh();
+	this->refreshDisplay();
 }
 
 void DmMaster::startDemo(void) {
@@ -67,7 +69,7 @@ void DmMaster::toggleLedSelection(void) {
 	Display.printf("LED %d selected\n", Led1Active ? 1 : 2);
 	uint8_t ls = UI.getLightSensorState();
 	Display.printf("LIGHT SENSOR value: %d", ls);
-	Display.refresh();
+	this->refreshDisplay();
 }
 
 void DmMaster::scroll(ScrollDirection direction) {
@@ -90,4 +92,8 @@ void DmMaster::scroll(ScrollDirection direction) {
 			Display.refresh();
 			break;
 	}
+}
+
+void DmMaster::refreshDisplay(void) {
+	Display.refresh();
 }

@@ -85,7 +85,11 @@ protected:
 
 private:
 	bool Led1Active = true;
-
+	Ticker _refreshTicker;
+	
+	void refreshDisplay(void);
 };
 	
 #endif // !DMMASTER_H
+
+
