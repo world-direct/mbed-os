@@ -1,6 +1,8 @@
 #include "AnalogInManager.h"
 #include <cmath>
 
+#define ADC_MAX_VALUE	0xFFFF
+
 static void donothing(uint16_t instanceId) {}
 
 AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel1, PinName muxSel2, PinName spiMiso, PinName spiSck, PinName spiCs)
@@ -9,12 +11,16 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 	// allocate memory for dynamic buffers
 	this->_measurementBuffers = new AINMeasurementBuffer[inputCount]();
 	this->_currentValue = new uint16_t[inputCount]();
+	this->_minValue = new uint16_t[inputCount]();
+	this->_maxValue = new uint16_t[inputCount]();
 	this->_valueChangedTolerance = new int[inputCount]();
 	this->_irq = new Callback<void(uint16_t)>[inputCount]();
 		
 	for (int i = 0; i < inputCount; i++) {
-        _irq[i] = donothing;
-		_valueChangedTolerance[i] = AIN_DEFAULT_VALUE_CHANGED_TOLERANCE;
+        this->_irq[i] = donothing;
+		this->_valueChangedTolerance[i] = AIN_DEFAULT_VALUE_CHANGED_TOLERANCE;
+		this->_minValue[i] = ADC_MAX_VALUE;
+		this->_maxValue[i] = 0;
     }
 
 	this->read(); // initiate first conversion
@@ -28,6 +34,8 @@ AnalogInManager::~AnalogInManager() {
 	// free allocated memory for dynamic buffers
 	delete [] this->_measurementBuffers;
 	delete [] this->_currentValue;
+	delete [] this->_minValue;
+	delete [] this->_maxValue;
 	delete [] this->_valueChangedTolerance;
 	delete [] this->_irq;
 }
@@ -48,6 +56,8 @@ void AnalogInManager::attach(int inputIndex, Callback<void(uint16_t)> func) {
 
 void AnalogInManager::detach(int inputIndex) {
 	
+	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
+
 	_irq[inputIndex] = donothing;
 	
 }
@@ -116,14 +126,30 @@ void AnalogInManager::collectMeasurement(void) {
 	uint16_t previousValue = this->_currentValue[inputIndex];
 	this->_currentValue[inputIndex] = this->_measurementBuffers[inputIndex].get();
 	
-	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex]) {
+	if (this->_currentValue[inputIndex] > this->_maxValue)
+		this->_maxValue = this->_currentValue[inputIndex];
+	
+	if (this->_currentValue[inputIndex] < this->_minValue)
+		this->_minValue = this->_currentValue[inputIndex];
+	
+	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex])
 		_irq->call(inputIndex);
-	}
 	
 }
 
 int AnalogInManager::getMAD(int inputIndex) {
 	
+	if (inputIndex < 0 || inputIndex >= this->_inputCount) return 0;
+	
 	return this->_measurementBuffers[inputIndex].MAD();
 	
+}
+
+void AnalogInManager::resetMinAndMaxValues(int inputIndex) {
+	
+	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
+
+	this->_minValue = ADC_MAX_VALUE;
+	this->_maxValue = 0;
+
 }

@@ -2,7 +2,8 @@
 
 #include "AnalogInManager.h"
 
-#define INVALID_VALUE	-999.99f
+#define PT_INVALID_VALUE				-999.99f
+#define PT_VALUE_CHANGED_TOLERANCE		0.5f
 
 class SensorPlatinumTemperature {
 public:
@@ -25,11 +26,23 @@ public:
 	void setMaxRangeValue(float value) { _maxRangeValue = value; };
 	PTUnit getUnit(void) { return _unit; };
 	void setUnit(PTUnit value) { _unit = value; };
+	PTType getType(void) { return _ptType; };
 	
+	float getValueChangedTolerance(void);
+	void setValueChangedTolerance(float value = PT_VALUE_CHANGED_TOLERANCE);
+
+	void attach(Callback<void(uint16_t)> func);
+	void detach(void);
+
+	float getMinMeasuredValue(void);
+	float getMaxMeasuredValue(void);
+	void resetMinAndMaxMeasuredValues(void);
+
 	float getValue(void);
 	
 private:
-	float adc2Temperature(uint16_t adc);
+	float adc2temperature(uint16_t adc);
+	uint16_t temperature2adc(float temp);
 	
 	float _minRangeValue; // TODO
 	float _maxRangeValue; // TODO

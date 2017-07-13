@@ -2,8 +2,6 @@
 
 #include "AnalogOutManager.h"
 
-#define INVALID_VALUE	-1
-
 class ActorCurrentLoopOut {
 public:
 	ActorCurrentLoopOut(AnalogOutManager * analogOutManager, int outputIndex);
@@ -21,14 +19,14 @@ public:
 	
 private:
 	
-	float _minRangeValue = 3.8f;
-	float _maxRangeValue = 20.5f;
-	float _currentCalibrationCoefficient = 5.549f;
+	float _minRangeValue;
+	float _maxRangeValue;
+	float _currentCalibrationCoefficient;
 
 	AnalogOutManager * _analogOutManager;
 	int _outputIndex;
 	
-	volatile float _value = 0;
+	float _value;
 	
 };
 

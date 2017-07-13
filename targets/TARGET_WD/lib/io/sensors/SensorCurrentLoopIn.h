@@ -16,6 +16,10 @@ public:
 	float getCurrentCalibrationCoefficient(void) { return _currentCalibrationCoefficient; };
 	void setCurrentCalibrationCoefficient(float value) { _currentCalibrationCoefficient = value; };
 	
+	float getMinMeasuredValue(void);
+	float getMaxMeasuredValue(void);
+	void resetMinAndMaxMeasuredValues(void);
+	
 	// tolerance in respect to mA value
 	float getValueChangedTolerance(void);
 	void setValueChangedTolerance(float value);
@@ -28,9 +32,9 @@ public:
 	float getMAD(void);
 	
 private:
-	float _minRangeValue = 3.8f;
-	float _maxRangeValue = 20.5f;
-	float _currentCalibrationCoefficient = 0.3357f;
+	float _minRangeValue;
+	float _maxRangeValue;
+	float _currentCalibrationCoefficient;
 	
 	AnalogInManager * _analogInManager;
 	int _inputIndex;

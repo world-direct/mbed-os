@@ -1,9 +1,11 @@
 #include "SensorPlatinumTemperature.h"
+#include <cmath>
 
 SensorPlatinumTemperature::SensorPlatinumTemperature(AnalogInManager * analogInManager, int inputIndex, PTType ptType)
 	: _inputIndex(inputIndex), _minRangeValue(-50.0f), _maxRangeValue(150.0f), _unit(SensorPlatinumTemperature::CELSIUS), _ptType(ptType) {
 
 	this->_analogInManager = analogInManager;
+	this->setValueChangedTolerance();
 }
 
 SensorPlatinumTemperature::~SensorPlatinumTemperature() {
@@ -13,7 +15,7 @@ SensorPlatinumTemperature::~SensorPlatinumTemperature() {
 	
 }
 
-float SensorPlatinumTemperature::adc2Temperature(uint16_t adc) {
+float SensorPlatinumTemperature::adc2temperature(uint16_t adc) {
 	
 	uint64_t rv = this->_ptType == SensorPlatinumTemperature::PT1000 ? 2700 : 3300;
 	
@@ -36,13 +38,71 @@ float SensorPlatinumTemperature::adc2Temperature(uint16_t adc) {
 	
 }
 
+uint16_t SensorPlatinumTemperature::temperature2adc(float temp) {
+
+	int64_t resistance = ((int64_t)(262144 * temp) + (int64_t)68096000) / 133;
+	int64_t rv = this->_ptType == SensorPlatinumTemperature::PT1000 ? 2700 : 3300;
+	uint16_t adc = ((int64_t)(65536 * resistance)) / ((int64_t)512 * rv + resistance);
+	return adc;
+
+}
+
+float SensorPlatinumTemperature::getValueChangedTolerance(void) {
+
+	return this->adc2temperature(
+		this->temperature2adc(0) +
+		this->_analogInManager->getValueChangedTolerance(this->_inputIndex)
+	);
+
+}
+
+void SensorPlatinumTemperature::setValueChangedTolerance(float value /*= PT_VALUE_CHANGED_TOLERANCE*/) {
+
+	uint16_t adc_temp_zero = this->temperature2adc(0);
+	uint16_t adc_temp = this->temperature2adc(abs(value));
+
+	this->_analogInManager->setValueChangedTolerance(this->_inputIndex, adc_temp-adc_temp_zero);
+	
+}
+
+void SensorPlatinumTemperature::attach(Callback<void(uint16_t)> func) {
+
+	if (func) {
+		this->_analogInManager->attach(this->_inputIndex, func);
+	}
+
+}
+
+void SensorPlatinumTemperature::detach(void) {
+	
+	this->_analogInManager->detach(this->_inputIndex);
+
+}
+
+float SensorPlatinumTemperature::getMinMeasuredValue(void) {
+
+	return this->adc2temperature(this->_analogInManager->getMinValue(this->_inputIndex));
+
+}
+
+float SensorPlatinumTemperature::getMaxMeasuredValue(void) {
+
+	return this->adc2temperature(this->_analogInManager->getMaxValue(this->_inputIndex));
+
+}
+
+void SensorPlatinumTemperature::resetMinAndMaxMeasuredValues(void) {
+
+	this->_analogInManager->resetMinAndMaxValues(this->_inputIndex);
+
+}
 
 float SensorPlatinumTemperature::getValue(void) {
 	
-	float conversion_result = this->adc2Temperature(this->_analogInManager->getValue(this->_inputIndex));
+	float conversion_result = this->adc2temperature(this->_analogInManager->getValue(this->_inputIndex));
 	
 	if (conversion_result < this->_minRangeValue || conversion_result > this->_maxRangeValue) {
-		return INVALID_VALUE;
+		return PT_INVALID_VALUE;
 	} else {
 		return conversion_result;
 	}

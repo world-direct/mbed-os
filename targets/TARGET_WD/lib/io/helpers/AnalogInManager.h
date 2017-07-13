@@ -26,6 +26,10 @@ public:
 	
 	int getMAD(int inputIndex);
 	
+	int getMinValue(int inputIndex) { return _minValue[inputIndex]; };
+	int getMaxValue(int inputIndex) { return _maxValue[inputIndex]; };
+	void resetMinAndMaxValues(int inputIndex);
+	
 private:
 	
 	void selectNextInput(void);
@@ -40,6 +44,9 @@ private:
 	
 	uint16_t * _currentValue = 0;
 	int * _valueChangedTolerance = 0;
+	
+	uint16_t * _minValue = 0;
+	uint16_t * _maxValue = 0;
 	
 	Callback<void(uint16_t)> * _irq;
 	

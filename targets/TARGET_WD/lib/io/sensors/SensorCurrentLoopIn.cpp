@@ -1,7 +1,7 @@
 #include "SensorCurrentLoopIn.h"
 
 SensorCurrentLoopIn::SensorCurrentLoopIn(AnalogInManager * analogInManager, int inputIndex)
-	: _inputIndex(inputIndex) {
+	: _inputIndex(inputIndex), _minRangeValue(3.8f), _maxRangeValue(20.5f), _currentCalibrationCoefficient(0.3357f) {
 
 	this->_analogInManager = analogInManager;
 
@@ -38,6 +38,24 @@ void SensorCurrentLoopIn::detach(void) {
 	
 	this->_analogInManager->detach(this->_inputIndex);
 	
+}
+
+float SensorCurrentLoopIn::getMinMeasuredValue(void) {
+
+	return this->adc2mA(this->_analogInManager->getMinValue(this->_inputIndex));
+
+}
+
+float SensorCurrentLoopIn::getMaxMeasuredValue(void) {
+
+	return this->adc2mA(this->_analogInManager->getMaxValue(this->_inputIndex));
+
+}
+
+void SensorCurrentLoopIn::resetMinAndMaxMeasuredValues(void) {
+
+	this->_analogInManager->resetMinAndMaxValues(this->_inputIndex);
+
 }
 
 float SensorCurrentLoopIn::getValueChangedTolerance(void) {

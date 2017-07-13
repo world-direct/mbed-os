@@ -2,7 +2,7 @@
 
 
 ActorCurrentLoopOut::ActorCurrentLoopOut(AnalogOutManager * analogOutManager, int outputIndex) 
-	: _outputIndex(outputIndex) {
+	: _outputIndex(outputIndex), _minRangeValue(3.8f), _maxRangeValue(20.5f), _currentCalibrationCoefficient(5.549f), _value(3.8f) {
 
 	this->_analogOutManager = analogOutManager;
 }
