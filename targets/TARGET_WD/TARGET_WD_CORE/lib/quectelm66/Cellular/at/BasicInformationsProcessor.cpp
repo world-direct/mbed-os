@@ -7,7 +7,7 @@ BasicInformationsProcessor::BasicInformationsProcessor(ATCommandsInterface* atCo
 char* BasicInformationsProcessor::GetIMEI() {
 	
 	ATCommandsInterface::ATResult result;
-	if (this->_atCommandsInterface->execute("AT+GSN", this, &result, 300) != 0) {
+	if (this->_atCommandsInterface->execute("AT+GSN", this, &result, 500) != 0) {
 		return NULL;
 	}
 	if (result.result != ATCommandsInterface::ATResult::AT_OK) {
@@ -21,7 +21,7 @@ char* BasicInformationsProcessor::GetIMEI() {
 char* BasicInformationsProcessor::GetICCID(){
 	
 	ATCommandsInterface::ATResult result;
-	if (this->_atCommandsInterface->execute("AT+QCCID", this, &result, 300) != 0) {
+	if (this->_atCommandsInterface->execute("AT+QCCID", this, &result, 500) != 0) {
 		return NULL;
 	}
 	if (result.result != ATCommandsInterface::ATResult::AT_OK) {
