@@ -13,9 +13,13 @@
 #include "PinNames.h"
 
 // includes for private: members
-#include "serial_api.h"
+#include "mbed.h"
+
+#define RX_BUFFER_SIZE	64
 
 struct snwio_stats {
+
+	int rx_overruns;
 
 	int rx_bytes;
 	int tx_bytes;
@@ -40,9 +44,12 @@ class snwio {
 		virtual void handle_frame(void * data, size_t len);
 
 	private:
+		uint8_t m_rxbuffer[RX_BUFFER_SIZE];
+		int m_rxbuffer_offset;
 		snwio_stats m_stats;
-		serial_t m_serial;
-		void p_initrx();
+		RawSerial m_serial;
+		void p_rxIrq(void);
+		void p_rx(void);
 		void p_tx(void * data, size_t len);
 };
 
