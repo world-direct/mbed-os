@@ -70,6 +70,9 @@ QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapte
 		case DATA_MODE:
 			
 			// Data mode (PPP) initialization
+			this->_pppos_ctx.serial_stream_adapter = serialStreamAdapter;
+			this->_pppos_ctx.pppos_write_callback = &QuectelM66Interface::pppos_write_wrapper;
+
 			if (!this->_commandCoordinator.startupPPP()) {
 				wd_log_error("QuectelM66Interface --> Interface could not be started, system reset");
 				NVIC_SystemReset();
