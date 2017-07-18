@@ -29,29 +29,9 @@ struct snwio_stats {
 	int rx_frames_invalid;
 };
 
-class snwio {
-
-	public:
-		snwio(PinName tx, PinName rx, int baud);
-
-		void start();
-		int transmit_frame(void * data, size_t len);
-		snwio_stats stats_get(void);
-		snwio_stats stats_reset(void);
-		virtual ~snwio();
-
-	protected:
-		virtual void handle_frame(void * data, size_t len);
-
-	private:
-		uint8_t m_rxbuffer[RX_BUFFER_SIZE];
-		int m_rxbuffer_offset;
-		snwio_stats m_stats;
-		RawSerial m_serial;
-		void p_rxIrq(void);
-		void p_rx(void);
-		void p_tx(void * data, size_t len);
-};
+void snwio_init(void);
+void snwio_transfer_frame(const void * data, size_t size);
+void snwio_loop_check(void);
 
 
 #endif /* SNWIO_H_ */
