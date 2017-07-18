@@ -49,7 +49,7 @@ private:
 	
 	typedef MeasurementBuffer<float, DS18B20_MEASUREMENT_BUFFER_SIZE> DS18B20MeasurementBuffer;
 	map<uint64_t, DS18B20MeasurementBuffer> _mSensors;
-	int _sensorCount = 0;
+	int _sensorCount;
 	
 	uint64_t transformId(char romId[]);
 	void retrieveId(uint64_t inId, char * outId);

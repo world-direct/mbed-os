@@ -21,7 +21,7 @@ public:
 	
 private:
 	DigitalOut _digitalOut;
-	volatile int _value = 0;
+	int _value;
 	
 };
 

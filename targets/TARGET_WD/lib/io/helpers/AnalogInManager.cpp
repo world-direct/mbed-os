@@ -6,7 +6,10 @@
 static void donothing(uint16_t instanceId) {}
 
 AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel1, PinName muxSel2, PinName spiMiso, PinName spiSck, PinName spiCs)
-	: _inputCount(inputCount), _muxSel0(muxSel0, 0), _muxSel1(muxSel1, 0), _muxSel2(muxSel2, 0), _pinCs(spiCs, 1), _spi(NC, spiMiso, spiSck), _ticker(), _queue(&IOEventQueue::getInstance()) {
+	:	_inputCount(inputCount), _currentInputSelection(1), _currentValue(0), _valueChangedTolerance(0), _minValue(0), _maxValue(0),
+		_muxSel0(muxSel0, 0), _muxSel1(muxSel1, 0), _muxSel2(muxSel2, 0), 
+		_pinCs(spiCs, 1), _spi(NC, spiMiso, spiSck), 
+		_ticker(), _queue(&IOEventQueue::getInstance()) {
 	
 	// allocate memory for dynamic buffers
 	this->_measurementBuffers = new AINMeasurementBuffer[inputCount]();

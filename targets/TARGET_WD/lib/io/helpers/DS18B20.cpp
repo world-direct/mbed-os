@@ -28,7 +28,7 @@
 static void donothing(uint64_t id) {}
 
 DS18B20::DS18B20(OneWire * oneWire, uint measurementIntervalSeconds)
-	: _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance())  {
+	: _sensorCount(0), _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance())  {
 	
 	this->_oneWire = oneWire;
 

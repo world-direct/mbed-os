@@ -37,16 +37,16 @@ private:
 	void collectMeasurement(void);
 	
 	int _inputCount;
-	int _currentInputSelection = 1;
+	int _currentInputSelection;
 	
 	typedef MeasurementBuffer<uint16_t, AIN_MEASUREMENT_BUFFER_SIZE> AINMeasurementBuffer;
 	AINMeasurementBuffer * _measurementBuffers;
 	
-	uint16_t * _currentValue = 0;
-	int * _valueChangedTolerance = 0;
+	uint16_t * _currentValue;
+	int * _valueChangedTolerance;
 	
-	uint16_t * _minValue = 0;
-	uint16_t * _maxValue = 0;
+	uint16_t * _minValue;
+	uint16_t * _maxValue;
 	
 	Callback<void(uint16_t)> * _irq;
 	
