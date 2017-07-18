@@ -10,6 +10,7 @@
 #include "RawSerial.h"
 #include "serial_api.h"
 #include "snwconf.h"
+#include "swtimer.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
@@ -47,39 +48,6 @@ typedef struct {
 		int timeout_occured : 1;
 	};
 } _snwio_char_t;
-
-//////////////////////////////////////////////////////////////////////////
-// Sandwitch-Timer
-
-#include "us_ticker_api.h"
-
-typedef uint32_t swtimer_t;
-
-static void swtimer_init(swtimer_t * timer);
-static bool swtimer_elapsed(swtimer_t timer, uint32_t us);
-static void swtimer_wait_us(swtimer_t timer, uint32_t us);
-
-static void swtimer_init(swtimer_t * timer)
-{
-	*timer = us_ticker_read();
-}
-
-static bool swtimer_elapsed(swtimer_t timer, uint32_t us)
-{
-	// no need to validate the 'us' argument for overflow, because the us_timer has also 32 bit
-	// with the current clock of 168MHzm, the max time to be waited is 2^32 / 168 = ~ 25560000 us ~ 25.5 seconds
-	uint32_t time_taken = us_ticker_read() - timer;
-	return time_taken >= us;
-}
-
-
-static void swtimer_wait_us(swtimer_t timer, uint32_t us)
-{
-	while(!swtimer_elapsed(timer, us));
-}
-
-//////////////////////////////////////////////////////////////////////////
-
 
 // returns char 0-FF, or -1 if timeout
 static _snwio_char_t _snwio_readchar()
