@@ -174,10 +174,14 @@ static void _snwio_writeframe()
 
 	for(int i=0; i<3; i++){
 		_snwio_writechar(crcdata.data[i]);
+		m_stats.tx_bytes++;
 	}
+
+	m_tx_size = 0;
 	
 	// let's wait sync the pause chars, we also could wait "optimistic", but this would required to handle overflow of sysclk
 	wait_us(m_us_pause_time);
+	m_stats.tx_frames++;
 }
 
 void snwio_transfer_frame(const void * data, size_t size)
@@ -202,4 +206,15 @@ void snwio_loop_check()
 	if(m_tx_size > 0){
 		_snwio_writeframe();
 	}
+}
+
+void snwio_get_stats(snwio_stats * stats, bool reset)
+{
+	// copy over
+	*stats = m_stats;
+
+	if(reset){
+		m_stats = {};
+	}
+
 }
