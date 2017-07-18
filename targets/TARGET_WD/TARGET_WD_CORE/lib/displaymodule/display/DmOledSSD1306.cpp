@@ -193,6 +193,7 @@ void DmOledSSD1306::dim(bool dim) {
 	// it is useful to dim the display
 	sendCommand(SSD1306_SETCONTRAST);
 	sendCommand(dim ? 0 : 0xCF);
+	this->_isDimmed = dim;
 }
 
 // TODO: async SPI transfer with cb

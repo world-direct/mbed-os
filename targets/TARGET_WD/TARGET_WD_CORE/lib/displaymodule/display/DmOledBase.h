@@ -58,6 +58,9 @@ public:
 	inline uint16_t height(void) { return _height; }
 	void setWidth(uint16_t width) { _width = width; }
 	void setHeight(uint16_t height) { _height = height; }
+
+	inline int16_t x_coordinate(void) { return cursorX; };
+	inline int16_t y_coordinate(void) { return cursorY; };
 	
 	/** @brief Set the color of the text.
 	 *

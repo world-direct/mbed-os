@@ -103,6 +103,8 @@ public:
 	DmOledSSD1306(PinName mosi, PinName sck, PinName cs, PinName dc, PinName rst = NC);
 	virtual ~DmOledSSD1306();
 	
+	inline bool isDimmed(void) { return _isDimmed; };
+
 	/** @brief Initialize display functionality (needs to be called before any further access).
 	 *
      */
@@ -215,6 +217,8 @@ private:
 	inline void drawVerticalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
 	inline void drawHorizontalLineInternal(uint16_t x, uint16_t y, uint16_t length, uint16_t color) __attribute__((always_inline));
 	
+	bool _isDimmed;
+
 	bool _useReset;
 	DigitalOut* _pinCS;
 	DigitalOut* _pinDC;
