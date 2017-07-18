@@ -10,7 +10,6 @@
 #include "RawSerial.h"
 #include "serial_api.h"
 #include "snwconf.h"
-#include "us_ticker_api.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
@@ -31,12 +30,16 @@ void snwio_init()
 	serial_init(&m_serial, SNWIO_CONF_PIN_TX, SNWIO_CONF_PIN_RX);
 	serial_baud(&m_serial, SNWIO_CONF_BAUD);
 
-	m_us_pause_time = SystemCoreClock / 
+	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
 		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
+	
+	// m_us_pause_time = 5000000;
 }
 
 // this is just a declaration, this method has to be implemented in the upper layer
 void snwio_frame_received(void * data, size_t size);
+__weak void snwio_frame_received(void * data, size_t size) {}
+
 
 typedef struct {
 	char value;
@@ -45,19 +48,52 @@ typedef struct {
 	};
 } _snwio_char_t;
 
+//////////////////////////////////////////////////////////////////////////
+// Sandwitch-Timer
+
+#include "us_ticker_api.h"
+
+typedef uint32_t swtimer_t;
+
+static void swtimer_init(swtimer_t * timer);
+static bool swtimer_elapsed(swtimer_t timer, uint32_t us);
+static void swtimer_wait_us(swtimer_t timer, uint32_t us);
+
+static void swtimer_init(swtimer_t * timer)
+{
+	*timer = us_ticker_read();
+}
+
+static bool swtimer_elapsed(swtimer_t timer, uint32_t us)
+{
+	// no need to validate the 'us' argument for overflow, because the us_timer has also 32 bit
+	// with the current clock of 168MHzm, the max time to be waited is 2^32 / 168 = ~ 25560000 us ~ 25.5 seconds
+	uint32_t time_taken = us_ticker_read() - timer;
+	return time_taken >= us;
+}
+
+
+static void swtimer_wait_us(swtimer_t timer, uint32_t us)
+{
+	while(!swtimer_elapsed(timer, us));
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+
 // returns char 0-FF, or -1 if timeout
 static _snwio_char_t _snwio_readchar()
 {
-	uint32_t start_time = us_ticker_read();
-	uint32_t end_time = start_time + m_us_pause_time;
-
 	_snwio_char_t ret;
 	ret.timeout_occured = 0;
 
-	while(us_ticker_read() - start_time > m_us_pause_time){
+	swtimer_t timer;
+	swtimer_init(&timer);
+
+	while(!swtimer_elapsed(timer, m_us_pause_time)){
 		if(serial_readable(&m_serial)){
-			m_stats.rx_bytes++;
 			char c = (char)serial_getc(&m_serial);
+			m_stats.rx_bytes++;
 			ret.value = c;
 			return ret;
 		}
@@ -102,14 +138,17 @@ static void _snwio_readframe()
 		return;
 	}
 
-	// we have the frame, let's check the CRC
-	if(crc == 0){
+	if (i < 4) {
+		// FRAME SIZE ERROR!!! this could be no valid frame, since size < crc.
+		// even a frame < 8 will never happen, but we let it pass, even if size == 0
+		m_stats.rx_frames_invalid++;
+	} else if(crc != 0) {
+		// CRC Error!!!
+		m_stats.rx_frames_invalid++;
+	} else {
 		// OK!!!, let it get handled by the upper layer, but we will hide the CRC from the size
 		m_stats.rx_frames_valid++;
 		snwio_frame_received(m_rx_buffer, i - 4);
-	} else {
-		// CRC Error!!!
-		m_stats.rx_frames_invalid++;
 	}
 	
 	
