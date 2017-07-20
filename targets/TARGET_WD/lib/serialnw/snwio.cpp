@@ -11,6 +11,7 @@
 #include "serial_api.h"
 #include "snwconf.h"
 #include "swtimer.h"
+#include "Mutex.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
@@ -30,6 +31,8 @@ static snwio_stats m_stats;
 static char m_rxisr_buffer[SNWIO_CONF_RXISR_BUFFER_SIZE];
 static char * m_rxisr_consumer;	// points beyond the last read char
 static char * m_rxisr_producer;	// points beyond the last written char
+
+static Mutex m_txmutex;
 
 static void _serial_interrupt()
 {
@@ -107,6 +110,10 @@ static _snwio_char_t _snwio_readchar()
 static _snwio_char_t _snwio_writechar(char c){
 	m_serial.putc(c);
 
+	// poll for SR (TC bit=6) 0x40
+	// volatile uint32_t * sr = (volatile uint32_t*)0x40004c00;
+	// while (!(*sr & 0x40));
+
 	_snwio_char_t echoc = _snwio_readchar();
 	if(echoc.timeout_occured){
 		// THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!
@@ -158,6 +165,9 @@ static void _snwio_readframe()
 
 static void _snwio_writeframe()
 {
+
+	m_txmutex.lock();
+
 	uint32_t crc = UINT32_MAX;
 
 	for(int i=0; i<m_tx_size; i++){
@@ -180,6 +190,8 @@ static void _snwio_writeframe()
 	}
 
 	m_tx_size = 0;
+
+	m_txmutex.unlock();
 	
 	// let's wait sync the pause chars, we also could wait "optimistic", but this would required to handle overflow of sysclk
 	wait_us(m_us_pause_time);
@@ -193,8 +205,12 @@ void snwio_transfer_frame(const void * data, size_t size)
 		return;
 	}
 
+	m_txmutex.lock();
+
 	memcpy(m_tx_buffer, data, size);
 	m_tx_size = size;	// this will trigger tx in next loop
+
+	m_txmutex.unlock();
 }
 
 void snwio_loop_check()
