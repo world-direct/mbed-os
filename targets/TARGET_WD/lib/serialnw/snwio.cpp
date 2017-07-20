@@ -19,22 +19,55 @@ extern "C" {
 }
 
 
-static serial_t m_serial;
+static RawSerial m_serial(SNWIO_CONF_PIN_TX, SNWIO_CONF_PIN_RX, SNWIO_CONF_BAUD);
 static char	m_rx_buffer[SNWIO_CONF_RX_BUFFER_SIZE];
 static char m_tx_buffer[SNWIO_CONF_TX_BUFFER_SIZE];
 static size_t m_tx_size;
 static int m_us_pause_time;
 static snwio_stats m_stats;
 
+// Buffered RX members (I wanted to use DMA, but this is somehow really bad in mbed.... )
+static char m_rxisr_buffer[SNWIO_CONF_RXISR_BUFFER_SIZE];
+static char * m_rxisr_consumer;	// points beyond the last read char
+static char * m_rxisr_producer;	// points beyond the last written char
+
+static void _serial_interrupt()
+{
+	char c = m_serial.getc();
+	*m_rxisr_producer++ = c;
+
+	if(m_rxisr_producer == m_rxisr_buffer + SNWIO_CONF_RXISR_BUFFER_SIZE)
+		m_rxisr_producer = m_rxisr_buffer;
+}
+
+static int _serial_readable()
+{
+	return m_rxisr_consumer != m_rxisr_producer;
+}
+
+static char _serial_getc()
+{
+	while(!_serial_readable());
+	char c = *m_rxisr_consumer++;
+
+	if(m_rxisr_consumer == m_rxisr_buffer + SNWIO_CONF_RXISR_BUFFER_SIZE)
+		m_rxisr_consumer = m_rxisr_buffer;
+
+	return c;
+}
+
 void snwio_init()
 {
-	serial_init(&m_serial, SNWIO_CONF_PIN_TX, SNWIO_CONF_PIN_RX);
-	serial_baud(&m_serial, SNWIO_CONF_BAUD);
 
+	// calculated pause time
 	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
 		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
-	
-	// m_us_pause_time = 5000000;
+
+	m_rxisr_consumer = m_rxisr_producer = m_rxisr_buffer;
+
+	// attach RX Interrupt
+	m_serial.attach(mbed::Callback<void()>(_serial_interrupt), SerialBase::RxIrq);
+
 }
 
 // this is just a declaration, this method has to be implemented in the upper layer
@@ -59,8 +92,8 @@ static _snwio_char_t _snwio_readchar()
 	swtimer_init(&timer);
 
 	while(!swtimer_elapsed(timer, m_us_pause_time)){
-		if(serial_readable(&m_serial)){
-			char c = (char)serial_getc(&m_serial);
+		if(_serial_readable()){
+			char c = _serial_getc();
 			m_stats.rx_bytes++;
 			ret.value = c;
 			return ret;
@@ -72,7 +105,8 @@ static _snwio_char_t _snwio_readchar()
 }
 
 static _snwio_char_t _snwio_writechar(char c){
-	serial_putc(&m_serial, c);
+	m_serial.putc(c);
+
 	_snwio_char_t echoc = _snwio_readchar();
 	if(echoc.timeout_occured){
 		// THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!
@@ -140,7 +174,7 @@ static void _snwio_writeframe()
 		char data[4];
 	} crcdata = {crc};
 
-	for(int i=0; i<3; i++){
+	for(int i=0; i<4; i++){
 		_snwio_writechar(crcdata.data[i]);
 		m_stats.tx_bytes++;
 	}
@@ -166,7 +200,7 @@ void snwio_transfer_frame(const void * data, size_t size)
 void snwio_loop_check()
 {
 	// RX started from other peer?
-	if(serial_readable(&m_serial)){
+	if(_serial_readable()){
 		_snwio_readframe();
 	}
 
