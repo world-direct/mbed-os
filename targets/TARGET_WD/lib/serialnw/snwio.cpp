@@ -7,6 +7,7 @@
 
 #include "snwio.h"
 #include "snwconf.h"
+#include "mbed.h"
 #include "RawSerial.h"
 #include "serial_api.h"
 #include "snwconf.h"
@@ -73,9 +74,8 @@ void snwio_init()
 
 }
 
-// this is just a declaration, this method has to be implemented in the upper layer
-void snwio_frame_received(void * data, size_t size);
-__weak void snwio_frame_received(void * data, size_t size) {}
+// implement this in the upper layer to handle valid frames
+__weak void snwio_handle_frame(const void * data, size_t size) {}
 
 
 typedef struct {
@@ -111,13 +111,13 @@ static _snwio_char_t _snwio_writechar(char c){
 	m_serial.putc(c);
 
 	// poll for SR (TC bit=6) 0x40
-	// volatile uint32_t * sr = (volatile uint32_t*)0x40004c00;
-	// while (!(*sr & 0x40));
+	 //volatile uint32_t * sr = (volatile uint32_t*)0x40004c00;
+	 //while (!(*sr & 0x40));
 
 	_snwio_char_t echoc = _snwio_readchar();
 	if(echoc.timeout_occured){
 		// THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!
-		return;
+		return echoc;
 	}
 
 	return echoc;
@@ -157,7 +157,7 @@ static void _snwio_readframe()
 	} else {
 		// OK!!!, let it get handled by the upper layer, but we will hide the CRC from the size
 		m_stats.rx_frames_valid++;
-		snwio_frame_received(m_rx_buffer, i - 4);
+		snwio_handle_frame(m_rx_buffer, i - 4);
 	}
 	
 	
@@ -170,7 +170,7 @@ static void _snwio_writeframe()
 
 	uint32_t crc = UINT32_MAX;
 
-	for(int i=0; i<m_tx_size; i++){
+	for(size_t i=0; i<m_tx_size; i++){
 		char c = m_tx_buffer[i];
 		if(_snwio_writechar(c).value != c){
 			// collision, may exit early!

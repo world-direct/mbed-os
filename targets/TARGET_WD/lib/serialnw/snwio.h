@@ -10,12 +10,6 @@
 #define SNWIO_H_
 
 #include <stddef.h>
-#include "PinNames.h"
-
-// includes for private: members
-#include "mbed.h"
-
-#define RX_BUFFER_SIZE	64
 
 struct snwio_stats {
 
@@ -31,6 +25,7 @@ struct snwio_stats {
 
 void snwio_init(void);
 void snwio_transfer_frame(const void * data, size_t size);
+void snwio_handle_frame(const void * data, size_t size);
 void snwio_loop_check(void);
 void snwio_get_stats(snwio_stats * stats, bool reset);
 
