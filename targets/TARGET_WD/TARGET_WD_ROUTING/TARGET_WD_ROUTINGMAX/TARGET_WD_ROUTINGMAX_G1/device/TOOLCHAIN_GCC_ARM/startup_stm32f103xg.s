@@ -122,6 +122,10 @@ LoopFillZerobss:
   // to initializsation when using rtos.
   bl _start
   bx lr
+
+LoopForever:
+  b LoopForever
+
 .size Reset_Handler, .-Reset_Handler
 
 /**
