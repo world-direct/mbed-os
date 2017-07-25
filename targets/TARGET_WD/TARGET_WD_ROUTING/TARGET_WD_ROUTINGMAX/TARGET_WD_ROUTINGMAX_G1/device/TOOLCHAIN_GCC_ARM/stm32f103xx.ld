@@ -1,4 +1,4 @@
-M_VECTOR_RAM_SIZE = 0x300;
+M_VECTOR_RAM_SIZE = 0x400;
 
 #if !defined(MBED_APP_START)
   #define MBED_APP_START 0x08000000
@@ -13,7 +13,7 @@ MEMORY
 {
 	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
 	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
-    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x300, LENGTH = MBED_APP_SIZE - 0x300
+    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 96k
 }
 
@@ -66,16 +66,7 @@ SECTIONS
 		. = ALIGN(4);
 	} > METADATA
 
-	.interrupts_ram :
-    {
-        . = ALIGN(4);
-        __VECTOR_RAM__ = .;
-        __interrupts_ram_start__ = .; /* Create a global symbol at data start */
-        *(.m_interrupts_ram)     /* This is a user defined section */
-        . += M_VECTOR_RAM_SIZE;
-        . = ALIGN(4);
-        __interrupts_ram_end__ = .; /* Define a global symbol at data end */
-    } > RAM
+	
 
     .text :
     {
@@ -122,6 +113,17 @@ SECTIONS
 
     __etext = .;
     _sidata = .;
+
+	.interrupts_ram :
+    {
+        . = ALIGN(4);
+        __VECTOR_RAM__ = .;
+        __interrupts_ram_start__ = .; /* Create a global symbol at data start */
+        *(.m_interrupts_ram)     /* This is a user defined section */
+        . += M_VECTOR_RAM_SIZE;
+        . = ALIGN(4);
+        __interrupts_ram_end__ = .; /* Define a global symbol at data end */
+    } > RAM
 
     .data : AT (__etext)
     {
