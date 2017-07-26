@@ -37,13 +37,13 @@
 #if defined(TARGET_WD_ROUTINGMAX_G1)
 
 #ifndef INITIAL_SP
-#define INITIAL_SP              (0x20030000UL)
+#define INITIAL_SP              (0x20018000UL)
 #endif
 #ifndef OS_TASKCNT
-#define OS_TASKCNT              14
+#define OS_TASKCNT              6
 #endif
 #ifndef OS_MAINSTKSIZE
-#define OS_MAINSTKSIZE          256
+#define OS_MAINSTKSIZE          128
 #endif
 #ifndef OS_CLOCK
 #define OS_CLOCK                72000000

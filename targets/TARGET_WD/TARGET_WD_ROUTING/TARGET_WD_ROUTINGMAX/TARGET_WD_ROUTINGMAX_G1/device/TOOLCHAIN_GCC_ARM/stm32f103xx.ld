@@ -1,5 +1,8 @@
 M_VECTOR_RAM_SIZE = 0x400;
 
+STACK_SIZE = 0x400;
+HEAP_SIZE = 0x400;
+
 #if !defined(MBED_APP_START)
   #define MBED_APP_START 0x08000000
 #endif
@@ -66,8 +69,6 @@ SECTIONS
 		. = ALIGN(4);
 	} > METADATA
 
-	
-
     .text :
     {
         KEEP(*(.isr_vector))
@@ -105,11 +106,6 @@ SECTIONS
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } > FLASH
     __exidx_end = .;
-
-	
-	__image_end = .;
-	__image_size = __image_end - __image_start;
-
 
     __etext = .;
     _sidata = .;
@@ -161,6 +157,9 @@ SECTIONS
 
     } > RAM
 
+	__image_end = .;
+	__image_size = __image_end - __image_start;
+
     .bss :
     {
         . = ALIGN(4);
@@ -173,27 +172,17 @@ SECTIONS
         _ebss = .;
     } > RAM
     
-    .heap (COPY):
+    .heap (NOLOAD):
     {
         __end__ = .;
         end = __end__;
-        *(.heap*)
+        . += HEAP_SIZE;
         __HeapLimit = .;
     } > RAM
 
-    /* .stack_dummy section doesn't contains any symbols. It is only
-     * used for linker to calculate size of stack sections, and assign
-     * values to stack symbols later */
-    .stack_dummy (COPY):
-    {
-        *(.stack*)
-    } > RAM
-
-    /* Set stack top to end of RAM, and stack limit move down by
-     * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
     _estack = __StackTop;
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
+    __StackLimit = __StackTop - STACK_SIZE;
     PROVIDE(__stack = __StackTop);
     
     /* Check if data + heap + stack exceeds RAM limit */
