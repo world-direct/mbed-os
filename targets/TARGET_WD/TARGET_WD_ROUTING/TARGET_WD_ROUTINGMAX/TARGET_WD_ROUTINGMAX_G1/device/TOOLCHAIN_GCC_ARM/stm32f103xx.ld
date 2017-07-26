@@ -1,25 +1,3 @@
-M_VECTOR_RAM_SIZE = 0x400;
-
-STACK_SIZE = 0x400;
-HEAP_SIZE = 0x400;
-
-#if !defined(MBED_APP_START)
-  #define MBED_APP_START 0x08000000
-#endif
-
-#if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 512k
-#endif
-
-/* Specify the memory areas */
-MEMORY
-{
-	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
-	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
-    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
-    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 96k
-}
-
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.
  * It references following symbols, which must be defined in code:
@@ -47,13 +25,32 @@ MEMORY
  *   __stack
  *   _estack
  */
+
+/* Entry Point */
 ENTRY(Reset_Handler)
 
+M_VECTOR_RAM_SIZE = 0x400;
+
+STACK_SIZE = 0x400;
+HEAP_SIZE = 0x6000;
+
+#define MBED_APP_START	0x08000000
+#define MBED_APP_SIZE	512k
+
+/* Specify the memory areas */
+MEMORY
+{
+	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
+	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
+    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
+    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 0x17FFF
+}
+
+/* Define output sections */
 SECTIONS
 {
 	.isr_vector :
     {
-
 		__image_start = .;
 
         __vector_table = .;
@@ -71,8 +68,10 @@ SECTIONS
 
     .text :
     {
-        KEEP(*(.isr_vector))
-        *(.text*)
+        . = ALIGN(4);
+        
+		*(.text*)
+
         KEEP(*(.init))
         KEEP(*(.fini))
 
@@ -121,8 +120,10 @@ SECTIONS
         __interrupts_ram_end__ = .; /* Define a global symbol at data end */
     } > RAM
 
-    .data : AT (__etext)
+    .data : 
     {
+		PROVIDE( __etext = LOADADDR(.data) );
+
         __data_start__ = .;
         _sdata = .;
         *(vtable)
@@ -155,12 +156,25 @@ SECTIONS
         __data_end__ = .;
         _edata = .;
 
-    } > RAM
+    } > RAM AT > FLASH
 
 	__image_end = .;
 	__image_size = __image_end - __image_start;
 
-    .bss :
+	/* Uninitialized data section
+     * This region is not initialized by the C/C++ library and can be used to
+     * store state across soft reboots. */
+    .uninitialized (NOLOAD):
+    {
+        . = ALIGN(32);
+        __uninitialized_start = .;
+        *(.uninitialized)
+        KEEP(*(.keep.uninitialized))
+        . = ALIGN(32);
+        __uninitialized_end = .;
+    } > RAM
+
+    .bss (NOLOAD):
     {
         . = ALIGN(4);
         __bss_start__ = .;
