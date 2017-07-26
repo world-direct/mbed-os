@@ -1,18 +1,16 @@
 /*
  * snwio.c
  *
- * Created: 04.07.2017 13:12:41
- *  Author: Guenter.Prossliner
+ * created: 04.07.2017 13:12:41
+ *  author: guenter.prossliner
  */ 
 
 #include "snwio.h"
 #include "snwconf.h"
 #include "mbed.h"
-#include "RawSerial.h"
 #include "serial_api.h"
-#include "snwconf.h"
 #include "swtimer.h"
-#include "Mutex.h"
+#include "rtos/mutex.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
@@ -21,8 +19,8 @@ extern "C" {
 }
 
 
-static RawSerial m_serial(SNWIO_CONF_PIN_TX, SNWIO_CONF_PIN_RX, SNWIO_CONF_BAUD);
-static char	m_rx_buffer[SNWIO_CONF_RX_BUFFER_SIZE];
+static RawSerial * m_serial;
+static char m_rx_buffer[SNWIO_CONF_RX_BUFFER_SIZE];
 static char m_tx_buffer[SNWIO_CONF_TX_BUFFER_SIZE];
 static size_t m_tx_size;
 static int m_us_pause_time;
@@ -37,7 +35,7 @@ static Mutex m_txmutex;
 
 static void _serial_interrupt()
 {
-	char c = m_serial.getc();
+	char c = m_serial->getc();
 	*m_rxisr_producer++ = c;
 
 	if(m_rxisr_producer == m_rxisr_buffer + SNWIO_CONF_RXISR_BUFFER_SIZE)
@@ -62,7 +60,8 @@ static char _serial_getc()
 
 void snwio_init()
 {
-
+	m_serial = new RawSerial(SNWIO_CONF_PIN_TX, SNWIO_CONF_PIN_RX, SNWIO_CONF_BAUD);
+	
 	// calculated pause time
 	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
 		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
@@ -70,7 +69,7 @@ void snwio_init()
 	m_rxisr_consumer = m_rxisr_producer = m_rxisr_buffer;
 
 	// attach RX Interrupt
-	m_serial.attach(mbed::Callback<void()>(_serial_interrupt), SerialBase::RxIrq);
+	m_serial->attach(mbed::Callback<void()>(_serial_interrupt), SerialBase::RxIrq);
 
 }
 
@@ -108,7 +107,7 @@ static _snwio_char_t _snwio_readchar()
 }
 
 static _snwio_char_t _snwio_writechar(char c){
-	m_serial.putc(c);
+	m_serial->putc(c);
 
 	// poll for SR (TC bit=6) 0x40
 	 //volatile uint32_t * sr = (volatile uint32_t*)0x40004c00;
