@@ -23,6 +23,7 @@
 //#define LWIP_STATS_DISPLAY          1
 
 #define LWIP_TRANSPORT_ETHERNET     1
+#define LWIP_TRANSPORT_PPP			1
 
 /**
  * MEM_SIZE: the size of the heap memory. If the application will send
@@ -71,7 +72,6 @@
 #define PPP_NOTIFY_PHASE			1
 #define NO_SYS						0
 #define PPP_INPROC_IRQ_SAFE			0
-#define LWIP_DEBUG					0
 #define ICMP_STATS					1
 #define CHECKSUM_GEN_ICMP			0
 #define LWIP_CHECKSUM_CTRL_PER_NETIF 1

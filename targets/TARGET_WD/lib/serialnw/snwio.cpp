@@ -13,6 +13,7 @@
 #include "snwconf.h"
 #include "swtimer.h"
 #include "Mutex.h"
+#include "wd_logging.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
@@ -64,9 +65,11 @@ void snwio_init()
 {
 
 	// calculated pause time
-	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
-		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
+//	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
+//		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
 
+	m_us_pause_time = 3000;
+	
 	m_rxisr_consumer = m_rxisr_producer = m_rxisr_buffer;
 
 	// attach RX Interrupt
@@ -117,6 +120,7 @@ static _snwio_char_t _snwio_writechar(char c){
 	_snwio_char_t echoc = _snwio_readchar();
 	if(echoc.timeout_occured){
 		// THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!
+		wd_log_error("THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!");
 		return echoc;
 	}
 
@@ -132,6 +136,7 @@ static void _snwio_readframe()
 		_snwio_char_t c =  _snwio_readchar();
 		if(c.timeout_occured) {
 			// done with frame!
+			wd_log_error("done with frame (size: %d)", i);
 			break;
 		}
 		crc = update_crc_32(crc, c.value);
@@ -142,6 +147,7 @@ static void _snwio_readframe()
 	if(i == SNWIO_CONF_RX_BUFFER_SIZE){
 		// OVERRUN!
 		m_stats.rx_overruns++;
+		wd_log_error("OVERRUN");
 		// let's read the rest, so that we may handle the next frame
 		while(!_snwio_readchar().timeout_occured);
 		return;
@@ -151,9 +157,11 @@ static void _snwio_readframe()
 		// FRAME SIZE ERROR!!! this could be no valid frame, since size < crc.
 		// even a frame < 8 will never happen, but we let it pass, even if size == 0
 		m_stats.rx_frames_invalid++;
+		wd_log_error("Length less than 4, size %d", i);
 	} else if(crc != 0) {
 		// CRC Error!!!
 		m_stats.rx_frames_invalid++;
+		wd_log_error("CRC-error, lenght %d, crc %d, first byte: %x", i, crc, m_rx_buffer[0]);
 	} else {
 		// OK!!!, let it get handled by the upper layer, but we will hide the CRC from the size
 		m_stats.rx_frames_valid++;
@@ -172,8 +180,10 @@ static void _snwio_writeframe()
 
 	for(size_t i=0; i<m_tx_size; i++){
 		char c = m_tx_buffer[i];
+		//_snwio_writechar(c);
 		if(_snwio_writechar(c).value != c){
 			// collision, may exit early!
+			wd_log_error("collision, exit early");
 		}
 		crc = update_crc_32(crc, c);
 	}

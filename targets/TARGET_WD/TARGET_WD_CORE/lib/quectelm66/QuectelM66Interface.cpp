@@ -187,7 +187,7 @@ void QuectelM66Interface::serial_read_thread_entry() {
 		do {
 		
 			if (this->_serialStreamAdapter->read(this->_serialBuffer, &size, QUECTEL_M66_READ_BUFFER_SIZE, 1000) == 0) {
-				wd_log_debug("QuectelM66Interface --> %d bytes read, forwarding to pppos", size);
+				wd_log_error("QuectelM66Interface --> %d bytes read, forwarding to pppos", size);
 				ppp_pcb *tmp = mbed_get_ppp_pcb();
 				pppos_input_tcpip(tmp, this->_serialBuffer, size);	
 			}

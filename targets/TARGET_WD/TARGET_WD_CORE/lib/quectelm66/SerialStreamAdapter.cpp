@@ -16,9 +16,18 @@
 #include "wd_logging.h"
 #include "Cellular/core/errors.h"
 
+Semaphore SerialStreamAdapter::complete_sem(0);
+DMASerial* SerialStreamAdapter::_serial;
+Mutex SerialStreamAdapter::_mutex;
+
 SerialStreamAdapter::SerialStreamAdapter(BufferedSerial* bufferedSerial) {
 	wd_log_debug("SerialStreamAdapter --> ctor");
 	this->_bufferedSerial = bufferedSerial;
+	
+	SerialStreamAdapter::_serial = new DMASerial(GSM_TXD, GSM_RXD, 115200);
+	SerialStreamAdapter::_serial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
+	SerialStreamAdapter::_serial->set_dma_usage_tx(DMA_USAGE_NEVER);
+	
 }
 
 int SerialStreamAdapter::abortRead() {
@@ -50,36 +59,40 @@ size_t SerialStreamAdapter::space() {
 	return 0;
 }
 
+void SerialStreamAdapter::read_callback(int a){
+	SerialStreamAdapter::complete_sem.release();
+}
+
 int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */) {
+	
+	if(!SerialStreamAdapter::_mutex.trylock()){
+		Thread::wait(timeout);
+		return NET_TIMEOUT;
+	}
+	
+	char tmpBuffer[maxLength];
+	if(!SerialStreamAdapter::_serial->read(tmpBuffer, maxLength, callback(SerialStreamAdapter::read_callback))){
+		return NET_TIMEOUT;
+	}
 	
 	Timer timer;
 	timer.start();
 	
-	size_t idx = 0;
-	while (idx < maxLength && (timeout == 0 || timer.read_ms() < timeout)) {
-		
-		if (!this->_bufferedSerial->readable()) {
-			if (timeout == 0) {
-				*pLength = idx;
-				return idx > 0 ? OK : NET_EMPTY;
-			}
-			__WFI();
-			continue;
-		}
-		
-		if (maxLength - idx) {
-			buf[idx++] = this->_bufferedSerial->getc();
-		}
-		
-	}
+	while (timer.read_ms() < timeout && !SerialStreamAdapter::complete_sem.wait(100)) {}
+	// timeout or callback occurred!!
 	
-	*pLength = idx;
+	// abort read
+	SerialStreamAdapter::_serial->abort_read();
 	
-	if (idx >= maxLength) {
-		return NET_FULL;
-	}
+	int length = SerialStreamAdapter::_serial->GetLength();
 	
-	if (idx == 0) {
+	memcpy(buf, tmpBuffer, maxLength - length);
+	
+	*pLength = length;
+	
+	SerialStreamAdapter::_mutex.unlock();
+	
+	if (length == 0) {
 		return NET_TIMEOUT;
 	}
 	
@@ -89,10 +102,14 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 int SerialStreamAdapter::write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
 	wd_log_debug("SerialStreamAdapter --> write");
 	
-	ssize_t effectiveLength = this->_bufferedSerial->write(buf, length);
-	if (effectiveLength < length) {
-		return NET_FULL;
+	for(int i = 0; i < length; i++){
+		SerialStreamAdapter::_serial->putc(buf[i]);
 	}
+	
+	//ssize_t effectiveLength = this->_bufferedSerial->write(buf, length);
+	//if (effectiveLength < length) {
+		//return NET_FULL;
+	//}
 	
 	return OK;
 }

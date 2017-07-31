@@ -19,6 +19,8 @@
 #ifndef LWIPOPTS_H
 #define LWIPOPTS_H
 
+#define LWIP_DEBUG					
+
 #include "lwipopts_conf.h"
 
 // Workaround for Linux timeval
@@ -222,8 +224,9 @@
 #define LWIP_STATS                  0
 #endif
 
-#define LWIP_DBG_TYPES_ON           LWIP_DBG_OFF
+#define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
 #define LWIP_DBG_MIN_LEVEL          LWIP_DBG_LEVEL_ALL
+//#define LWIP_DBG_MIN_LEVEL			LWIP_DBG_LEVEL_WARNING
 
 #define LWIP_PLATFORM_BYTESWAP      1
 
