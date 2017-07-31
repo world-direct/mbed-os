@@ -58,10 +58,8 @@ static const uint32_t DMA_UartTx_Channel[UART_NUM] = {
 	DMA1_Channel4, DMA1_Channel7, DMA1_Channel2, DMA2_Channel5
 };
 	
-DMA_HandleTypeDef DmaHandle;
-
-static DMA_HandleTypeDef DmaTxHandle[UART_NUM];
-static DMA_HandleTypeDef DmaRxHandle[UART_NUM];
+DMA_HandleTypeDef DmaTxHandle[UART_NUM];
+DMA_HandleTypeDef DmaRxHandle[UART_NUM];
 
 #endif
 
@@ -108,7 +106,7 @@ static void init_dma(serial_t *obj)
 		hdma_rx->Init.MemInc              = DMA_MINC_ENABLE;
 		hdma_rx->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
 		hdma_rx->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-		hdma_rx->Init.Mode                = DMA_NORMAL;
+		hdma_rx->Init.Mode                = DMA_CIRCULAR;
 		hdma_rx->Init.Priority            = DMA_PRIORITY_HIGH;
 
 		if (HAL_DMA_Init(hdma_rx) != HAL_OK) {
