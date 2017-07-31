@@ -16,9 +16,9 @@
 #include "wd_logging.h"
 #include "Cellular/core/errors.h"
 
-Semaphore SerialStreamAdapter::complete_sem(0);
 DMASerial* SerialStreamAdapter::_serial;
 Mutex SerialStreamAdapter::_mutex;
+Semaphore SerialStreamAdapter::complete_sem;
 
 SerialStreamAdapter::SerialStreamAdapter(BufferedSerial* bufferedSerial) {
 	wd_log_debug("SerialStreamAdapter --> ctor");
@@ -63,6 +63,17 @@ void SerialStreamAdapter::read_callback(int a){
 	SerialStreamAdapter::complete_sem.release();
 }
 
+static int buffersize = 512;
+static char dma_buffer[512];
+static int dma_consumer_pointer = 0;
+static bool reading_started = false;
+
+
+void SerialStreamAdapter::start_reading() {
+	SerialStreamAdapter::_serial->read(dma_buffer, buffersize, callback(SerialStreamAdapter::read_callback));
+	reading_started = true;
+}
+
 int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */) {
 	
 	if(!SerialStreamAdapter::_mutex.trylock()){
@@ -70,24 +81,38 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 		return NET_TIMEOUT;
 	}
 	
-	char tmpBuffer[maxLength];
-	if(!SerialStreamAdapter::_serial->read(tmpBuffer, maxLength, callback(SerialStreamAdapter::read_callback))){
-		return NET_TIMEOUT;
+	if(!reading_started){
+		start_reading();
 	}
 	
 	Timer timer;
 	timer.start();
 	
 	while (timer.read_ms() < timeout && !SerialStreamAdapter::complete_sem.wait(100)) {}
+	
 	// timeout or callback occurred!!
+	int remainingBytes = SerialStreamAdapter::_serial->GetLength();
+	int dma_producer_pointer = buffersize - remainingBytes;
 	
-	// abort read
-	SerialStreamAdapter::_serial->abort_read();
+	int length = 0;
+	if (dma_consumer_pointer < dma_producer_pointer) {
+		// normal
+		memcpy(buf, dma_buffer + dma_consumer_pointer, dma_producer_pointer - dma_consumer_pointer);
+		length = dma_producer_pointer - dma_consumer_pointer;
+		wd_log_error("normal");
+	}
 	
-	int length = SerialStreamAdapter::_serial->GetLength();
+	if (dma_consumer_pointer > dma_producer_pointer) {
+		// overrun
+		memcpy(buf, dma_buffer + dma_consumer_pointer, buffersize - dma_consumer_pointer);
+		length = buffersize - dma_consumer_pointer;
+		memcpy(buf + (buffersize - dma_consumer_pointer), dma_buffer, dma_producer_pointer);
+		length += dma_producer_pointer;
+		wd_log_error("overrun");
+	}
 	
-	memcpy(buf, tmpBuffer, maxLength - length);
-	
+	// overflow currently not handled!
+	dma_consumer_pointer = dma_producer_pointer;
 	*pLength = length;
 	
 	SerialStreamAdapter::_mutex.unlock();

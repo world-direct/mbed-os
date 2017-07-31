@@ -29,9 +29,10 @@ class SerialStreamAdapter : public IOStream
 	private:
 		BufferedSerial* _bufferedSerial;
 		static DMASerial* _serial;
-		static void read_callback(int a);
 		static Mutex _mutex;
 		static Semaphore complete_sem;
+		static void start_reading();
+		static void read_callback(int a);
 	
 	public: 
 		
