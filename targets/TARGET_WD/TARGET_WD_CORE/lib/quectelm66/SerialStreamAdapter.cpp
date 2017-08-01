@@ -131,6 +131,7 @@ int SerialStreamAdapter::write(uint8_t* buf, size_t length, uint32_t timeout /* 
 		SerialStreamAdapter::_serial->putc(buf[i]);
 	}
 	
+	
 	//ssize_t effectiveLength = this->_bufferedSerial->write(buf, length);
 	//if (effectiveLength < length) {
 		//return NET_FULL;
