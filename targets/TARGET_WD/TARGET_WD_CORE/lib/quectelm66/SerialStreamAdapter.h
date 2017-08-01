@@ -19,6 +19,7 @@
 #include "mbed.h"
 #include "Cellular/core/IOStream.h"
 #include "BufferedSerial.h"
+#include "DMASerial.h"
 
 #define READTIMEOUT 5
 
@@ -27,6 +28,11 @@ class SerialStreamAdapter : public IOStream
 	
 	private:
 		BufferedSerial* _bufferedSerial;
+		static DMASerial* _serial;
+		static Mutex _mutex;
+		static Semaphore complete_sem;
+		static void start_reading();
+		static void read_callback(int a);
 	
 	public: 
 		

@@ -2643,7 +2643,7 @@
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_CORE" ],
     "macros": ["RTC_LSI=1"],
-    "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "I2CSLAVE", "I2C_ASYNCH", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT", "LOWPOWERTIMER", "ERROR_RED" ],
+    "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_ASYNCH_DMA", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "I2CSLAVE", "I2C_ASYNCH", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT", "LOWPOWERTIMER", "ERROR_RED" ],
     "features": [ "LWIP" ],
     "release_versions": [ "5" ]
   },

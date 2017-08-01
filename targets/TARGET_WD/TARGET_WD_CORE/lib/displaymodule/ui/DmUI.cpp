@@ -32,7 +32,7 @@ static void donothing() {}
 DmUI::DmUI(PinName mosi, PinName miso, PinName sck, PinName cs, PinName irq) : _pinCS(cs, 0), _pinIRQ(irq), _spi(mosi, miso, sck), _timer(), _queue(4 * EVENTS_EVENT_SIZE) {
 	
 	// start event queue dispatch thread
-	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+	//this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
 	
 	_spi.format(8, 0);
 	_spi.frequency(1000000);

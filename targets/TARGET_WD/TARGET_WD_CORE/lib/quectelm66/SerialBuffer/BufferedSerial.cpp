@@ -30,8 +30,9 @@ BufferedSerial::BufferedSerial(PinName tx, PinName rx, uint32_t buf_size, uint32
 	, _rxbuf(buf_size)
 	, _txbuf((uint32_t)(tx_multiple*buf_size))
 {
-    RawSerial::attach(this, &BufferedSerial::rxIrq, Serial::RxIrq);
-    this->_buf_size = buf_size;
+    //RawSerial::attach(this, &BufferedSerial::rxIrq, Serial::RxIrq);
+    this->set_dma_usage_rx(DMA_USAGE_ALWAYS);
+	this->_buf_size = buf_size;
     this->_tx_multiple = tx_multiple;   
     return;
 }
@@ -46,7 +47,8 @@ BufferedSerial::~BufferedSerial(void)
 
 int BufferedSerial::readable(void)
 {
-    return _rxbuf.available();  // note: look if things are in the buffer
+    //return _rxbuf.available();  // note: look if things are in the buffer
+	return 1;
 }
 
 int BufferedSerial::writeable(void)
@@ -54,8 +56,17 @@ int BufferedSerial::writeable(void)
     return 1;   // buffer allows overwriting by design, always true
 }
 
+static void complete_callback(int l){
+	
+}
+
 int BufferedSerial::getc(void)
 {
+	
+	char buffer[100];
+	
+	this->read(buffer, 1, callback(complete_callback));
+	
     return _rxbuf;
 }
 

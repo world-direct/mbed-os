@@ -91,7 +91,7 @@ public:
      *  @param name optional name
      *  @note Either tx or rx may be specified as NC if unused
      */
-    BufferedSerial(PinName tx, PinName rx, uint32_t buf_size = 256, uint32_t tx_multiple = 2,const char* name=NULL);
+    BufferedSerial(PinName tx, PinName rx, uint32_t buf_size = 1024, uint32_t tx_multiple = 2,const char* name=NULL);
     
     /** Destroy a BufferedSerial port
      */
