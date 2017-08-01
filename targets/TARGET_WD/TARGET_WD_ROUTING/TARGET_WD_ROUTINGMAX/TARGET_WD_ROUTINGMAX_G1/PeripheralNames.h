@@ -44,6 +44,11 @@ typedef enum {
     UART_5 = (int)UART5_BASE
 } UARTName; 
 
+typedef enum {
+	DMA_1 = (int)DMA1_BASE,
+	DMA_2 = (int)DMA2_BASE
+} DMAName;
+
 #define STDIO_UART_TX  PC_10
 #define STDIO_UART_RX  PC_11
 #define STDIO_UART     UART_4

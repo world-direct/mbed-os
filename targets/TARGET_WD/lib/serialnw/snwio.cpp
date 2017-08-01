@@ -65,11 +65,10 @@ void snwio_init()
 {
 
 	// calculated pause time
-//	m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
-//		(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
-
+	//m_us_pause_time = (SNWIO_CONF_FRAME_PAUSE_CHARS * SystemCoreClock) / 
+		//(SNWIO_CONF_BAUD * 10); // 8 Data, 1 Start, 1 Stop-Bit 
 	m_us_pause_time = 3000;
-	
+
 	m_rxisr_consumer = m_rxisr_producer = m_rxisr_buffer;
 
 	// attach RX Interrupt
@@ -112,7 +111,6 @@ static _snwio_char_t _snwio_readchar()
 
 static _snwio_char_t _snwio_writechar(char c){
 	m_serial.putc(c);
-
 	// poll for SR (TC bit=6) 0x40
 	 //volatile uint32_t * sr = (volatile uint32_t*)0x40004c00;
 	 //while (!(*sr & 0x40));
@@ -120,7 +118,7 @@ static _snwio_char_t _snwio_writechar(char c){
 	_snwio_char_t echoc = _snwio_readchar();
 	if(echoc.timeout_occured){
 		// THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!
-		wd_log_error("THIS IS A FATAL ERROR, WE SHOULD ALWAYS READ OUR CHAR!");
+		wd_log_error("_snwio_readchar timeout occurred!");
 		return echoc;
 	}
 
@@ -136,7 +134,7 @@ static void _snwio_readframe()
 		_snwio_char_t c =  _snwio_readchar();
 		if(c.timeout_occured) {
 			// done with frame!
-			wd_log_error("done with frame (size: %d)", i);
+			wd_log_error("done with frame, size: %d", i);
 			break;
 		}
 		crc = update_crc_32(crc, c.value);
@@ -180,10 +178,9 @@ static void _snwio_writeframe()
 
 	for(size_t i=0; i<m_tx_size; i++){
 		char c = m_tx_buffer[i];
-		//_snwio_writechar(c);
 		if(_snwio_writechar(c).value != c){
 			// collision, may exit early!
-			wd_log_error("collision, exit early");
+			wd_log_error("_snwio_writeframe collision");
 		}
 		crc = update_crc_32(crc, c);
 	}
@@ -212,6 +209,7 @@ void snwio_transfer_frame(const void * data, size_t size)
 {
 	if(size > SNWIO_CONF_TX_BUFFER_SIZE){
 		// OVERFLOW!
+		wd_log_error("Size of bytes to transfer (%d) > SNWIO_CONF_TX_BUFFER_SIZE (%d)!", size, SNWIO_CONF_TX_BUFFER_SIZE);
 		return;
 	}
 
@@ -227,11 +225,13 @@ void snwio_loop_check()
 {
 	// RX started from other peer?
 	if(_serial_readable()){
+		wd_log_error("snwio_loop_check --> RX");
 		_snwio_readframe();
 	}
 
 	// start tx?
 	if(m_tx_size > 0){
+		wd_log_error("snwio_loop_check --> TX");
 		_snwio_writeframe();
 	}
 }

@@ -2654,7 +2654,7 @@
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_ROUTING", "WD_ROUTINGMAX" ],
     "macros": ["RTC_LSI=1"],
-    "device_has": [ "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT" ],
+    "device_has": [ "SERIAL", "SERIAL_ASYNCH", "SERIAL_ASYNCH_DMA", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT" ],
     "release_versions": [ "5" ]
   }
 }

@@ -1,9 +1,9 @@
 /**
-  *************** (C) COPYRIGHT 2016 STMicroelectronics ************************
+  *************** (C) COPYRIGHT 2017 STMicroelectronics ************************
   * @file      startup_stm32f103xb.s
   * @author    MCD Application Team
-  * @version   V4.1.0
-  * @date      29-April-2016
+  * @version   V4.2.0
+  * @date      31-March-2017
   * @brief     STM32F103xB Devices vector table for Atollic toolchain.
   *            This module performs:
   *                - Set the initial SP
@@ -16,7 +16,7 @@
   *            priority is Privileged, and the Stack is set to Main.
   ******************************************************************************
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -77,7 +77,8 @@ defined in linker script */
   .weak Reset_Handler
   .type Reset_Handler, %function
 Reset_Handler:
-  ldr   sp, =__stack     /* set stack pointer */
+  ldr   r0, =_estack
+  mov   sp, r0          /* set stack pointer */
 
 /* Copy the data segment initializers from flash to SRAM */
   movs r1, #0
@@ -95,11 +96,23 @@ LoopCopyDataInit:
   adds r2, r0, r1
   cmp r2, r3
   bcc CopyDataInit
+  ldr r2, =_sbss
+  b LoopFillZerobss
 
+/* Zero fill the bss segment. */
+FillZerobss:
+  movs r3, #0
+  str r3, [r2], #4
+
+LoopFillZerobss:
+  ldr r3, = _ebss
+  cmp r2, r3
+  bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
+  bl SystemInitPre
   bl HAL_InitPre
-  bl  SystemInit   
+  bl SystemInit   
 /* Call static constructors */
   //bl __libc_init_array
 /* Call the application's entry point.*/
@@ -109,11 +122,12 @@ LoopCopyDataInit:
   // starting main(). software_init_hook() is available and has to be called due 
   // to initializsation when using rtos.
   bl _start
+  bx lr
 
 LoopForever:
   b LoopForever
 
-.size  Reset_Handler, .-Reset_Handler
+.size Reset_Handler, .-Reset_Handler
 
 /**
  * @brief  This is the code that gets called when the processor receives an
@@ -141,9 +155,8 @@ Infinite_Loop:
 
 g_pfnVectors:
 
-  .word  __stack
+  .word  _estack
   .word  Reset_Handler
-
   .word  NMI_Handler
   .word  HardFault_Handler
   .word  MemManage_Handler
@@ -158,8 +171,6 @@ g_pfnVectors:
   .word  0
   .word  PendSV_Handler
   .word  SysTick_Handler
-
-  /* External Interrupts */
   .word  WWDG_IRQHandler
   .word  PVD_IRQHandler
   .word  TAMPER_IRQHandler
