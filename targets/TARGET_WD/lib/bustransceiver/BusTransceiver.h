@@ -16,6 +16,7 @@
 //#include "platform/SingletonPtr.h"
 
 #define BT_RX_BUFFER_SIZE	512
+#define BT_TX_BUFFER_SIZE	512
 
 extern DMA_HandleTypeDef DmaTxHandle[5];
 extern DMA_HandleTypeDef DmaRxHandle[5];
@@ -27,6 +28,7 @@ public:
 protected:
 private:
 	char * _bt_rx_buffer;
+	char * _bt_tx_buffer;
 	unsigned int _bt_rx_consumer;
 	unsigned int _bt_rx_producer;
 	
