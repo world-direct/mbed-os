@@ -16,7 +16,7 @@ ___________________IMPLEMENTATION______________________
 DmMaster::DmMaster(PinName mosi, PinName miso, PinName sck, PinName csDisplay, PinName csPeripheral, PinName oledA0, PinName wakeup) :
 	Display(mosi, sck, csDisplay, oledA0), UI(mosi, miso, sck, csPeripheral, wakeup), _refreshTicker() {
 		Display.init();
-		_refreshTicker.attach(callback(this, &DmMaster::refreshDisplay), ((float) DISPLAY_REFRESH_INTERVAL_MS)/1000.0f );
+		//_refreshTicker.attach(callback(this, &DmMaster::refreshDisplay), ((float) DISPLAY_REFRESH_INTERVAL_MS)/1000.0f );
 }
 
 void DmMaster::printLogo(void) {

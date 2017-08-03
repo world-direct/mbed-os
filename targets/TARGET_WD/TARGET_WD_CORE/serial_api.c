@@ -122,8 +122,8 @@ static void init_dma(serial_t *obj)
         hdma_tx->Init.MemInc              = DMA_MINC_ENABLE;
         hdma_tx->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
         hdma_tx->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_tx->Init.Mode                = DMA_CIRCULAR;
-        hdma_tx->Init.Priority            = DMA_PRIORITY_LOW;
+        hdma_tx->Init.Mode                = DMA_NORMAL;
+	    hdma_tx->Init.Priority            = DMA_PRIORITY_LOW;
         hdma_tx->Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
         hdma_tx->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_HALFFULL;
         hdma_tx->Init.MemBurst            = DMA_MBURST_INC4;
@@ -453,6 +453,7 @@ static void uart_irq(int id)
 static void dma_irq(DMAName name, int id, SerialIrq txrxirq)
 {
 
+	
   if (serial_irq_ids[id] != 0) {
     if (txrxirq == RxIrq) {
       if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
@@ -466,17 +467,17 @@ static void dma_irq(DMAName name, int id, SerialIrq txrxirq)
         }
     }    
   }
-    DmaHandle.Instance = (DMA_Stream_TypeDef *)name;
-    if (serial_irq_ids[id] != 0) {
-        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-            irq_handler(serial_irq_ids[id], TxIrq);
-            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF0_4);
-        }
-        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-            irq_handler(serial_irq_ids[id], RxIrq);
-            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF2_6);
-        }
-    }
+//    DmaHandle.Instance = (DMA_Stream_TypeDef *)name;
+//    if (serial_irq_ids[id] != 0) {
+//        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
+//            irq_handler(serial_irq_ids[id], TxIrq);
+//            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF0_4);
+//        }
+//        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
+//            irq_handler(serial_irq_ids[id], RxIrq);
+//            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF2_6);
+//        }
+//    }
 }
 #endif
 // DEVICE_SERIAL_ASYNCH_DMA
