@@ -33,6 +33,7 @@ class SerialStreamAdapter : public IOStream
 		static Semaphore complete_sem;
 		static void start_reading();
 		static void read_callback(int a);
+		static void write_callback(int a);
 	
 	public: 
 		
