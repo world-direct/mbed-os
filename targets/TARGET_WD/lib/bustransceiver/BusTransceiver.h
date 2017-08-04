@@ -33,9 +33,15 @@ private:
 	unsigned int _bt_rx_producer;
 	
 	InterruptIn * _bt_rx_pin;
-	ResettableTimeout * _bt_timeout;
+	//ResettableTimeout * _bt_timeout;
+	Ticker * _bt_timeout;
 	
-//	static SingletonPtr<PlatformMutex> _mutex;
+	static Mutex _bt_rx_mutex;
+	static Mutex _bt_tx_mutex;
+
+	EventQueue _queue;
+	Thread _eventThread;
+	
 	
 //functions
 public:
