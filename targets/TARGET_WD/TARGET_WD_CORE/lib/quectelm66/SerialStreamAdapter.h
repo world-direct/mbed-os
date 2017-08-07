@@ -21,23 +21,28 @@
 #include "BufferedSerial.h"
 #include "DMASerial.h"
 
-#define READTIMEOUT 5
+#define DMA_BUFFER_SIZE						512
+#define DMA_READ_SEM_COMPLETE_TIMEOUT_MS	100
 
 class SerialStreamAdapter : public IOStream
 {
 	
 	private:
-		BufferedSerial* _bufferedSerial;
-		static DMASerial* _serial;
-		static Mutex _mutex;
-		static Semaphore complete_sem;
-		static void start_reading();
-		static void read_callback(int a);
-		static void write_callback(int a);
+	
+		char _dma_buffer[DMA_BUFFER_SIZE] = {};
+		int _dma_consumer_pointer = 0;
+		bool _reading_started = false;
+	
+		DMASerial* _serial;
+		Mutex _mutex;
+		Semaphore _complete_sem;
+		void start_reading();
+		void read_callback(int a);
+		void write_callback(int a);
 	
 	public: 
 		
-		SerialStreamAdapter(BufferedSerial* bufferedSerial);
+		SerialStreamAdapter();
 		virtual int abortRead() override;
 		virtual int read(uint8_t* buf, size_t* pLength, size_t maxLength, uint32_t timeout /* = osWaitForever */) override;
 		virtual int waitAvailable(uint32_t timeout /* = osWaitForever */) override;
@@ -46,7 +51,6 @@ class SerialStreamAdapter : public IOStream
 		virtual int write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) override;
 		virtual size_t space() override;
 		virtual size_t available() override;
-		virtual void attach(Callback<void()> func, RawSerial::IrqType type);
 	
 };
 

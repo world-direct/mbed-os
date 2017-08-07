@@ -34,7 +34,7 @@ extern "C" {
 
 
 QuectelM66Interface::QuectelM66Interface(PinName tx, PinName rx, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password, InitializationMode initializationMode)
-	: QuectelM66Interface(new SerialStreamAdapter(new BufferedSerial(tx, rx)), pwrKey, vdd_ext, apn, username, password, initializationMode) {
+	: QuectelM66Interface(new SerialStreamAdapter(), pwrKey, vdd_ext, apn, username, password, initializationMode) {
 	}
 
 QuectelM66Interface::QuectelM66Interface(SerialStreamAdapter* serialStreamAdapter, PinName pwrKey, PinName vdd_ext, const char *apn, const char *username, const char *password, InitializationMode initializationMode)
@@ -186,7 +186,7 @@ void QuectelM66Interface::serial_read_thread_entry() {
 		int size;
 		do {
 		
-			if (this->_serialStreamAdapter->read(this->_serialBuffer, &size, QUECTEL_M66_READ_BUFFER_SIZE, 1000) == 0) {
+			if (this->_serialStreamAdapter->read(this->_serialBuffer, &size, QUECTEL_M66_READ_BUFFER_SIZE, 100) == 0) {
 				wd_log_error("QuectelM66Interface --> %d bytes read, forwarding to pppos", size);
 				ppp_pcb *tmp = mbed_get_ppp_pcb();
 				pppos_input_tcpip(tmp, this->_serialBuffer, size);	
