@@ -32,7 +32,7 @@ private:
 	unsigned int _bt_rx_consumer;
 	unsigned int _bt_rx_producer;
 	
-	InterruptIn * _bt_rx_pin;
+	//InterruptIn * _bt_rx_pin;
 	//ResettableTimeout * _bt_timeout;
 	Ticker * _bt_timeout;
 	

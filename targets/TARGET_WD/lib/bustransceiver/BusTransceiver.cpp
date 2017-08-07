@@ -50,11 +50,11 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	//this->_bt_rx_pin->enable_irq();
 	//timestamp_t timout_us = this->_bt_break_time_us()*0.8f;
 	//this->_bt_timeout = new ResettableTimeout(callback(this, &BusTransceiver::_bt_rx_frame_received), timout_us);
-	//this->_bt_timeout = new Ticker();
-    //this->_bt_timeout->attach(
-	    //_queue.event(callback(this, &BusTransceiver::_bt_rx_frame_received)),
-	    //0.1
-    //);
+	this->_bt_timeout = new Ticker();
+    this->_bt_timeout->attach(
+	    _queue.event(callback(this, &BusTransceiver::_bt_rx_frame_received)),
+	    0.1
+    );
 
 }
 
@@ -64,7 +64,7 @@ BusTransceiver::~BusTransceiver() {
 	delete this->_bt_rx_buffer;
 	delete this->_bt_tx_buffer;
 	delete this->_bt_timeout;
-	delete this->_bt_rx_pin;
+//	delete this->_bt_rx_pin;
 	
 } //~BusTransceiver
 
@@ -82,7 +82,7 @@ void BusTransceiver::_bt_tx_complete(int evt) {
 
 void BusTransceiver::_bt_rx_complete(int evt) {
 	
-	_queue.call(this, &BusTransceiver::_bt_rx_frame_received);
+	//_queue.call(this, &BusTransceiver::_bt_rx_frame_received);
 	
 } 
 
@@ -111,7 +111,6 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 		length += this->_bt_rx_producer;
 	}
 	else {
-		wd_log_error("Received frame interrupt but length was 0!");
 		_bt_rx_mutex.unlock();
 		return;
 	}
@@ -136,23 +135,29 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 	
 	for (int i = 0; i < length; i++) {
 		
-		// split
 		if (buf[i] == BT_EOF_CHAR_MATCH){
 			
-			buffer_length = i;
-	
 			// crc check
 			uint32_t crc = UINT32_MAX;
-			for (int i = buffer_start; i < buffer_length; i++) {
-				crc = update_crc_32(crc, buf[i]);
+			for (int j = buffer_start; j < i; j++) {
+				crc = update_crc_32(crc, buf[j]);
 			}
+			wd_log_error("BusTranceiver: CRC start-index: %d, length: %d", buffer_start, i - buffer_start);
+			
+			if (crc != 0 && (i + 1) < length) {
+				// continue probably '~' in payload
+				wd_log_error("BusTranceiver: CRC error, probably '~' in payload");
+				continue;
+			}
+			
+			buffer_length = i - buffer_start;
 	
 			bool isEcho = memcmp(this->_bt_tx_buffer, buf + buffer_start, buffer_length) == 0;
 		
 			_bt_rx_mutex.unlock();
-	
+			
 			if (crc != 0) { // CRC error
-				wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);
+				wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);	
 			}
 			else if (isEcho) { // Tx echo
 				wd_log_error("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);
@@ -163,7 +168,9 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 			}
 			
 			buffer_start = i+1;
+			
 		}
+		
 	}
 	
 }
@@ -174,9 +181,10 @@ void BusTransceiver::bt_start(void) {
 	this->read(
 		this->_bt_rx_buffer, 
 		BT_RX_BUFFER_SIZE, 
-		callback(this, &BusTransceiver::_bt_rx_complete), 
+		callback(this, &BusTransceiver::_bt_rx_complete)/*, 
 		SERIAL_EVENT_RX_CHARACTER_MATCH, 
 		BT_EOF_CHAR_MATCH
+		*/
 	);
 
 }
