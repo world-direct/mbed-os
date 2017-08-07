@@ -17,8 +17,7 @@
 
 #include <stdint.h>
 #include "mbed.h"
-#include "Cellular/core/IOStream.h"
-#include "BufferedSerial.h"
+#include "IOStream.h"
 #include "DMASerial.h"
 
 #define DMA_BUFFER_SIZE						512

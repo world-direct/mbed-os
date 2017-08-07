@@ -19,7 +19,6 @@
 
 #include "QuectelM66Interface.h"
 #include "SerialStreamAdapter.h"
-#include "BufferedSerial.h"
 
 extern "C" {
 	#include "lwip_quectelm66_stack.h"
