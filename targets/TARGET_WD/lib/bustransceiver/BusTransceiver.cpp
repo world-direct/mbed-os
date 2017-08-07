@@ -7,14 +7,15 @@
 
 
 #include "BusTransceiver.h"
-#include "Mutex.h"
 #include "wd_logging.h"
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
 	// because I don't want to modify the .h file
-#include "lib_crc.h"
+	#include "lib_crc.h"
 }
+
+rtos::Mutex BusTransceiver::_mutex;
 
 BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/) {
 	
@@ -24,7 +25,6 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
 		
 	// init
-	//this->_bt_rx_pin  = new InterruptIn(Rx);
 	this->_bt_rx_buffer = new char[BT_RX_BUFFER_SIZE]();
 	this->_bt_tx_buffer = new char[BT_TX_BUFFER_SIZE]();
 	
@@ -34,20 +34,6 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	this->_dmaSerial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
 	this->_dmaSerial->set_dma_usage_tx(DMA_USAGE_ALWAYS);
 	
-	/* Configure timeout for frame detection
-	 * 
-	 * The idea is to use a timeout, whose counter is reset in response to rising edges on an input capture
-	 * connected to the USART receive pin.
-	 * 
-	 * When no data are received (i.e. no rising edge of USART Rx), the timer/counter continues its operation 
-	 * until the defined timeout value is reached. The timeout value is configured according to the length of 
-	 * the break signal. Consequently, an interrupt is generated once a frame ends.
-	 * 
-	 * */
-	//this->_bt_rx_pin->fall(callback(this, &BusTransceiver::_bt_rx_active_interrupt));	// fall because otherwise we get the interrupt twice
-	//this->_bt_rx_pin->enable_irq();
-	//timestamp_t timout_us = this->_bt_break_time_us()*0.8f;
-	
 	this->_bt_timeout = new Ticker();
 	this->_bt_timeout->attach(
 		_queue.event(callback(this, &BusTransceiver::_bt_rx_frame_received)),
@@ -56,20 +42,13 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	
 }
 
-// default destructor
 BusTransceiver::~BusTransceiver() {
 	
 	delete this->_bt_rx_buffer;
+	delete this->_bt_tx_buffer;
 	delete this->_bt_timeout;
-	delete this->_bt_rx_pin;
+	delete this->_dmaSerial;
 	
-} //~BusTransceiver
-
-static Mutex _bt_rx_mutex;
-static Mutex _bt_tx_mutex;
-
-void BusTransceiver::_bt_rx_active_interrupt(void) {
-	//this->_bt_timeout->reset();
 }
 
 void BusTransceiver::_bt_tx_complete(int evt) {
@@ -82,7 +61,7 @@ void BusTransceiver::_bt_rx_complete(int evt) {
 
 void BusTransceiver::_bt_rx_frame_received(void) {
 	
-	_bt_rx_mutex.lock();
+	_mutex.lock();
 	char buf[BT_RX_BUFFER_SIZE] = { };
 	
 	int remainingBytes = this->_dmaSerial->GetLength();
@@ -100,15 +79,15 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 		length += this->_bt_rx_producer;
 	}
 	else {
-		_bt_rx_mutex.unlock();
+		_mutex.unlock();
 		return;
 	}
 	
 	// overflow currently not handled!	
 	
 	if (this->_bt_rx_buffer[((this->_bt_rx_producer + BT_RX_BUFFER_SIZE) - 1) % BT_RX_BUFFER_SIZE] != '~') {
-		wd_log_error("Incomplete frame, continue!");
-		_bt_rx_mutex.unlock();
+		wd_log_debug("Incomplete frame, continue!");
+		_mutex.unlock();
 		return;
 	}
 	
@@ -116,7 +95,7 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 	
 	if (length < 5) {
 		wd_log_error("Frame is too short to be valid! (length: %d)", length);
-		_bt_rx_mutex.unlock();
+		_mutex.unlock();
 		return;
 	}
 	
@@ -135,11 +114,11 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 			for (int j = buffer_start; j < i; j++) {
 				crc = update_crc_32(crc, buf[j]);
 			}
-			wd_log_error("BusTranceiver: Start-index: %d, CRC length: %d, first-char: %c, last-char %c", buffer_start, i - buffer_start, buf[buffer_start], buf[i - buffer_start - 1]);
+			wd_log_debug("BusTranceiver: Start-index: %d, CRC length: %d, first-char: %c, last-char %c", buffer_start, i - buffer_start, buf[buffer_start], buf[i - buffer_start - 1]);
 			
 			if (crc != 0 && (i + 1) < length) {
 				// continue probably '~' in payload
-				wd_log_error("BusTranceiver: CRC error, probably '~' in payload");
+				wd_log_debug("BusTranceiver: CRC error, probably '~' in payload");
 				continue;
 			}
 			
@@ -147,16 +126,16 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 	
 			bool isEcho = memcmp(this->_bt_tx_buffer, buf + buffer_start, buffer_length) == 0;
 		
-			_bt_rx_mutex.unlock();
+			_mutex.unlock();
 			
 			if (crc != 0) { // CRC error
 				wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);	
 			}
 			else if (isEcho) { // Tx echo
-				wd_log_error("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);
+				wd_log_debug("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", buffer_length, crc, buf[buffer_start]);
 			}
 			else { // valid frame
-				wd_log_error("BusTranceiver: Received valid frame (length: %d, first byte: %x).", buffer_length, buf[buffer_start]);
+				wd_log_info("BusTranceiver: Received valid frame (length: %d, first byte: %x).", buffer_length, buf[buffer_start]);
 				this->bt_handle_frame(buf + buffer_start, buffer_length - 4); // exclude crc in upper layer
 			}
 			
@@ -181,8 +160,6 @@ void BusTransceiver::bt_start(void) {
 
 void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	
-	_bt_tx_mutex.lock();
-	
 	uint32_t crc = UINT32_MAX;
 	
 	memcpy(this->_bt_tx_buffer, data, size);
@@ -205,14 +182,6 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	char delimiter = '~';
 	memcpy(this->_bt_tx_buffer + size, &delimiter, 1);
 	size++;
-	
-	_bt_tx_mutex.unlock();
-	
-	/*
-	for (int i = 0; i < size; i++) {
-		this->_dmaSerial->putc(this->_bt_tx_buffer[i]);
-	}
-	*/
 	
 	this->_dmaSerial->write(this->_bt_tx_buffer, size, callback(this, &BusTransceiver::_bt_tx_complete));
 	

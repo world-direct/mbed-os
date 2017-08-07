@@ -13,8 +13,7 @@
 #include "objects.h"
 #include "ResettableTimeout.h"
 #include "DMASerial.h"
-//#include "platform/PlatformMutex.h"
-//#include "platform/SingletonPtr.h"
+#include "Mutex.h"
 
 #define BT_RX_BUFFER_SIZE	512
 #define BT_TX_BUFFER_SIZE	512
@@ -23,25 +22,24 @@ extern DMA_HandleTypeDef DmaTxHandle[5];
 extern DMA_HandleTypeDef DmaRxHandle[5];
 
 class BusTransceiver{
+	
 //variables
 public:
 protected:
 private:
+	
+	static rtos::Mutex _mutex;
+	
 	char * _bt_rx_buffer;
 	char * _bt_tx_buffer;
 	unsigned int _bt_rx_consumer;
 	unsigned int _bt_rx_producer;
 	
-	InterruptIn * _bt_rx_pin;
 	Ticker * _bt_timeout;
 	DMASerial *_dmaSerial;
 	
 	EventQueue _queue;
 	Thread _eventThread;
-	
-	
-	
-//	static SingletonPtr<PlatformMutex> _mutex;
 	
 //functions
 public:
@@ -57,11 +55,9 @@ private:
 	BusTransceiver(const BusTransceiver &c);
 	BusTransceiver& operator=(const BusTransceiver &c);
 
-	void _bt_rx_active_interrupt(void);
 	void _bt_rx_frame_received(void);
 	void _bt_tx_complete(int evt);
 	void _bt_rx_complete(int evt);
-	float _bt_break_time_us(void) { return 18000000 / 115200; };	// 1.5 frames = 18 bit
 
 }; //BusTransceiver
 
