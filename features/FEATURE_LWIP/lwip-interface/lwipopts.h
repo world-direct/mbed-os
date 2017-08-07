@@ -209,7 +209,7 @@
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 #define AUTOIP_DEBUG                LWIP_DBG_OFF
-#define DNS_DEBUG                   LWIP_DBG_ON
+#define DNS_DEBUG                   LWIP_DBG_OFF
 #define IP6_DEBUG                   LWIP_DBG_OFF
 
 #define PPP_DEBUG                   LWIP_DBG_ON

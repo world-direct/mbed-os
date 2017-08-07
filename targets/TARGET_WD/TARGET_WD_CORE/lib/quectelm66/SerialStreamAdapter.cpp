@@ -26,7 +26,7 @@ SerialStreamAdapter::SerialStreamAdapter(BufferedSerial* bufferedSerial) {
 	
 	SerialStreamAdapter::_serial = new DMASerial(GSM_TXD, GSM_RXD, 115200);
 	SerialStreamAdapter::_serial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
-	SerialStreamAdapter::_serial->set_dma_usage_tx(DMA_USAGE_NEVER);
+	SerialStreamAdapter::_serial->set_dma_usage_tx(DMA_USAGE_ALWAYS);
 	
 }
 
@@ -61,6 +61,9 @@ size_t SerialStreamAdapter::space() {
 
 void SerialStreamAdapter::read_callback(int a){
 	SerialStreamAdapter::complete_sem.release();
+}
+
+void SerialStreamAdapter::write_callback(int a) {
 }
 
 static int buffersize = 512;
@@ -127,10 +130,11 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 int SerialStreamAdapter::write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
 	wd_log_debug("SerialStreamAdapter --> write");
 	
+	
+//	SerialStreamAdapter::_serial->write(buf, length, callback(SerialStreamAdapter::write_callback));
 	for(int i = 0; i < length; i++){
 		SerialStreamAdapter::_serial->putc(buf[i]);
 	}
-	
 	
 	//ssize_t effectiveLength = this->_bufferedSerial->write(buf, length);
 	//if (effectiveLength < length) {

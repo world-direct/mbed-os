@@ -10,31 +10,34 @@
 #include "Mutex.h"
 #include "wd_logging.h"
 
-#define BT_EOF_CHAR_MATCH	(126)
+#define BT_EOF_CHAR_MATCH			(126)
+#define BT_RX_CHECK_INTERVAL_SEC	0.1
 
 extern "C" {
 	// there is no extern "C" in lib_crc.h, so we have to put it here
 	// because I don't want to modify the .h file
-	#include "lib_crc.h"
+#include "lib_crc.h"
 }
 
 Mutex BusTransceiver::_bt_rx_mutex;
 Mutex BusTransceiver::_bt_tx_mutex;
 
 BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
-	: RawSerial(Tx, Rx, baud), _bt_rx_consumer(0), _bt_rx_producer(0), _queue() {
+	: _bt_rx_consumer(0), _bt_rx_producer(0), _queue() {
 	
+	this->_dmaSerial = new DMASerial(Tx, Rx, baud);
+	
+	// start event-thread
+	this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
+		
 	// init
 	//this->_bt_rx_pin  = new InterruptIn(Rx);
 	this->_bt_rx_buffer = new char[BT_RX_BUFFER_SIZE]();
 	this->_bt_tx_buffer = new char[BT_TX_BUFFER_SIZE]();
 	
-    // start event-thread
-    this->_eventThread.start(callback(&_queue, &EventQueue::dispatch_forever));
-
 	// configure DMA usage
-	this->set_dma_usage_rx(DMA_USAGE_ALWAYS);
-	this->set_dma_usage_tx(DMA_USAGE_ALWAYS);
+	this->_dmaSerial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
+	this->_dmaSerial->set_dma_usage_tx(DMA_USAGE_ALWAYS);
 	
 	/* Configure timeout for frame detection
 	 * 
@@ -53,9 +56,9 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	this->_bt_timeout = new Ticker();
     this->_bt_timeout->attach(
 	    _queue.event(callback(this, &BusTransceiver::_bt_rx_frame_received)),
-	    0.1
+	    BT_RX_CHECK_INTERVAL_SEC
     );
-
+	
 }
 
 // default destructor
@@ -75,26 +78,24 @@ void BusTransceiver::_bt_rx_active_interrupt(void) {
 }
 
 void BusTransceiver::_bt_tx_complete(int evt) {
-	
+
+	wd_log_info("_bt_tx_complete");
 	//this->send_break();
 
 }
 
 void BusTransceiver::_bt_rx_complete(int evt) {
 	
-	//_queue.call(this, &BusTransceiver::_bt_rx_frame_received);
-	
-} 
+	wd_log_info("_bt_rx_complete");
+	//this->_bt_timeout->reset();
+}
 
 void BusTransceiver::_bt_rx_frame_received(void) {
 	
-	_bt_rx_mutex.lock();
-	char buf[BT_RX_BUFFER_SIZE] = {};
+	if (!_bt_rx_mutex.trylock()) return; // method is called periodically anyway
+	char buf[BT_RX_BUFFER_SIZE] = { };
 	
-	struct serial_s *obj_s = &((this->_serial).serial);
-	DMA_HandleTypeDef *hdma = &DmaRxHandle[obj_s->index];
-	
-	int remainingBytes = __HAL_DMA_GET_COUNTER(hdma);
+	int remainingBytes = this->_dmaSerial->GetLength();
 	this->_bt_rx_producer = BT_RX_BUFFER_SIZE - remainingBytes;
 	
 	int length = 0;
@@ -124,11 +125,12 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 	this->_bt_rx_consumer = this->_bt_rx_producer;
 	
 	if (length < 5) {// crc + delimiter
+		wd_log_error("Frame is too short to be valid! (length: %d)", length);
 		_bt_rx_mutex.unlock();
-		wd_log_warn("Frame-length too short!");
 		return;
 	}
 	
+	// Maybe more frames?
 	
 	int buffer_start = 0;
 	int buffer_length = 0;
@@ -142,7 +144,7 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 			for (int j = buffer_start; j < i; j++) {
 				crc = update_crc_32(crc, buf[j]);
 			}
-			wd_log_error("BusTranceiver: CRC start-index: %d, length: %d", buffer_start, i - buffer_start);
+			wd_log_error("BusTranceiver: Start-index: %d, CRC length: %d, first-char: %c, last-char %c", buffer_start, i - buffer_start, buf[buffer_start], buf[i - buffer_start - 1]);
 			
 			if (crc != 0 && (i + 1) < length) {
 				// continue probably '~' in payload
@@ -172,19 +174,16 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 		}
 		
 	}
-	
+		
 }
 
 void BusTransceiver::bt_start(void) {
 
 	// start async read
-	this->read(
+	this->_dmaSerial->read(
 		this->_bt_rx_buffer, 
 		BT_RX_BUFFER_SIZE, 
-		callback(this, &BusTransceiver::_bt_rx_complete)/*, 
-		SERIAL_EVENT_RX_CHARACTER_MATCH, 
-		BT_EOF_CHAR_MATCH
-		*/
+		callback(this, &BusTransceiver::_bt_rx_complete)
 	);
 
 }
@@ -198,7 +197,7 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	memcpy(this->_bt_tx_buffer, data, size);
 	
 	// crc computation
-	for(size_t i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		char c = ((char*)data)[i];
 		crc = update_crc_32(crc, c);
 	}
@@ -207,18 +206,19 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	union {
 		uint32_t crc;
 		char data[4];
-	} crcdata = {crc};
+	} crcdata = { crc };
 	memcpy(this->_bt_tx_buffer + size, crcdata.data, 4);
 	size += 4;
 	
-	// write end-of-frame character
+	// append delimiter
 	char delimiter = BT_EOF_CHAR_MATCH;
 	memcpy(this->_bt_tx_buffer + size, &delimiter, 1);
 	size++; 
 	
 	_bt_tx_mutex.unlock();
 	
-	this->write(this->_bt_tx_buffer, size, NULL); //callback(this, &BusTransceiver::_bt_tx_complete), SERIAL_EVENT_TX_COMPLETE);	
+	this->_dmaSerial->write(this->_bt_tx_buffer, size, callback(this, &BusTransceiver::_bt_tx_complete));
+	
 }
 
 // implement this in the upper layer to handle valid frames
