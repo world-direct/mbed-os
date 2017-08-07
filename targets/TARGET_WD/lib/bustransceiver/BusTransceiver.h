@@ -11,7 +11,6 @@
 
 #include "mbed.h"
 #include "objects.h"
-#include "ResettableTimeout.h"
 #include "DMASerial.h"
 #include "Mutex.h"
 
@@ -21,7 +20,7 @@
 extern DMA_HandleTypeDef DmaTxHandle[5];
 extern DMA_HandleTypeDef DmaRxHandle[5];
 
-class BusTransceiver{
+class BusTransceiver {
 	
 //variables
 public:
