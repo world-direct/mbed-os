@@ -35,3 +35,26 @@ void mbed_sdk_init()
     // Need to restart HAL driver after the RAM is initialized
     HAL_Init();
 }
+
+void mbed_die(void) {
+	
+	core_util_critical_section_enter();
+	
+	#if (DEVICE_ERROR_RED == 1)
+
+	gpio_t led_red;
+	gpio_init_out(&led_red, LED_RED);
+	
+	for (int i=0; i<3; i++) {
+		gpio_write(&led_red, 1);
+		wait_ms(1000);
+
+		gpio_write(&led_red, 0);
+		wait_ms(1000);
+	}
+
+	#endif
+	
+	NVIC_SystemReset();
+	
+}

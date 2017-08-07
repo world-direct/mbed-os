@@ -1548,25 +1548,25 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
     /* UART parity error interrupt occurred ----------------------------------*/
     if(((isrflags & USART_SR_PE) != RESET) && ((cr1its & USART_CR1_PEIE) != RESET))
     {
-      huart->ErrorCode |= HAL_UART_ERROR_PE;
+		huart->ErrorCode |= HAL_UART_ERROR_PE;
     }
     
     /* UART noise error interrupt occurred -----------------------------------*/
     if(((isrflags & USART_SR_NE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
     {
-      huart->ErrorCode |= HAL_UART_ERROR_NE;
+		huart->ErrorCode |= HAL_UART_ERROR_NE;
     }
     
     /* UART frame error interrupt occurred -----------------------------------*/
     if(((isrflags & USART_SR_FE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
     {
-      huart->ErrorCode |= HAL_UART_ERROR_FE;
+		huart->ErrorCode |= HAL_UART_ERROR_FE;
     }
     
     /* UART Over-Run interrupt occurred --------------------------------------*/
     if(((isrflags & USART_SR_ORE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
     { 
-      huart->ErrorCode |= HAL_UART_ERROR_ORE;
+		huart->ErrorCode |= HAL_UART_ERROR_ORE;
     }
 
     /* Call UART Error Call back function if need be --------------------------*/    
@@ -1622,9 +1622,9 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
         /* Non Blocking error : transfer could go on. 
            Error is notified to user through user error callback */
         HAL_UART_ErrorCallback(huart);
-        huart->ErrorCode = HAL_UART_ERROR_NONE;
       }
     }
+	huart->ErrorCode = HAL_UART_ERROR_NONE;
     return;
   } /* End if some error occurs */
 

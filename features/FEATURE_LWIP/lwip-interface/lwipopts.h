@@ -19,6 +19,8 @@
 #ifndef LWIPOPTS_H
 #define LWIPOPTS_H
 
+#define LWIP_DEBUG					
+
 #include "lwipopts_conf.h"
 
 // Workaround for Linux timeval
@@ -202,7 +204,7 @@
 #define TCP_OUTPUT_DEBUG            LWIP_DBG_OFF
 #define TCP_RST_DEBUG               LWIP_DBG_OFF
 #define TCP_QLEN_DEBUG              LWIP_DBG_OFF
-#define UDP_DEBUG                   LWIP_DBG_OFF
+#define UDP_DEBUG                   LWIP_DBG_ON
 #define TCPIP_DEBUG                 LWIP_DBG_OFF
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
@@ -210,7 +212,7 @@
 #define DNS_DEBUG                   LWIP_DBG_OFF
 #define IP6_DEBUG                   LWIP_DBG_OFF
 
-#define PPP_DEBUG                   LWIP_DBG_OFF
+#define PPP_DEBUG                   LWIP_DBG_ON
 #define ETHARP_DEBUG                LWIP_DBG_OFF
 #define UDP_LPC_EMAC                LWIP_DBG_OFF
 
@@ -222,8 +224,9 @@
 #define LWIP_STATS                  0
 #endif
 
-#define LWIP_DBG_TYPES_ON           LWIP_DBG_OFF
+#define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
 #define LWIP_DBG_MIN_LEVEL          LWIP_DBG_LEVEL_ALL
+//#define LWIP_DBG_MIN_LEVEL			LWIP_DBG_LEVEL_WARNING
 
 #define LWIP_PLATFORM_BYTESWAP      1
 

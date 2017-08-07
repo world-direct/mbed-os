@@ -49,9 +49,9 @@ void AnalogInManager::attach(int inputIndex, Callback<void(uint16_t)> func) {
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
 	
 	if (func){
-		_irq[inputIndex] = _queue->event(func);
+		this->_irq[inputIndex] = _queue->event(func);
 	} else {
-		_irq[inputIndex] = donothing;
+		this->_irq[inputIndex] = donothing;
 	}
 	
 }
@@ -61,7 +61,7 @@ void AnalogInManager::detach(int inputIndex) {
 	
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
 
-	_irq[inputIndex] = donothing;
+	this->_irq[inputIndex] = donothing;
 	
 }
 
@@ -136,7 +136,7 @@ void AnalogInManager::collectMeasurement(void) {
 		this->_minValue = this->_currentValue[inputIndex];
 	
 	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex])
-		_irq->call(inputIndex);
+		this->_irq[inputIndex].call(inputIndex);
 	
 }
 

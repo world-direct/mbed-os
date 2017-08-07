@@ -82,16 +82,8 @@ int ATCommandsInterface::init() {
 	int err;
 	ATResult res;
 		
-	wd_log_info("ATCommandsInterface --> Setup echo (ATZ E1 V1)");
-	int tries = 5;
-	do
-	{
-		err = executeInternal("ATZ E1 V1", this, &res);
-		if (err && tries && res.result == ATResult::AT_OK){
-			wd_log_warn("ATCommandsInterface --> Setup echo (ATZ E1 V1): no response, trying again");
-			wait_ms(500);
-		}
-	} while (err && tries--);
+	wd_log_info("ATCommandsInterface --> Setup echo (ATZ E1 V1)");	
+	err = executeSimple("ATZ E1 V1", &res, 500, 3);
 	if (err)
 	{
 		wd_log_error("ATCommandsInterface --> Setup echo failed (%d)", err);
