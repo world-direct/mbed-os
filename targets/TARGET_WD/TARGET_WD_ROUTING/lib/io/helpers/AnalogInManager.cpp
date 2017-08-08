@@ -49,7 +49,7 @@ void AnalogInManager::attach(int inputIndex, Callback<void(uint16_t)> func) {
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
 	
 	if (func){
-		this->_irq[inputIndex] = _queue->event(func);
+		this->_irq[inputIndex] = func;
 	} else {
 		this->_irq[inputIndex] = donothing;
 	}
@@ -129,14 +129,14 @@ void AnalogInManager::collectMeasurement(void) {
 	uint16_t previousValue = this->_currentValue[inputIndex];
 	this->_currentValue[inputIndex] = this->_measurementBuffers[inputIndex].get();
 	
-	if (this->_currentValue[inputIndex] > this->_maxValue)
-		this->_maxValue = this->_currentValue[inputIndex];
+	if (this->_currentValue[inputIndex] > this->_maxValue[inputIndex])
+		this->_maxValue[inputIndex] = this->_currentValue[inputIndex];
 	
-	if (this->_currentValue[inputIndex] < this->_minValue)
-		this->_minValue = this->_currentValue[inputIndex];
+	if (this->_currentValue[inputIndex] < this->_minValue[inputIndex])
+		this->_minValue[inputIndex] = this->_currentValue[inputIndex];
 	
 	if (abs(previousValue - this->_currentValue[inputIndex]) > this->_valueChangedTolerance[inputIndex])
-		this->_irq[inputIndex].call(inputIndex);
+		_queue->call(this->_irq[inputIndex], inputIndex);
 	
 }
 
@@ -152,7 +152,7 @@ void AnalogInManager::resetMinAndMaxValues(int inputIndex) {
 	
 	if (inputIndex < 0 || inputIndex >= this->_inputCount) return;
 
-	this->_minValue = ADC_MAX_VALUE;
-	this->_maxValue = 0;
+	this->_minValue[inputIndex] = ADC_MAX_VALUE;
+	this->_maxValue[inputIndex] = 0;
 
 }
