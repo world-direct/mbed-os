@@ -35,6 +35,10 @@
 //=======================================
 #define DEVICE_ID_LENGTH       24
 
+#ifndef MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE
+#define MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE		115200
+#endif
+
 #include "objects.h"
 
 #endif
