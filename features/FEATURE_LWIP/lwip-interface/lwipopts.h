@@ -204,7 +204,7 @@
 #define TCP_OUTPUT_DEBUG            LWIP_DBG_OFF
 #define TCP_RST_DEBUG               LWIP_DBG_OFF
 #define TCP_QLEN_DEBUG              LWIP_DBG_OFF
-#define UDP_DEBUG                   LWIP_DBG_ON
+#define UDP_DEBUG                   LWIP_DBG_OFF
 #define TCPIP_DEBUG                 LWIP_DBG_OFF
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
@@ -212,7 +212,7 @@
 #define DNS_DEBUG                   LWIP_DBG_OFF
 #define IP6_DEBUG                   LWIP_DBG_OFF
 
-#define PPP_DEBUG                   LWIP_DBG_ON
+#define PPP_DEBUG                   LWIP_DBG_OFF
 #define ETHARP_DEBUG                LWIP_DBG_OFF
 #define UDP_LPC_EMAC                LWIP_DBG_OFF
 
