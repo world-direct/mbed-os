@@ -262,7 +262,7 @@ void serial_init(serial_t *obj, PinName tx, PinName rx)
     // Configure UART
     UART_HandleTypeDef *handle = &UartHandle[SERIAL_OBJ(index)];
     handle->Instance          = (USART_TypeDef *)instance;
-    handle->Init.BaudRate     = 9600;
+    handle->Init.BaudRate     = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE;
     handle->Init.WordLength   = UART_WORDLENGTH_8B;
     handle->Init.StopBits     = UART_STOPBITS_1;
     handle->Init.Parity       = UART_PARITY_NONE;
