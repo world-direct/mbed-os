@@ -34,7 +34,10 @@ private:
 	
 	void selectNextInput(void);
 	uint16_t read(void);
-	void collectMeasurement(void);
+	
+	void measurement_entry(void);
+	void measurement_step(void);
+	
 	
 	int _inputCount;
 	int _currentInputSelection;
@@ -55,7 +58,9 @@ private:
 	DigitalOut _muxSel2;
 	DigitalOut _pinCs;
 	SPI _spi;
-	Ticker _ticker;
 	IOEventQueue * _queue;
+	
+	rtos::Mutex _mutex;
+	Thread _measurementThread;
 };
 
