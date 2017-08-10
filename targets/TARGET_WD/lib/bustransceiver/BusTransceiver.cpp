@@ -73,8 +73,29 @@ void BusTransceiver::_bt_rx_frame_received(void) {
 	
 	char buf[BT_RX_BUFFER_SIZE] = { };
 	
-	int remainingBytes = this->_dmaSerial->GetLength();
-	this->_bt_rx_producer = BT_RX_BUFFER_SIZE - remainingBytes;
+	Timer timer;
+	timer.start();
+	
+	do {
+		this->_bt_rx_producer = BT_RX_BUFFER_SIZE - this->_dmaSerial->GetLength();
+		if (this->_bt_rx_producer == this->_bt_rx_consumer) {
+			Thread::wait(10);
+		}
+	} while (
+		this->_bt_rx_producer == this->_bt_rx_consumer && 
+		timer.read_ms() < 100);
+	
+	// Handle ongoing DMA-transfer
+	do {
+		this->_bt_rx_producer = BT_RX_BUFFER_SIZE - this->_dmaSerial->GetLength();
+		Thread::wait(10);
+	} while(
+		(
+			this->_bt_rx_producer != (BT_RX_BUFFER_SIZE - this->_dmaSerial->GetLength()) ||
+			this->_bt_rx_buffer[(BT_RX_BUFFER_SIZE + (this->_bt_rx_producer - 1)) % BT_RX_BUFFER_SIZE] != BT_EOF_CHAR_MATCH
+		) &&
+		timer.read_ms() < 200
+	);
 	
 	int length = 0;
 
