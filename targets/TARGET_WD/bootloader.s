@@ -36,6 +36,7 @@ g_bl_vectors:
 .section .bl_text,"ax",%progbits
 
 .global bl_start
+.type bl_start, %function
 bl_start:
 
 	// turn on the BUS-LED (PE10 = 0x4A)
