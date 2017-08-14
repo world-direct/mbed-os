@@ -4,7 +4,43 @@
  *
  * Created: 10.08.2017 11:40:20
  *  Author: Guenter.Prossliner
+
+# Implementation note:
+
+The bootloader is not in a part of the application that is performance-critical.
+For sure we should not spend time in doing unnesserary things, but we will focus on maintainability instead of reducing some CPU cycles
+
+# Organization:
+
+The bootloader is seperated into two files:
+
+## bootloader.s (this file) 
+Contains the entry-point and implements the bootloader workflow.
+The ISR-Vectors go to section .bl_vectors, all other objects to section .bl.
+All functions are prefixed with bl_
+
+## bootloader_BOARD.s (like bootloader_cb.s)
+Implements function prototypes called by bootloader.s to access the hardware.
+There will be more than one bootloader_BARDS.s file in the project, but only one should be linked.
+All objects need to be placed in the .bl section.
+All functions are prefixed with bl_hal_
+
+# Calling convention
+
+We will use the standard ARM calling convention for the implementation:
+- Arguments will be passed from R0 to R3
+- Return value will be passed in R0
+- Registers R4-R11 must be perserved by the callee (PUSHM {r4-r11, lr} .... POPM {r4-r11, pc})
+
+# Document conventions
+
+To document the signatures of the bl_hal_ functions we will write a pseudo C signature as a comment in the sourcefile.
+The use of constants (like HW-Registers or there values need to be documented in a way that allows them to be found in the datasheets.
+
  */ 
+
+
+
 
 .syntax unified
 .cpu cortex-m4
@@ -35,11 +71,17 @@ g_bl_vectors:
 
 .section .bl_text,"ax",%progbits
 
+
+/*************************************************************************
+	void bl_start(void)
+	this is the entrypoint of the bootloader
+*/
 .global bl_start
 .type bl_start, %function
 bl_start:
 
 	BL bl_hal_init
+	BL bl_hal_ui
 
 	// start application
 	/////////////////////////////////////////////

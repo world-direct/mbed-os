@@ -12,9 +12,15 @@
 
 .section .bl_text,"ax",%progbits
 
+/*************************************************************************
+	void bl_hal_init(void):
+	Initializes the HW resources needed for other functions in the hal
+*/
 .global bl_hal_init
 .type bl_hal_init, %function
 bl_hal_init:
+
+PUSH {lr}
 
 	/////////////////////////////////////////////////////
 	// CLOCKS:
@@ -38,6 +44,19 @@ bl_hal_init:
 
 	// start GPIOE Clk
 
+POP {pc}
+
+/*************************************************************************
+	void bl_hal_ui(void):
+	Signals the user about the running bootloader (by BUS_LED)
+*/
+.global bl_hal_ui
+.type bl_hal_ui, %function
+bl_hal_ui:
+
+PUSH {lr}
+
+
 	// turn on the BUS-LED (PE10 = 0x4A)
 	// port = 0x4A >> 4 =  0x4 GPIOE_BASE = 0x40021000
 
@@ -55,4 +74,4 @@ bl_hal_init:
 	LDR r2, =0x400
 	STR r2, [r3, #0x14]
 
-	MOV pc, lr
+POP {pc}
