@@ -127,6 +127,11 @@ g_bl_vectors:
 	.word 0
 	.word bl_PendSV_Handler
 	.word bl_SysTick_Handler
+	.word 0
+	.word 0
+	.word 0
+	.word 0
+	.word bl_flash_handler
 
 .section .bl_text,"ax",%progbits
 
@@ -336,6 +341,9 @@ bl_DebugMon_Handler:
 bl_PendSV_Handler:
 	MOV pc, pc
 bl_SysTick_Handler:
+	MOV pc, pc
+
+bl_flash_handler:
 	MOV pc, pc
 
 // the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file

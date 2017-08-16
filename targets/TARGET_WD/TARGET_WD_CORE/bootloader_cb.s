@@ -31,7 +31,7 @@ PUSH {lr}
 
 	// set enable bits in RCC_AHB1ENR register (@40023830)
 	// this register has a default value of != 0, so we need to read it
-	LDR r3, =0x40023830	// use r3 for register address
+	LDR r3, bl_hal_rcc_ahb1enr_address	// use r3 for register address
 	LDR r2, [r3]		// read current value into r2 (should be 0x00100000 as documented)
 	LDR r1, =#0x1010	// the mask
 	ORR r2, r2, r1	// perform OR
@@ -60,12 +60,12 @@ PUSH {lr}
 
 	// enable output on BUS-LED
 	// *((volatile int *)0x40210000) = 0x100000;
-	LDR r3, =0x40021000
-	LDR r2, =0x100000
+	LDR r3, bl_hal_gpioe_address
+	MOV r2, 0x100000
 	STR r2, [r3, #0]
 
 	// and turn it on
-	LDR r2, =0x400
+	MOV r2, #0x400
 	STR r2, [r3, #0x14]
 
 POP {pc}
@@ -143,9 +143,10 @@ PUSH {lr}
 	// construct value of FLASH_CR
 	MOV r2, r0, LSL #3 // sector number bit 3-6
 
-	ORR r2, #0x10000	// STRT
-	ORR r2, #0x200 // PSIZE=b10
-	ORR r2, #0x3 // SER and PG 
+	ORR r2, #0x10000	// STRT: bit 16
+	ORR r2, #0x200 // PSIZE=b10 : bit 89
+	ORR r2, #0x3 // SER and PG : bit1 and bit 0
+	ORR r2, #0x2000000	// ERRIE: bit 25
 
 	BL bl_hal_flash_unlock
 	BL bl_hal_flash_wait_idle
@@ -200,6 +201,8 @@ PUSH {lr}
 POP {pc}
 
 
+bl_hal_gpioe_address:	.word 0x40021000
+bl_hal_rcc_ahb1enr_address: .word 0x40023830
 bl_hal_crc_address:		.word 0x40023000
 bl_hal_flashc_address:	.word 0x40023C00
 bl_hal_flash_key1:		.word 0x45670123
