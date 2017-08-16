@@ -69,7 +69,9 @@ one of the memory banks.
 
 Depends on successfull metadata validation.
 Runs a CRC (we will use the STM32 hardware CRC driver, which uses the CRC_MPEG2 implementation, must change Build-tool).
-If final CRC != 0 => INVALID_CRC
+If final CRC == 0 => IMAGE_VALUE
+if CRC word == 0 => IMAGE_UNVERIFYABLE (no crc signature found)
+=> IMAGE_INVALID
 
 - Default: Unkown
 	- Factory default. Bootloader starts app directly
@@ -137,6 +139,13 @@ g_bl_vectors:
 .type bl_start, %function
 bl_start:
 
+	// variable registers
+	// r4: bool image verification result
+	// r5: update image verification result
+	// r6: end of update image pointer (to read command word or to write update status)
+
+	/////////////////////////////////////////////////////
+	// perform hw initialization
 	BL bl_hal_init
 
 	// turn on BUS_LED to signal start of bootloader
@@ -144,10 +153,25 @@ bl_start:
 	/////////////////////////////////////////////////////
 	BL bl_hal_ui
 
-	// validate boot image
+	// get the system state
+	/////////////////////////////////////////////////////
+
+	// start validating boot image
 	LDR r0, bl_data_image_start
 	BL bl_validate_image
+	MOV r4, r0
+
+	// validate update image
+	LDR r0, bl_data_update_image_start
+	BL bl_validate_image
+	MOV r6, r1
+	MOVS r5, r0
 	
+	// valid?
+	ITT EQ
+	MOVEQ r0, r6
+	BLEQ bl_update
+
 	// start application
 	/////////////////////////////////////////////
 	LDR r0, bl_data_image_start
@@ -161,7 +185,7 @@ bl_start:
 	MOV pc, r1
 
 /*************************************************************************
-	void bl_update(void)
+	void bl_update(void* endptr)
 	this is the entypoint for the sw-update
 */
 .global bl_update
@@ -169,22 +193,28 @@ bl_start:
 bl_update:
 PUSH {lr}
 
-	// load image length
-	// validate crc
-	// nok? -> EXIT!
-	// erase Bank1 except bootloader
-	// copy flash
-	// erase Bank2 except config
-	// reset bootloader status
+	// variable regisers
+	// r4: endptr
+	MOV r4, r0
 
+	// load command word
+	LDR r0, [r4]
+	BNE 0f	// return if != 0
+
+	// erase app bank
+
+0:
 POP {pc}
 
 
 /*************************************************************************
 	struct {
 		int status; // returned in r0
-		int command_word; // returned in r1
+		void * endptr; // returned in r1
 	} bl_validate_image(void*)
+
+	The endptr is only valid if status == 0
+	The endptr contains the very next word after the image incl. crc
 
 	This method performs the image validation for the given start-address (which is bl_data_image_start or bl_data_update_image_start)
 	It returns one of the following enumation values
@@ -277,7 +307,7 @@ PUSH {r4, r5, r6, r7, lr}
 
 	.L_success:
 	MOV r0, 0
-
+	MOV r1, r5	// endptr
 
 .L_ret:
 POP {r4, r5, r6, r7, pc}

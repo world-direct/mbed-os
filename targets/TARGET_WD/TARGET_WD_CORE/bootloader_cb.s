@@ -102,7 +102,60 @@ PUSH {lr}
 
 POP {pc}
 
-bl_hal_crc_address:	.word 0x40023000
+
+/*************************************************************************
+	void bl_hal_flash_unlock():
+	
+	Unlocks flash controller if not yet done 
+*/
+.global bl_hal_flash_unlock
+.type bl_hal_flash_unlock, %function
+bl_hal_flash_unlock:
+
+PUSH {lr}
+
+	BL bl_hal_flash_wait_idle
+	
+	LDR r1, bl_hal_flashc_address
+	LDR r0, [r1, #0x10]		// FLASH_CR
+	AND r0, #0x8000000
+	BNE 0f	// return if true
+
+	// unlock sequence
+	LDR r0, bl_hal_flash_key1
+	STR r0, [r1, #0x04] // FLASH_KEYR
+	LDR r0, bl_hal_flash_key2
+	STR r0, [r1, #0x04] // FLASH_KEYR
+
+0:
+POP {pc}
+
+/*************************************************************************
+	void bl_hal_flash_wait_idle():
+	
+	Polls to the FLASH_SR to wait for an operation to finish
+*/
+.type bl_hal_flash_wait_idle, %function
+bl_hal_flash_wait_idle:
+
+PUSH {lr}
+	
+	LDR r1, bl_hal_flashc_address
+
+1:
+	LDR r0, [r2, #0x0C]		// FLASH_SR
+	AND r0, #0x00010000		// bit 16: BSY
+	BEQ 1b	// retest
+
+
+POP {pc}
+
+
+bl_hal_crc_address:		.word 0x40023000
+bl_hal_flashc_address:	.word 0x40023C00
+bl_hal_flash_key1:		.word 0x45670123
+bl_hal_flash_key2:		.word 0xCDEF89AB
+
 
 
 // the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file

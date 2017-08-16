@@ -36,4 +36,7 @@ padded_string EXPSTR(APPLICATION_VERSION), 16
 
 .octa HEXL(APPLICATION_COMMIT_ID)
 
-nop
+
+.section .crc32
+.word 0xFFFFFFFF	// this will be linked at the end of FLASH, and patched in the elf file to the correct crc value
+
