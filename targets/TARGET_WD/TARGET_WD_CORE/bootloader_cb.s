@@ -131,6 +131,55 @@ PUSH {lr}
 POP {pc}
 
 /*************************************************************************
+	void bl_hal_erase_sector(int sector_nr):
+	
+	Erases the specified sector
+*/
+.type bl_hal_erase_sector, %function
+bl_hal_erase_sector:
+
+PUSH {lr}
+
+	// construct value of FLASH_CR
+	MOV r2, r0, LSL #3 // sector number bit 3-6
+
+	ORR r2, #0x10000	// STRT
+	ORR r2, #0x200 // PSIZE=b10
+	ORR r2, #0x3 // SER and PG 
+
+	BL bl_hal_flash_unlock
+	BL bl_hal_flash_wait_idle
+
+	LDR r1, bl_hal_flashc_address
+	STR r2, [r1, #0x10]
+0:
+POP {pc}
+
+/*************************************************************************
+	void bl_hal_erase_boot_image(void):
+	
+	Erases the whole boot-image
+*/
+.global bl_hal_erase_boot_image
+.type bl_hal_erase_boot_image, %function
+bl_hal_erase_boot_image:
+PUSH {r4, r5, lr}
+
+	MOV r4, #1	// start and current sector
+	MOV r5, #11  // last sector
+
+	1:
+	MOV r0, r4
+	BL bl_hal_erase_sector
+	ADD r4, #1
+	CMP r4, r5
+	BNE 1b
+
+
+0:
+POP {r4, r5, pc}
+
+/*************************************************************************
 	void bl_hal_flash_wait_idle():
 	
 	Polls to the FLASH_SR to wait for an operation to finish

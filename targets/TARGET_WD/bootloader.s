@@ -202,6 +202,7 @@ PUSH {lr}
 	BNE 0f	// return if != 0
 
 	// erase app bank
+	BL bl_hal_erase_boot_image
 
 0:
 POP {pc}
