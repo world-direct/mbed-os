@@ -109,7 +109,7 @@ If final CRC != 0 => INVALID_CRC
 
 g_bl_vectors:
 
-	.word __stack		// SP
+	.word 0x20001000		// SP for bootloader
 	.word bl_start	// reset vector
 	.word bl_NMI_Handler
 	.word bl_HardFault_Handler
@@ -255,8 +255,11 @@ PUSH {r4, r5, r6, r7, lr}
 
 	// load current word
 .L_validate_next_word:
-	LDR r0, [r5]
-	ADD r5, #4
+	LDR r0, [r5], #4	// this is post-index, so it should to r5+=4
+
+	// LDR reads not the pysical order, it read LittleEndian, so we get 0x01020304, but in the file we have 0x4030201! 
+	// to allow that we can form the CRC on the file (it seems better IMO), to REV to file-order here
+	REV r0, r0	
 
 	BL bl_hal_crc_update	
 	MOV r6, r0	// store crc in r6
