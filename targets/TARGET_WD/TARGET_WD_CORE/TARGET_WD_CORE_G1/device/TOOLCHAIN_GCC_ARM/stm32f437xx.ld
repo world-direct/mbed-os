@@ -18,14 +18,18 @@ MEMORY
 		the bootloader has be resist in an own sector of the flash.
 		It also has to be the first sector, so that the reset-vector is in the bootloader.
 
-		On the STM32F437 the Sector 1 is 4k in size.
+		On the STM32F437 the Sector 1 is 16k in size.
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
 	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x3D00
     VECTORS (rx) :			ORIGIN = 0x08004000, LENGTH = 0x0300
 	METADATA (rw):			ORIGIN = 0x08004300, LENGTH = 0x0100
-    FLASH (rx)   :			ORIGIN = 0x08004400, LENGTH = 0x100000 - 0x4000 - 0x400 /* = 0xFBC00 = 1031168 = 1007k)
+    FLASH (rx)   :			ORIGIN = 0x08004400, LENGTH = 0x100000 - 0x4000 - 0x400 /* = 0xFBC00 = 1031168 = 1007k) */
+
+	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
+	UPDATE (rw) :			ORIGIN = 0x08104000, LENGTH = 0xFC000
+
     CCM (rwx)    :			ORIGIN = 0x10000000, LENGTH = 64K /* len: 0x10000 */
     RAM (rwx)    :			ORIGIN = 0x20000000, LENGTH = 192k /* len : 0x30000 */
 }
@@ -291,4 +295,11 @@ SECTIONS
     __uvisor_sram_end = ORIGIN(CCM) + LENGTH(CCM);
     __uvisor_public_sram_start = ORIGIN(RAM);
     __uvisor_public_sram_end = ORIGIN(RAM) + LENGTH(RAM);
+
+	__config_start = ORIGIN(CONFIG);
+	__update_image_start = ORIGIN(UPDATE);
+	__application_max_size = LENGTH(UPDATE);
+
+	__metadata_magic = 0x01020304;
+	__metadata_offset = 0x300;
 }

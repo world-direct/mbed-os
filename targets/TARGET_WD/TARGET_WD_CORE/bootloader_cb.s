@@ -38,12 +38,6 @@ PUSH {lr}
 	STR r2, [r3, #0]	// and write to register
 
 
-	// turn on BUS_LED to signal start of bootloader
-	// MED will turn it of on initialization (somewhere in software_init_hook), so you will just see it flashing!
-	/////////////////////////////////////////////////////
-
-	// start GPIOE Clk
-
 POP {pc}
 
 /*************************************************************************
@@ -75,3 +69,42 @@ PUSH {lr}
 	STR r2, [r3, #0x14]
 
 POP {pc}
+
+/*************************************************************************
+	void bl_hal_crc_init(void):
+	Initializes the crc generator to the init value of 0xFFFFFFFF
+*/
+.global bl_hal_crc_init
+.type bl_hal_crc_init, %function
+bl_hal_crc_init:
+
+PUSH {lr}
+	
+	MOV r1, #1
+	LDR r2, bl_hal_crc_address		// CRC_ base address
+	STR r1, [r3, #0x8]				// CRC_CR, set bit #0 (RESET) which clears the DR
+
+POP {pc}
+
+/*************************************************************************
+	unsigned int bl_hal_crc_update(unsigned int):
+	Updates the crc calculation 
+*/
+.global bl_hal_crc_update
+.type bl_hal_crc_update, %function
+bl_hal_crc_update:
+
+PUSH {lr}
+	
+	LDR r2, bl_hal_crc_address
+	STR r0, [r3, #0x8]		// CRC_DR, we have the argument passed in r0
+	LDR r0, [r2, #0]		// read the updated value and return it in r0
+
+POP {pc}
+
+bl_hal_crc_address:	.word 0x40023000
+
+
+// the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file
+// so this label is to clean up the dissassembly.
+bl_hal_misc_data:

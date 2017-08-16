@@ -37,13 +37,70 @@ We will use the standard ARM calling convention for the implementation:
 To document the signatures of the bl_hal_ functions we will write a pseudo C signature as a comment in the sourcefile.
 The use of constants (like HW-Registers or there values need to be documented in a way that allows them to be found in the datasheets.
 
+# Update state
+
+The process of applying an update needs to maintain some state, like if we can an valid update, the bootloader should apply an update,
+or the result of this process.
+
+First we wanted to use Option-Bits for this, but there seem be no user-defined option bits available.
+We don't want to use RAM, because of it's volatile nature, and also no external memory.
+
+The current concept don't explicitly stores this state in a single memory location.
+It is reconstructed every time the bootloader runs. Changing this state is done by earse or write operations to 
+one of the memory banks.
+
+1. Valid Metadata in Boot-Image? =no=> unkown, try reapply
+2. Boot bank valid (see validation procedure)? =no=> app invalid, try reapply
+
+=> app is valid an can be launched, continue to read update status
+
+3. Valid Metadata in Update-Image? =no=> unkown update status (factory default)
+4. Is Update == Boot =no=> update already done
+4. Update bank valid (see validation procedure)? =no=> update invalid, append error-code to Update bank
+5. Read Update command word from flash
+6. If == APPLY apply update, write Update Status word, and restart
+
+## Metadata Validation
+
+1. Check Metadata signurature word. Must be 0x01020304, or MD_NOTFOUND
+2. Read Image size. Must be < sizeof(imageregion), or INVALID_SIZE
+
+## Bank Validation
+
+Depends on successfull metadata validation.
+Runs a CRC (we will use the STM32 hardware CRC driver, which uses the CRC_MPEG2 implementation, must change Build-tool).
+If final CRC != 0 => INVALID_CRC
+
+- Default: Unkown
+	- Factory default. Bootloader starts app directly
+	- Update area erased
+
+- UpdateRequested
+	- enabled by user request (sw_apply_update)
+
+- Default: UpdateSuccess
+	- Update has been applied
+	- Update area not erased
+
+- UpdateValidationError
+	- Update did not pass validation
+	- Retry will not be successfull
+
+- UpdateProgrammingError
+	- The Flash hardware controller reported an error while programming
+	- additional state may be stored in RAM
+
+- UpdateSystemError
+	- An unexpected error or interrupt occured on running the update
+	- bootloader may be corrupt, or there is an programming bug
+	- retry most likely to fail, but you may try ;-)
+
  */ 
 
 
 
 
 .syntax unified
-.cpu cortex-m4
 .thumb
 
 .section  .bl_vectors,"a",%progbits
@@ -81,11 +138,19 @@ g_bl_vectors:
 bl_start:
 
 	BL bl_hal_init
+
+	// turn on BUS_LED to signal start of bootloader
+	// MED will turn it of on initialization (somewhere in software_init_hook), so you will just see it flashing!
+	/////////////////////////////////////////////////////
 	BL bl_hal_ui
 
+	// validate boot image
+	LDR r0, bl_data_image_start
+	BL bl_validate_image
+	
 	// start application
 	/////////////////////////////////////////////
-	LDR r0, =__image_start
+	LDR r0, bl_data_image_start
 
 	// load SP
 	LDR r1, [r0, #0]
@@ -95,10 +160,130 @@ bl_start:
 	LDR r1, [r0, #4]
 	MOV pc, r1
 
+/*************************************************************************
+	void bl_update(void)
+	this is the entypoint for the sw-update
+*/
+.global bl_update
+.type bl_update, %function
+bl_update:
+PUSH {lr}
 
-bl_data:
-	// bring in some data
-	.word __image_start
+	// load image length
+	// validate crc
+	// nok? -> EXIT!
+	// erase Bank1 except bootloader
+	// copy flash
+	// erase Bank2 except config
+	// reset bootloader status
+
+POP {pc}
+
+
+/*************************************************************************
+	struct {
+		int status; // returned in r0
+		int command_word; // returned in r1
+	} bl_validate_image(void*)
+
+	This method performs the image validation for the given start-address (which is bl_data_image_start or bl_data_update_image_start)
+	It returns one of the following enumation values
+
+	0: ValidImage
+	1: NoMetadata (Signature != 0x01020304)
+	2: InvalidMetadata (Length > max)
+	3: InvalidImage (CRC validation failed)
+*/
+.type bl_validate_image, %function
+bl_validate_image:
+PUSH {r4, r5, r6, r7, lr}
+
+	////////////////////////////
+	// local constant vars ;-)
+	MOV r4, r0	// r4 will hold the base-address
+				// r7 will be initialized later for the image-size
+
+	////////////////////////////
+	// metadata validation
+
+	// start validating metadata by loading the signature word into r5
+	MOV r5, r4
+	LDR r6, bl_data_metadata_offset
+	ADD r5, r6
+	LDR r5, [r5]
+
+	// load comparant to r6
+	LDR r6, bl_data_metadata_magic
+
+	// and do the compare
+	CMP r5, r6
+	BEQ .L_validate_metadata	// continue
+		
+		// return error 1 (NoMetadata)
+		MOV r0, 1
+		B .L_ret
+
+.L_validate_metadata:
+
+	// load length
+	MOV r5, r4
+	LDR r6, bl_data_metadata_offset
+	ADD r5, r6
+	LDR r7, [r5, #4]	// len has offset of 4, see metadata.s, r7 will be used in .L_validate_image!
+
+	// load comparant to r6
+	LDR r6, bl_data_application_max_size
+
+	// and do the compare
+	CMP r7, r6
+	BGT .L_validate_image	// continue
+		// return error 2 (InvalidMetadata)
+		MOV r0, 2
+		B .L_ret
+
+.L_validate_image:
+
+	// r5 current address, will be incremented by 4 in the loop
+	MOV r5, r4
+
+	// r6 will contain the current crc
+
+	// r7 remaining length, will be post-decremented (by 4) in the loop until 0 is reached
+	// r7 is already initialized from .L_validate_metadata
+
+	BL bl_hal_crc_init
+
+	// load current word
+.L_validate_next_word:
+	LDR r0, [r5]
+	ADD r5, #4
+
+	BL bl_hal_crc_update	
+	MOV r6, r0	// store crc in r6
+
+	// check if we are done. SUB updates the flags, so ne need to compare here
+	SUB r7, #4
+	BNE .L_validate_next_word
+
+	// compare r6 to zero for a valid image
+	MOV r6, r6	//seem like a nop, but is not. It updates the flags!
+	BEQ .L_success	// continue
+		// return error 3 (InvalidImage)
+		MOV r0, 3
+		B .L_ret
+
+	.L_success:
+	MOV r0, 0
+
+
+.L_ret:
+POP {r4, r5, r6, r7, pc}
+
+bl_data_image_start: .word __image_start
+bl_data_update_image_start : .word __update_image_start
+bl_data_metadata_offset : .word __metadata_offset
+bl_data_metadata_magic: .word __metadata_magic
+bl_data_application_max_size: .word __application_max_size
 
 bl_NMI_Handler:
 	MOV pc, pc
@@ -118,3 +303,7 @@ bl_PendSV_Handler:
 	MOV pc, pc
 bl_SysTick_Handler:
 	MOV pc, pc
+
+// the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file
+// so this label is to clean up the dissassembly.
+bl_misc_data:
