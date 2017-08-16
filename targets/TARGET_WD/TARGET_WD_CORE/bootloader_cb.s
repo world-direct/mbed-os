@@ -82,7 +82,7 @@ PUSH {lr}
 	
 	MOV r1, #1
 	LDR r2, bl_hal_crc_address		// CRC_ base address
-	STR r1, [r3, #0x8]				// CRC_CR, set bit #0 (RESET) which clears the DR
+	STR r1, [r2, #0x8]				// CRC_CR, set bit #0 (RESET) which clears the DR
 
 POP {pc}
 
@@ -97,7 +97,7 @@ bl_hal_crc_update:
 PUSH {lr}
 	
 	LDR r2, bl_hal_crc_address
-	STR r0, [r3, #0x8]		// CRC_DR, we have the argument passed in r0
+	STR r0, [r2, #0]		// CRC_DR, we have the argument passed in r0
 	LDR r0, [r2, #0]		// read the updated value and return it in r0
 
 POP {pc}

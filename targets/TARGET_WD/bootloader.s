@@ -235,8 +235,8 @@ PUSH {r4, r5, r6, r7, lr}
 	LDR r6, bl_data_application_max_size
 
 	// and do the compare
-	CMP r7, r6
-	BGT .L_validate_image	// continue
+	CMP r6, r7
+	BHI .L_validate_image	// continue
 		// return error 2 (InvalidMetadata)
 		MOV r0, 2
 		B .L_ret
@@ -262,11 +262,11 @@ PUSH {r4, r5, r6, r7, lr}
 	MOV r6, r0	// store crc in r6
 
 	// check if we are done. SUB updates the flags, so ne need to compare here
-	SUB r7, #4
+	SUBS r7, #4
 	BNE .L_validate_next_word
 
 	// compare r6 to zero for a valid image
-	MOV r6, r6	//seem like a nop, but is not. It updates the flags!
+	MOVS r6, r6	//seem like a nop, but is not. It updates the flags!
 	BEQ .L_success	// continue
 		// return error 3 (InvalidImage)
 		MOV r0, 3
