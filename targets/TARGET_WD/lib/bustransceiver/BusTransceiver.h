@@ -62,6 +62,7 @@ private:
 
 	void _bt_rx_entry(void);
 	void _bt_rx_step(void);
+	void _bt_rx_locked_step(void);
 	void _bt_tx_complete(int evt);
 	void _bt_rx_complete(int evt);
 

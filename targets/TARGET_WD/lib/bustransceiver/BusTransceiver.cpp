@@ -59,17 +59,20 @@ void BusTransceiver::_bt_rx_entry(void){
 
 	while(true){
 		
-		if (!_mutex.trylock()) { 
-			continue;
-		}
-		
-		_bt_rx_step();
-		
-		_mutex.unlock();
-		
+		this->_bt_rx_locked_step();
 		Thread::wait(BT_RX_CHECK_INTERVAL_MSEC);
 		
 	}
+	
+}
+
+void BusTransceiver::_bt_rx_locked_step(void) {
+	
+	if (!_mutex.trylock()) {
+		return;
+	}
+	_bt_rx_step();
+	_mutex.unlock();
 	
 }
 
@@ -211,6 +214,8 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	size++; 
 	
 	this->_dmaSerial->write(this->_bt_tx_buffer, size, callback(this, &BusTransceiver::_bt_tx_complete));
+	
+	this->_bt_rx_locked_step();
 	
 }
 
