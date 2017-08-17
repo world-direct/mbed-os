@@ -191,6 +191,12 @@ PUSH {r4, r5, r6, lr}
 
 		SUBS r6, #4	// size -=4
 		BNE .L_memcpy_next	// while !=0
+
+	// disable programming mode
+	LDR r1, bl_hal_flashc_address
+	LDR r2, [r1, #0x10]
+	AND r2, #0xFFFFFFFE
+	STR r2, [r1, #0x10] 
 0:
 POP {r4, r5, r6, pc}
 
