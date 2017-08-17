@@ -169,7 +169,6 @@ g_bl_vectors:
 		}
 	}
 */
-.global bl_srv_call
 .type bl_srv_call, %function
 bl_srv_call:
 PUSH {r4, r5, lr}
@@ -226,11 +225,11 @@ PUSH {r4, r5, lr}
 		ADD r0, r1 // dest: add size
 		MOV r1, sp // src: we need a pointer to pass, so let's stack the command-word
 		PUSH {r2}
+		ADD sp, #4 // keep stack in balance
 		MOV r2, #4 // size: word
 		
 		BL bl_hal_flash_memcpy
 
-		POP {r0} // keep stack in balance
 		MOV r0, r5 // and return success
 		B 0f
 0:
@@ -309,12 +308,24 @@ PUSH {r4, lr}
 	// erase app bank
 	BL bl_hal_erase_boot_image
 
-	// start progamming over
+	// flash progamming
 	LDR r0, bl_data_image_start
 	LDR r1, bl_data_update_image_start
 	MOV r2, r4
 	BL bl_hal_flash_memcpy
 
+	// write update status (set command-word to 0)
+	// with another memcpy
+	LDR r0, bl_data_update_image_start	// dest
+	ADD r0, r4	// dest: add size
+	ADD r0, #4	// go to command word
+	MOV r1, sp	// buffer on stack
+	MOV r2, #0	// initialize to 0
+	PUSH {r2}
+	ADD sp, #4	// POP
+	MOV r2, #4	// size=4
+	BL bl_hal_flash_memcpy
+	
 0:
 POP {r4, pc}
 
