@@ -142,10 +142,69 @@ g_bl_vectors:
 	// aligns to 0x200
 	.p2align 9
 	.word 0x00000001	// magic
-	.word bl_hal_flash_memcpy	
-	.word bl_hal_erase_update_image
-
+	.word bl_srv_call
+	
 .section .bl_text,"ax",%progbits
+
+/*************************************************************************
+	int bl_srv_call(void * cmd)
+	this is the entrypoint service calls from the application to the bootloader
+	it's it called indirectly from the application by the address emitted to 0x200.
+
+	The cmd argument pointer points to a variable-sized structure to descibe the args:
+
+	(see struct srv_call_cmd in bootloader.h)
+	struct srv_call_cmd {
+		int operation;
+		union {
+			
+			// operation is a selector for the following fields
+
+			struct {
+				void * src;
+				void * dest;
+				int size;
+			} bl_srv_call_flashmemcpy;
+
+		}
+	}
+*/
+.global bl_srv_call
+.type bl_srv_call, %function
+bl_srv_call:
+PUSH {r4, r5, lr}
+
+	MOV r4, r0			// store desc in r4
+	LDR r1, [r4], #4	// and load operation
+
+	// test for blsrv_erase_update_region = 1
+	MOV r5, #1
+	CMP r1, r5
+	BEQ .L_blsrv_erase_update_region
+
+	// test for blsrv_flashmemcpy = 2
+	MOV r5, #2
+	CMP r1, r5
+	BEQ .L_blsrv_flashmemcpy
+
+	MOV r0, 0
+	B 0f
+
+	.L_blsrv_erase_update_region:
+		BL bl_hal_erase_update_image
+		MOV r0, 1
+		B 0f
+
+	.L_blsrv_flashmemcpy:
+		// load args
+		LDR r0, [r4], #4	// dest
+		LDR r1, [r4], #4	// src
+		LDR r2, [r4], #4	// size
+		BL bl_hal_flash_memcpy
+		MOV r0, 1
+		B 0f
+0:
+POP {r4, r5, pc}
 
 
 /*************************************************************************

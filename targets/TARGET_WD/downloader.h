@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include "mc_res.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
 	
 	///< Returns the total length of the image, as reported by the server.
@@ -21,9 +25,8 @@ typedef struct {
 	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
 	const char * image_application_version;
 	
-	///< returns the crc32 of the raw data in the image, up to the \see image_current_length.
-	///< we use the default ETHERNET polynomial of 0xEDB88320.
-	uint32_t image_current_crc32;
+	/// ImageValid if 0, other values see bootloader
+	int image_validation_result;
 	
 } downloader_status;
 
@@ -55,6 +58,10 @@ MC_RES downloader_append_data(const void * buffer, size_t buffer_size);
 *	NOTE: this function does not return. It forces a reset, where the bootloader will apply the new firmware image.
 */
 void downloader_apply(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif  // DOWNLOADER_H_
