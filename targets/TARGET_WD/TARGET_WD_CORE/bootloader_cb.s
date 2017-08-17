@@ -145,7 +145,7 @@ PUSH {lr}
 
 	ORR r2, #0x10000	// STRT: bit 16
 	ORR r2, #0x200 // PSIZE=b10 : bit 89
-	ORR r2, #0x3 // SER and PG : bit1 and bit 0
+	ORR r2, #0x2 // SER: bit1
 	ORR r2, #0x2000000	// ERRIE: bit 25
 
 	BL bl_hal_flash_unlock
@@ -157,6 +157,45 @@ PUSH {lr}
 POP {pc}
 
 /*************************************************************************
+	void bl_hal_flash_memcpy(dest, src, size):
+	
+	Programms data from 'src' to 'dest'
+*/
+.global bl_hal_flash_memcpy
+.type bl_hal_flash_memcpy, %function
+bl_hal_flash_memcpy:
+
+PUSH {r4, r5, r6, lr}
+
+	MOV r4, r0 // dest, will be postincremented
+	MOV r5, r1 // src, will be postincremented
+	MOV r6, r2 // size, will be decremented to check for completion
+
+	BL bl_hal_flash_unlock
+	BL bl_hal_flash_wait_idle
+
+	/* enable programming mode for 32 bit
+	bit 25:		ERRIE
+	bits 8..9:	PSIZE 10 (32)
+	bit 0:		PG (enable Programming) */
+	LDR r2, =#0x2000201
+
+	LDR r1, bl_hal_flashc_address
+	STR r2, [r1, #0x10]
+
+	.L_memcpy_next:
+		LDR r0, [r5], #4	// load src word
+		STR r0, [r4], #4	// write to dest
+
+		BL bl_hal_flash_wait_idle
+
+		SUBS r6, #4	// size -=4
+		BNE .L_memcpy_next	// while !=0
+0:
+POP {r4, r5, r6, pc}
+
+
+/*************************************************************************
 	void bl_hal_erase_boot_image(void):
 	
 	Erases the whole boot-image
@@ -164,10 +203,47 @@ POP {pc}
 .global bl_hal_erase_boot_image
 .type bl_hal_erase_boot_image, %function
 bl_hal_erase_boot_image:
+PUSH {lr}
+
+	MOV r0, #1	// start and current sector
+	MOV r1, #11  // last sector
+
+	BL bl_hal_erase_sectors
+
+0:
+POP {pc}
+
+/*************************************************************************
+	void bl_hal_erase_update_image(void):
+	
+	Erases the whole update image.
+	This is not directly called by the bootloader, but from the downloader.
+	We will keep this here, because we already have everything needed here
+*/
+.global bl_hal_erase_update_image
+.type bl_hal_erase_update_image, %function
+bl_hal_erase_update_image:
+PUSH {lr}
+
+	MOV r0, #13	// start and current sector
+	MOV r1, #23  // last sector
+
+	BL bl_hal_erase_sectors
+
+0:
+POP {pc}
+
+/*************************************************************************
+	void bl_hal_erase_sectors(int from, int to):
+	
+	Erases the sectors starting in the speicifed rang of sector numbers (inclusive)
+*/
+.type bl_hal_erase_sectors, %function
+bl_hal_erase_sectors:
 PUSH {r4, r5, lr}
 
-	MOV r4, #1	// start and current sector
-	MOV r5, #11  // last sector
+	MOV r4, r0	// start and current sector
+	MOV r5, r1  // last sector
 
 	1:
 	MOV r0, r4

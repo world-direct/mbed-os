@@ -169,8 +169,8 @@ bl_start:
 	// validate update image
 	LDR r0, bl_data_update_image_start
 	BL bl_validate_image
-	MOV r6, r1
-	MOVS r5, r0
+	MOV r6, r1	// size
+	MOVS r5, r0	// result
 	
 	// valid?
 	ITT EQ
@@ -190,37 +190,41 @@ bl_start:
 	MOV pc, r1
 
 /*************************************************************************
-	void bl_update(void* endptr)
-	this is the entypoint for the sw-update
+	void bl_update(int size)
+
+	this is the entypoint for erase and write of the image
+	size is passed form the validation procedure
 */
 .global bl_update
 .type bl_update, %function
 bl_update:
-PUSH {lr}
+PUSH {r4, lr}
 
 	// variable regisers
-	// r4: endptr
+	// r4: size
 	MOV r4, r0
 
-	// load command word
-	LDR r0, [r4]
-	BNE 0f	// return if != 0
 
 	// erase app bank
 	BL bl_hal_erase_boot_image
 
+	// start progamming over
+	LDR r0, bl_data_image_start
+	LDR r1, bl_data_update_image_start
+	MOV r2, r4
+	BL bl_hal_flash_memcpy
+
 0:
-POP {pc}
+POP {r4, pc}
 
 
 /*************************************************************************
 	struct {
 		int status; // returned in r0
-		void * endptr; // returned in r1
+		int size; // returned in r1
 	} bl_validate_image(void*)
 
-	The endptr is only valid if status == 0
-	The endptr contains the very next word after the image incl. crc
+	The size is only valid if status == 0
 
 	This method performs the image validation for the given start-address (which is bl_data_image_start or bl_data_update_image_start)
 	It returns one of the following enumation values
@@ -233,12 +237,12 @@ POP {pc}
 */
 .type bl_validate_image, %function
 bl_validate_image:
-PUSH {r4, r5, r6, r7, lr}
+PUSH {r4, r5, r6, r7, r8, lr}
 
 	////////////////////////////
 	// local constant vars ;-)
 	MOV r4, r0	// r4 will hold the base-address
-				// r7 will be initialized later for the image-size
+				// r8 will be initialized later for the image-size
 
 	////////////////////////////
 	// metadata validation
@@ -266,7 +270,8 @@ PUSH {r4, r5, r6, r7, lr}
 	MOV r5, r4
 	LDR r6, bl_data_metadata_offset
 	ADD r5, r6
-	LDR r7, [r5, #4]	// len has offset of 4, see metadata.s, r7 will be used in .L_validate_image!
+	LDR r8, [r5, #4]	// len has offset of 4, see metadata.s
+	MOV r7, r8 // r7 will be used in .L_validate_image, but decremented. r8 will not be overwritten and can be returned
 
 	// load comparant to r6
 	LDR r6, bl_data_application_max_size
@@ -327,10 +332,10 @@ PUSH {r4, r5, r6, r7, lr}
 
 	.L_success:
 	MOV r0, 0
-	MOV r1, r5	// endptr
+	MOV r1, r8	// size
 
 .L_ret:
-POP {r4, r5, r6, r7, pc}
+POP {r4, r5, r6, r7, r8, pc}
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
