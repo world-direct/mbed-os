@@ -118,8 +118,8 @@ PUSH {lr}
 	
 	LDR r1, bl_hal_flashc_address
 	LDR r0, [r1, #0x10]		// FLASH_CR
-	AND r0, #0x8000000
-	BNE 0f	// return if true
+	ANDS r0, #0x80000000
+	BEQ 0f	// return if true
 
 	// unlock sequence
 	LDR r0, bl_hal_flash_key1
@@ -193,9 +193,9 @@ PUSH {lr}
 	LDR r1, bl_hal_flashc_address
 
 1:
-	LDR r0, [r2, #0x0C]		// FLASH_SR
-	AND r0, #0x00010000		// bit 16: BSY
-	BEQ 1b	// retest
+	LDR r0, [r1, #0x0C]		// FLASH_SR
+	ANDS r0, #0x00010000		// bit 16: BSY
+	BNE 1b	// retest
 
 
 POP {pc}

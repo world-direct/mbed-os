@@ -229,6 +229,7 @@ POP {pc}
 	1: NoMetadata (Signature != 0x01020304)
 	2: InvalidMetadata (Length > max)
 	3: InvalidImage (CRC validation failed)
+	4: UnverifyableImage (CRC validation failed && CRC==0xFFFFFFFF)
 */
 .type bl_validate_image, %function
 bl_validate_image:
@@ -300,16 +301,29 @@ PUSH {r4, r5, r6, r7, lr}
 	BL bl_hal_crc_update	
 	MOV r6, r0	// store crc in r6
 
-	// check if we are done. SUB updates the flags, so ne need to compare here
+	// check if we are done. SUB updates the flags, so no need to compare here
 	SUBS r7, #4
 	BNE .L_validate_next_word
 
 	// compare r6 to zero for a valid image
 	MOVS r6, r6	//seem like a nop, but is not. It updates the flags!
 	BEQ .L_success	// continue
+
+		// check if the CRC word was 0xFFFFFFFF, that is an unverifyable image
+		LDR r0, [r5, #-4];	// r5 points one word next to the length
+		MOV r1, 0xFFFFFFFF
+		CMP r0, r1
+		BEQ .L_unverfiyable
+
 		// return error 3 (InvalidImage)
 		MOV r0, 3
 		B .L_ret
+
+	.L_unverfiyable:
+
+	// return error 4 (UnverifyableImage)
+	MOV r0, 4
+	B .L_ret
 
 	.L_success:
 	MOV r0, 0
