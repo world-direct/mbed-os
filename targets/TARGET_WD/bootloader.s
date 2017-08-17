@@ -122,16 +122,28 @@ g_bl_vectors:
 	.word 0
 	.word 0
 	.word 0
-	.word bl_SVC_Handler
-	.word bl_DebugMon_Handler
+	.word bl_Other_Handler
+	.word bl_Other_Handler
 	.word 0
-	.word bl_PendSV_Handler
-	.word bl_SysTick_Handler
+	.word bl_Other_Handler
+	.word bl_Other_Handler
 	.word 0
 	.word 0
 	.word 0
 	.word 0
 	.word bl_flash_handler
+
+/*************************************************************************
+
+	entry vectors to run indirect calls from the bootloader without linking directly to static offsets,
+	because they may change between compilations
+*/
+
+	// aligns to 0x200
+	.p2align 9
+	.word 0x00000001	// magic
+	.word bl_hal_flash_memcpy	
+	.word bl_hal_erase_update_image
 
 .section .bl_text,"ax",%progbits
 
@@ -344,23 +356,17 @@ bl_data_metadata_magic: .word __metadata_magic
 bl_data_application_max_size: .word __application_max_size
 
 bl_NMI_Handler:
-	MOV pc, pc
+	B .
 bl_HardFault_Handler:
-	MOV pc, pc
+	B .
 bl_MemManage_Handler:
-	MOV pc, pc
+	B .
 bl_BusFault_Handler:
-	MOV pc, pc
+	B .
 bl_UsageFault_Handler:
-	MOV pc, pc
-bl_SVC_Handler:
-	MOV pc, pc
-bl_DebugMon_Handler:
-	MOV pc, pc
-bl_PendSV_Handler:
-	MOV pc, pc
-bl_SysTick_Handler:
-	MOV pc, pc
+	B .
+bl_Other_Handler:
+	B .
 
 bl_flash_handler:
 	MOV pc, pc

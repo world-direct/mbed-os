@@ -108,7 +108,6 @@ POP {pc}
 	
 	Unlocks flash controller if not yet done 
 */
-.global bl_hal_flash_unlock
 .type bl_hal_flash_unlock, %function
 bl_hal_flash_unlock:
 
@@ -131,6 +130,29 @@ PUSH {lr}
 POP {pc}
 
 /*************************************************************************
+	void bl_hal_flash_lock():
+	
+	Locks flash controller if not yet done 
+*/
+.type bl_hal_flash_lock, %function
+bl_hal_flash_lock:
+
+PUSH {lr}
+
+	BL bl_hal_flash_wait_idle
+	
+	LDR r1, bl_hal_flashc_address
+	LDR r0, [r1, #0x10]		// FLASH_CR
+	ANDS r0, #0x80000000
+	BNE 0f	// return if already locked
+
+	MOV r0, #0x80000000
+	STR r0, [r1, #0x10] // FLASH_CR
+
+0:
+POP {pc}
+
+/*************************************************************************
 	void bl_hal_erase_sector(int sector_nr):
 	
 	Erases the specified sector
@@ -138,21 +160,25 @@ POP {pc}
 .type bl_hal_erase_sector, %function
 bl_hal_erase_sector:
 
-PUSH {lr}
+PUSH {r4, lr}
+
+	MOV r4, r0 // sector_nr
+
+	BL bl_hal_flash_unlock
+	BL bl_hal_flash_wait_idle
 
 	// construct value of FLASH_CR
-	MOV r2, r0, LSL #3 // sector number bit 3-6
+	MOV r2, r4, LSL #3 // sector number bit 3-6
 
 	ORR r2, #0x10000	// STRT: bit 16
 	ORR r2, #0x200 // PSIZE=b10 : bit 89
 	ORR r2, #0x2 // SER: bit1
 	ORR r2, #0x2000000	// ERRIE: bit 25
 
-	BL bl_hal_flash_unlock
-	BL bl_hal_flash_wait_idle
-
 	LDR r1, bl_hal_flashc_address
 	STR r2, [r1, #0x10]
+
+	BL bl_hal_flash_lock
 0:
 POP {pc}
 
@@ -193,10 +219,8 @@ PUSH {r4, r5, r6, lr}
 		BNE .L_memcpy_next	// while !=0
 
 	// disable programming mode
-	LDR r1, bl_hal_flashc_address
-	LDR r2, [r1, #0x10]
-	AND r2, #0xFFFFFFFE
-	STR r2, [r1, #0x10] 
+	BL bl_hal_flash_lock
+
 0:
 POP {r4, r5, r6, pc}
 
