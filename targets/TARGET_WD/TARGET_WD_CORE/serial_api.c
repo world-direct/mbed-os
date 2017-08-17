@@ -1317,29 +1317,28 @@ int serial_irq_handler_asynch(serial_t *obj)
         return_event |= SERIAL_EVENT_RX_OVERRUN_ERROR & SERIAL_OBJ(events);
     }
 
-    //RX PART
-    // increment rx_buff.pos
-    if (handle->RxXferSize != 0) {
-        obj->rx_buff.pos = handle->RxXferSize - handle->RxXferCount;
-    }
-    
-    if ((handle->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
-        return_event |= SERIAL_EVENT_RX_COMPLETE & SERIAL_OBJ(events);
-    }
-    
-    // Check if char_match is present
-    if (SERIAL_OBJ(events) & SERIAL_EVENT_RX_CHARACTER_MATCH) {
-      if (buf != NULL){
-        while((buf[i] != obj->char_match) && (i < handle->RxXferSize)){
-          i++;
-        }
-        if (i < handle->RxXferSize){
-            obj->rx_buff.pos = i;
-            return_event |= SERIAL_EVENT_RX_CHARACTER_MATCH & SERIAL_OBJ(events);
-        }
-      }
-    }
-    
+	//RX PART
+	if (handle->RxXferSize != 0) {
+		obj->rx_buff.pos = handle->RxXferSize - handle->RxXferCount;
+	}
+	if ((handle->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
+		return_event |= SERIAL_EVENT_RX_COMPLETE & SERIAL_OBJ(events);
+	}
+
+	// Check if char_match is present
+	if (SERIAL_OBJ(events) & SERIAL_EVENT_RX_CHARACTER_MATCH) {
+		if (buf != NULL) {
+			for (i = 0; i < obj->rx_buff.pos; i++) {
+				if (buf[i] == obj->char_match) {
+					obj->rx_buff.pos = i;
+					return_event |= (SERIAL_EVENT_RX_CHARACTER_MATCH & SERIAL_OBJ(events));
+					serial_rx_abort_asynch(obj);
+					break;
+				}
+			}
+		}
+	}
+
     return return_event;  
 }
 

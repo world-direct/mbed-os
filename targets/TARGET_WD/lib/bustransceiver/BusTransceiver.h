@@ -20,7 +20,7 @@
 
 #define BT_RX_READ_TIMEOUT1			10
 #define BT_RX_READ_TIMEOUT2			100
-
+#define BT_TX_WRITE_TIMEOUT			100
 
 extern DMA_HandleTypeDef DmaTxHandle[5];
 extern DMA_HandleTypeDef DmaRxHandle[5];
@@ -43,6 +43,7 @@ private:
 	DMASerial *_dmaSerial;
 	
 	rtos::Mutex _mutex;
+	rtos::Semaphore _tx_semaphore;
 	Timer _stepTimer;
 	Thread _readProcessingThread;
 	

@@ -15,7 +15,9 @@ extern "C" {
 }
 
 BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
-	: _bt_rx_consumer(0), _bt_rx_producer(0){
+	: _bt_rx_consumer(0), 
+	  _bt_rx_producer(0),
+	  _tx_semaphore(1) {
 
 	this->_dmaSerial = new DMASerial(Tx, Rx, baud);
 		
@@ -46,6 +48,7 @@ BusTransceiver::~BusTransceiver() {
 void BusTransceiver::_bt_tx_complete(int evt) {
 
 	wd_log_debug("_bt_tx_complete");
+	this->_tx_semaphore.release();
 
 }
 
@@ -183,7 +186,9 @@ void BusTransceiver::bt_start(void) {
 	this->_dmaSerial->read(
 		this->_bt_rx_buffer, 
 		BT_BUFFER_SIZE, 
-		callback(this, &BusTransceiver::_bt_rx_complete)
+		callback(this, &BusTransceiver::_bt_rx_complete),
+		SERIAL_EVENT_RX_CHARACTER_MATCH,
+		BT_EOF_CHAR_MATCH
 	);
 
 }
@@ -213,10 +218,11 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	memcpy(this->_bt_tx_buffer + size, &delimiter, 1);
 	size++; 
 	
+	// send frame
 	this->_dmaSerial->write(this->_bt_tx_buffer, size, callback(this, &BusTransceiver::_bt_tx_complete));
-	
+	this->_tx_semaphore.wait(BT_TX_WRITE_TIMEOUT);
 	this->_bt_rx_locked_step();
-	
+	this->_tx_semaphore.release();
 }
 
 // implement this in the upper layer to handle valid frames
