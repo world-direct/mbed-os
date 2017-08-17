@@ -187,6 +187,11 @@ PUSH {r4, r5, lr}
 	CMP r1, r5
 	BEQ .L_blsrv_flashmemcpy
 
+	// test for blsrv_validate_update_image = 3
+	MOV r5, #3
+	CMP r1, r5
+	BEQ .L_blsrv_validate_update_image
+
 	MOV r0, 0
 	B 0f
 
@@ -202,6 +207,31 @@ PUSH {r4, r5, lr}
 		LDR r2, [r4], #4	// size
 		BL bl_hal_flash_memcpy
 		MOV r0, 1
+		B 0f
+
+	.L_blsrv_validate_update_image:
+
+		LDR r0, bl_data_update_image_start
+		BL bl_validate_image // r0=code, r1=size
+
+		MOVS r5, r0 // r5 = validation ret value
+		BNE 0f	// return if != 0
+		
+		LDR r2, [r4] // load command-word
+		MOVS r2, r2	 // and test for != 0
+		BEQ 0f	// r0 already contains the ret value
+
+		// write it to flash
+		LDR r0, bl_data_update_image_start // dest: start with base
+		ADD r0, r1 // dest: add size
+		MOV r1, sp // src: we need a pointer to pass, so let's stack the command-word
+		PUSH {r2}
+		MOV r2, #4 // size: word
+		
+		BL bl_hal_flash_memcpy
+
+		POP {r0} // keep stack in balance
+		MOV r0, r5 // and return success
 		B 0f
 0:
 POP {r4, r5, pc}

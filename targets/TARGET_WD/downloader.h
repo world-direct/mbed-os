@@ -13,10 +13,7 @@ typedef struct {
 	
 	///< Returns the total length of the image, as reported by the server.
 	size_t image_total_length;
-	
-	///< Returns the length of the data downloaded for the current image.
-	size_t image_current_length;	
-	
+		
 	///< returns a pointer to the name of the downloaded image.
 	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
 	const char * image_application_name;

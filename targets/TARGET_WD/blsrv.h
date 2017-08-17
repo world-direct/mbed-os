@@ -16,22 +16,26 @@ extern "C" {
 
 enum blsrv_cmd_operation {
 	blsrv_erase_update_region = 1,
-	blsrv_flashmemcpy = 2
+	blsrv_flashmemcpy = 2,
+	blsrv_validate_update_image = 3,
 };
 
 struct blsrv_desc {
 
+	// operation is a selector for the following fields
 	enum blsrv_cmd_operation operation;
 	union {
 		
-		// operation is a selector for the following fields
-
 		struct {
-			void * src;
-			void * dest;
+			intptr_t src;
+			intptr_t dest;
 			size_t size;
 		} flashmemcpy;
 
+		struct {
+			int command_word;	// if != 0 this triggers updating the application after reset
+		} validate_update_image;
+		
 	} args;
 };
 
