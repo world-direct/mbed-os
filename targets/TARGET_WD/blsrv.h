@@ -14,9 +14,10 @@ extern "C" {
 #endif
 
 
-#define blsrv_erase_update_region	0x01
-#define blsrv_write_update_region	0x02
-#define blsrv_validate_update_image	0x03
+#define blsrv_erase_update_region		0x01
+#define blsrv_write_update_region		0x02
+#define blsrv_validate_update_image		0x03
+#define blsrv_get_update_metadata_ptr	0x04
 
 struct blsrv_desc {
 
@@ -33,6 +34,10 @@ struct blsrv_desc {
 		struct {
 			int command_word;	// if != 0 this triggers updating the application after reset
 		} validate_update_image;
+
+		struct {
+			intptr_t start;	// output field, will be set be the service
+		} get_update_metadata_ptr;
 		
 	} args;
 };

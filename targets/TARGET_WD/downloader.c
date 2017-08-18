@@ -12,10 +12,15 @@ MC_RES downloader_get_status(downloader_status * status)
 	int res = blsrv_call(&desc);
 	status->image_validation_result = res; 
 	if(res == 0 || res >= 3){
+		
+		desc.operation = blsrv_get_update_metadata_ptr;
+		blsrv_call(&desc);
+		intptr_t md = desc.args.get_update_metadata_ptr.start;
+
 		// TODO: we really need to pass this from the bootloader....
-		status->image_total_length = *((size_t*)0x08004304);
-		status->image_application_name = (const char *)0x08004308;
-		status->image_application_version = (const char *)0x08004328;
+		status->image_total_length = *((size_t*)(md + 0x04));
+		status->image_application_name = (const char *)(md + 0x08);
+		status->image_application_version = (const char *)(md + 0x28);
 	} else {
 		status->image_application_name = NULL;
 		status->image_application_version = NULL;

@@ -176,6 +176,11 @@ PUSH {r4, r5, lr}
 	CMP r1, r5
 	BEQ .L_blsrv_validate_update_image
 
+	// test for blsrv_get_update_metadata_ptr	0x04
+	MOV r5, #4
+	CMP r1, r5
+	BEQ .L_blsrv_get_update_metadata_ptr
+
 	MOV r0, 0
 	B 0f
 
@@ -219,6 +224,15 @@ PUSH {r4, r5, lr}
 
 		MOV r0, r5 // and return success
 		B 0f
+
+	.L_blsrv_get_update_metadata_ptr:
+		LDR r0, bl_data_update_image_start	// base
+		LDR r1, bl_data_metadata_offset	// offset
+		ADD r0, r1	// add
+		STR r0, [r4]	// r4 is the ptr to the 'start' field
+		MOV r0, 1	// and return success
+		B 0f
+
 0:
 POP {r4, r5, pc}
 
