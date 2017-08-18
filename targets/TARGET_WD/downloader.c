@@ -2,7 +2,6 @@
 #include "blsrv.h"
 
 static size_t m_offset;
-extern intptr_t __update_image_start;
 
 MC_RES downloader_get_status(downloader_status * status)
 {
@@ -13,10 +12,10 @@ MC_RES downloader_get_status(downloader_status * status)
 	int res = blsrv_call(&desc);
 	status->image_validation_result = res; 
 	if(res == 0 || res >= 3){
-		// load metadata fields if the metadata is valid at least
-		status->image_total_length = __update_image_start + 0x304;
-		status->image_application_name = __update_image_start + 0x308;
-		status->image_application_version = __update_image_start + 0x328;
+		// TODO: we really need to pass this from the bootloader....
+		status->image_total_length = *((size_t*)0x08004304);
+		status->image_application_name = (const char *)0x08004308;
+		status->image_application_version = (const char *)0x08004328;
 	} else {
 		status->image_application_name = NULL;
 		status->image_application_version = NULL;
@@ -41,13 +40,12 @@ MC_RES downloader_prepare_new(void)
 MC_RES downloader_append_data(const void * buffer, size_t buffer_size)
 {
 	intptr_t src = (intptr_t)buffer;
-	intptr_t dest = __update_image_start + m_offset;
 
 	struct blsrv_desc desc;
-	desc.operation = blsrv_flashmemcpy;
-	desc.args.flashmemcpy.src = src;
-	desc.args.flashmemcpy.dest = dest;
-	desc.args.flashmemcpy.size = buffer_size;
+	desc.operation = blsrv_write_update_region;
+	desc.args.write_update_region.src = src;
+	desc.args.write_update_region.offset = m_offset;
+	desc.args.write_update_region.size = buffer_size;
 
 	m_offset += buffer_size;
 

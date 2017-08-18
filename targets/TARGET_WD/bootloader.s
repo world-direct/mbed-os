@@ -113,11 +113,11 @@ g_bl_vectors:
 
 	.word 0x20001000		// SP for bootloader
 	.word bl_start	// reset vector
-	.word bl_NMI_Handler
+	.word bl_Other_Handler
 	.word bl_HardFault_Handler
-	.word bl_MemManage_Handler
-	.word bl_BusFault_Handler
-	.word bl_UsageFault_Handler
+	.word bl_Other_Handler
+	.word bl_Other_Handler
+	.word bl_Other_Handler
 	.word 0
 	.word 0
 	.word 0
@@ -134,14 +134,12 @@ g_bl_vectors:
 	.word bl_flash_handler
 
 /*************************************************************************
-
 	entry vectors to run indirect calls from the bootloader without linking directly to static offsets,
 	because they may change between compilations
 */
 
 	// aligns to 0x200
 	.p2align 9
-	.word 0x00000001	// magic
 	.word bl_srv_call
 	
 .section .bl_text,"ax",%progbits
@@ -151,23 +149,10 @@ g_bl_vectors:
 	this is the entrypoint service calls from the application to the bootloader
 	it's it called indirectly from the application by the address emitted to 0x200.
 
-	The cmd argument pointer points to a variable-sized structure to descibe the args:
+	The cmd argument pointer points to a variable-sized structure to descibe the args,
+	where the first word is a selector for the operation, which may need following fields
 
-	(see struct srv_call_cmd in bootloader.h)
-	struct srv_call_cmd {
-		int operation;
-		union {
-			
-			// operation is a selector for the following fields
-
-			struct {
-				void * src;
-				void * dest;
-				int size;
-			} bl_srv_call_flashmemcpy;
-
-		}
-	}
+	(see struct blsrv_desc in blsrv.h)
 */
 .type bl_srv_call, %function
 bl_srv_call:
@@ -181,10 +166,10 @@ PUSH {r4, r5, lr}
 	CMP r1, r5
 	BEQ .L_blsrv_erase_update_region
 
-	// test for blsrv_flashmemcpy = 2
+	// test for blsrv_write_update_region = 2
 	MOV r5, #2
 	CMP r1, r5
-	BEQ .L_blsrv_flashmemcpy
+	BEQ .L_blsrv_write_update_region
 
 	// test for blsrv_validate_update_image = 3
 	MOV r5, #3
@@ -199,9 +184,11 @@ PUSH {r4, r5, lr}
 		MOV r0, 1
 		B 0f
 
-	.L_blsrv_flashmemcpy:
+	.L_blsrv_write_update_region:
 		// load args
-		LDR r0, [r4], #4	// dest
+		LDR r0, [r4], #4	// load offset
+		LDR r1, bl_data_update_image_start	// load base address
+		ADD r0, r1			// dest = offset + base address
 		LDR r1, [r4], #4	// src
 		LDR r2, [r4], #4	// size
 		BL bl_hal_flash_memcpy
@@ -455,15 +442,7 @@ bl_data_metadata_offset : .word __metadata_offset
 bl_data_metadata_magic: .word __metadata_magic
 bl_data_application_max_size: .word __application_max_size
 
-bl_NMI_Handler:
-	B .
 bl_HardFault_Handler:
-	B .
-bl_MemManage_Handler:
-	B .
-bl_BusFault_Handler:
-	B .
-bl_UsageFault_Handler:
 	B .
 bl_Other_Handler:
 	B .

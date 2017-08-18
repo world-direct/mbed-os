@@ -180,7 +180,7 @@ PUSH {r4, lr}
 
 	BL bl_hal_flash_lock
 0:
-POP {pc}
+POP {r4, pc}
 
 /*************************************************************************
 	void bl_hal_flash_memcpy(dest, src, size):

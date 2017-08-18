@@ -14,23 +14,21 @@ extern "C" {
 #endif
 
 
-enum blsrv_cmd_operation {
-	blsrv_erase_update_region = 1,
-	blsrv_flashmemcpy = 2,
-	blsrv_validate_update_image = 3,
-};
+#define blsrv_erase_update_region	0x01
+#define blsrv_write_update_region	0x02
+#define blsrv_validate_update_image	0x03
 
 struct blsrv_desc {
 
 	// operation is a selector for the following fields
-	enum blsrv_cmd_operation operation;
+	int operation;
 	union {
 		
 		struct {
+			size_t offset;
 			intptr_t src;
-			intptr_t dest;
 			size_t size;
-		} flashmemcpy;
+		} write_update_region;
 
 		struct {
 			int command_word;	// if != 0 this triggers updating the application after reset
@@ -42,15 +40,21 @@ struct blsrv_desc {
 static inline int blsrv_call(struct blsrv_desc * descriptor){
 	int retcode;
 
-	asm (
-		"mov r0, %0\n"	// load descriptor ptr
-		"mov %1, #0x200\n"	// load fn address in any register
-		"blx %1\n"
-		"mov %1, r0"	// store res
+	typedef int (*ct)(void *);
+	void ** vectable = (void**)0x08000200;
+	void * fnptr = *vectable;
+	return ((ct)fnptr)(descriptor);
 
-		: "=r" (retcode)
-		: "r" (descriptor)
-	);
+	//asm (
+		//"mov r0, %0\n"	// load descriptor ptr
+		//"mov %1, #0x200\n"	// load table address in any register
+		//"ldr %1, [%1]\n"	// load fn address in register
+		//"blx %1\n"		// and call
+		//"mov %1, r0"	// store res
+//
+		//: "=r" (retcode)
+		//: "r" (descriptor)
+	//);
 	
 	return retcode;
 }
