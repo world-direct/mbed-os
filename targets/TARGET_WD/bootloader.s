@@ -156,10 +156,13 @@ g_bl_vectors:
 */
 .type bl_srv_call, %function
 bl_srv_call:
-PUSH {r4, r5, lr}
+PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0			// store desc in r4
 	LDR r1, [r4], #4	// and load operation
+
+	// r4: contains the ptr to be first arg in the call-descriptor
+	// r5 and r6 can be used to store vars in the case blocks (.L_blsrv_*)
 
 	// test for blsrv_erase_update_region = 1
 	MOV r5, #1
@@ -181,6 +184,7 @@ PUSH {r4, r5, lr}
 	CMP r1, r5
 	BEQ .L_blsrv_get_update_metadata_ptr
 
+	// return false (invalid operation)
 	MOV r0, 0
 	B 0f
 
@@ -203,24 +207,19 @@ PUSH {r4, r5, lr}
 	.L_blsrv_validate_update_image:
 
 		LDR r0, bl_data_update_image_start
-		BL bl_validate_image // r0=code, r1=size
+		BL bl_validate_image // r0=ret_code, r1=size
 
-		MOVS r5, r0 // r5 = validation ret value
-		BNE 0f	// return if != 0
+		MOV r5, r1	// r5 = size
+		MOVS r6, r0 // r6 = validation ret value
+		BNE 0f	// if (ret_code != 0) return ret_code
 		
-		LDR r2, [r4] // load command-word
-		MOVS r2, r2	 // and test for != 0
-		BEQ 0f	// r0 already contains the ret value
+		LDR r1, [r4] // load command-word
+		MOVS r1, r1	 // and test for != 0
+		BEQ 0f	// r0 still contains the ret value
 
-		// write it to flash
-		LDR r0, bl_data_update_image_start // dest: start with base
-		ADD r0, r1 // dest: add size
-		MOV r1, sp // src: we need a pointer to pass, so let's stack the command-word
-		PUSH {r2}
-		ADD sp, #4 // keep stack in balance
-		MOV r2, #4 // size: word
-		
-		BL bl_hal_flash_memcpy
+		// write command-word to flash
+		MOV r0, r5
+		BL bl_set_command_word
 
 		MOV r0, r5 // and return success
 		B 0f
@@ -234,7 +233,7 @@ PUSH {r4, r5, lr}
 		B 0f
 
 0:
-POP {r4, r5, pc}
+POP {r4, r5, r6, pc}
 
 
 /*************************************************************************
@@ -271,12 +270,27 @@ bl_start:
 	LDR r0, bl_data_update_image_start
 	BL bl_validate_image
 	MOV r6, r1	// size
-	MOVS r5, r0	// result
+	MOVS r5, r0	// result, set's Z bit if == 0
 	
-	// valid?
-	ITT EQ
-	MOVEQ r0, r6
-	BLEQ bl_update
+	BNE .L_start_app	// if (result!=0) goto .L_start_app
+
+	// evaluate command-word
+	LDR r0, bl_data_update_image_start
+	ADD r0, r6		// r0: &command_word
+	LDR r0, [r0]	// r0: command_word
+	LDR r1, =#0x0000FFFF
+	CMP r1, r0
+	BNE .L_start_app	// skip update, because if command-word
+
+	MOV r0, r6	//load size
+	BL bl_update	// bl_update(size)
+
+	// update command-word to zero
+	MOV r0, r6
+	MOV r1, #0	
+	BL bl_set_command_word
+
+	.L_start_app:
 
 	// start application
 	/////////////////////////////////////////////
@@ -289,6 +303,35 @@ bl_start:
 	// load PC
 	LDR r1, [r0, #4]
 	MOV pc, r1
+
+
+
+/*************************************************************************
+	void bl_set_command_word(int image-size, int command_word)
+	updates the command-word in flash.
+	
+	NOTE: There is no erase here, so after erase (after factory programming or sw-update), you can only update bits from 1 to 0.
+	the command-word is: 
+		- 0xFFFFFFFF on erase, no further action
+		- 0x0000FFFF if the bootloader should  load the new image, set by bootloader after validation
+		- 0x00000000 if bootloader applied the image, can only be reset by a new image
+*/
+.type bl_set_command_word, %function
+bl_set_command_word:
+PUSH {lr}
+
+	LDR r2, bl_data_update_image_start
+	ADD r0, r2		// r0 (dest): &command_word_in_flash
+	
+	// local buffer (we uses stack) needed for flash_memcpy
+	STR r1, [sp]	// store arg command_word in local 4 bytes buffer
+	MOV r1, sp		//  r1 (str): &local_buffer
+	SUB sp, #4		// alloc
+	MOV r2, #4		// r2: (size): always 4
+	BL bl_hal_flash_memcpy	// perform the write
+	ADD sp, #4		// dealloc on stack
+
+POP {pc}
 
 /*************************************************************************
 	void bl_update(int size)
@@ -305,7 +348,6 @@ PUSH {r4, lr}
 	// r4: size
 	MOV r4, r0
 
-
 	// erase app bank
 	BL bl_hal_erase_boot_image
 
@@ -313,18 +355,6 @@ PUSH {r4, lr}
 	LDR r0, bl_data_image_start
 	LDR r1, bl_data_update_image_start
 	MOV r2, r4
-	BL bl_hal_flash_memcpy
-
-	// write update status (set command-word to 0)
-	// with another memcpy
-	LDR r0, bl_data_update_image_start	// dest
-	ADD r0, r4	// dest: add size
-	ADD r0, #4	// go to command word
-	MOV r1, sp	// buffer on stack
-	MOV r2, #0	// initialize to 0
-	PUSH {r2}
-	ADD sp, #4	// POP
-	MOV r2, #4	// size=4
 	BL bl_hal_flash_memcpy
 	
 0:
@@ -342,11 +372,11 @@ POP {r4, pc}
 	This method performs the image validation for the given start-address (which is bl_data_image_start or bl_data_update_image_start)
 	It returns one of the following enumation values
 
-	0: ValidImage
+	0: Valid
 	1: NoMetadata (Signature != 0x01020304)
 	2: InvalidMetadata (Length > max)
 	3: InvalidImage (CRC validation failed)
-	4: UnverifyableImage (CRC validation failed && CRC==0xFFFFFFFF)
+	4: UnverifiableImage (CRC validation failed && CRC==0xFFFFFFFF)
 */
 .type bl_validate_image, %function
 bl_validate_image:

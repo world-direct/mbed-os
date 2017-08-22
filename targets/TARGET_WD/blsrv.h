@@ -17,7 +17,10 @@ extern "C" {
 #define blsrv_erase_update_region		0x01
 #define blsrv_write_update_region		0x02
 #define blsrv_validate_update_image		0x03
-#define blsrv_get_update_metadata_ptr	0x04
+#define blsrv_validate_boot_image		0x04
+#define blsrv_get_update_metadata_ptr	0x05
+#define blsrv_apply_update_with_reset	0x07
+
 
 struct blsrv_desc {
 
@@ -32,11 +35,20 @@ struct blsrv_desc {
 		} write_update_region;
 
 		struct {
-			int command_word;	// if != 0 this triggers updating the application after reset
+			int validation_result;	// output field, will be set by the service
+			int update_status;	// output
 		} validate_update_image;
 
 		struct {
-			intptr_t start;	// output field, will be set be the service
+			int validation_result;	// output field, will be set by the service
+		} validate_boot_image;
+
+		struct {
+			int validation_result;	// output field, will be set by the service but only if != 0 , otherwise the call will not return but reset and apply!
+		} apply_update_with_reset;
+
+		struct {
+			intptr_t start;	// output field, will be set by the service
 		} get_update_metadata_ptr;
 		
 	} args;
@@ -49,19 +61,6 @@ static inline int blsrv_call(struct blsrv_desc * descriptor){
 	void ** vectable = (void**)0x08000200;
 	void * fnptr = *vectable;
 	return ((ct)fnptr)(descriptor);
-
-	//asm (
-		//"mov r0, %0\n"	// load descriptor ptr
-		//"mov %1, #0x200\n"	// load table address in any register
-		//"ldr %1, [%1]\n"	// load fn address in register
-		//"blx %1\n"		// and call
-		//"mov %1, r0"	// store res
-//
-		//: "=r" (retcode)
-		//: "r" (descriptor)
-	//);
-	
-	return retcode;
 }
 
 #ifdef __cplusplus
