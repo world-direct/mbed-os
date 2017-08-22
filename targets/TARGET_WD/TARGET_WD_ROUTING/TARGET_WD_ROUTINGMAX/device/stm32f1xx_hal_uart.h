@@ -698,6 +698,7 @@ void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
+void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart);
 
 /**
   * @}
