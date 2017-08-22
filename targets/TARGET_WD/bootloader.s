@@ -152,6 +152,13 @@ g_bl_vectors:
 	The cmd argument pointer points to a variable-sized structure to descibe the args,
 	where the first word is a selector for the operation, which may need following fields
 
+#define blsrv_erase_update_region		0x01
+#define blsrv_write_update_region		0x02
+#define blsrv_validate_update_image		0x03
+#define blsrv_validate_boot_image		0x04
+#define blsrv_apply_update_with_reset	0x05
+#define blsrv_get_update_status			0x06
+
 	(see struct blsrv_desc in blsrv.h)
 */
 .type bl_srv_call, %function
@@ -179,10 +186,15 @@ PUSH {r4, r5, r6, lr}
 	CMP r1, r5
 	BEQ .L_blsrv_validate_update_image
 
-	// test for blsrv_get_update_metadata_ptr	0x04
+	// test for blsrv_validate_boot_image	0x04
 	MOV r5, #4
 	CMP r1, r5
-	BEQ .L_blsrv_get_update_metadata_ptr
+	BEQ .L_blsrv_validate_boot_image
+
+	// test for blsrv_apply_update	0x05
+	MOV r5, #5
+	CMP r1, r5
+	BEQ .L_blsrv_apply_update
 
 	// return false (invalid operation)
 	MOV r0, 0
@@ -190,8 +202,7 @@ PUSH {r4, r5, r6, lr}
 
 	.L_blsrv_erase_update_region:
 		BL bl_hal_erase_update_image
-		MOV r0, 1
-		B 0f
+		B 1f
 
 	.L_blsrv_write_update_region:
 		// load args
@@ -201,37 +212,56 @@ PUSH {r4, r5, r6, lr}
 		LDR r1, [r4], #4	// src
 		LDR r2, [r4], #4	// size
 		BL bl_hal_flash_memcpy
-		MOV r0, 1
-		B 0f
+		B 1f
 
 	.L_blsrv_validate_update_image:
+		LDR r5, bl_data_update_image_start
+		B .L_validate_image
+
+	.L_blsrv_validate_boot_image:
+		LDR r5, bl_data_image_start
+		B .L_validate_image
+
+
+	.L_validate_image:
+		// r5 contains image-base
+		MOV r0, r5
+
+		BL bl_validate_image // r0=ret_code, r1=size
+		MOV r6, r1	// store size
+
+		// output fields:
+		STR r0, [r4], #4	// validation_result
+
+		MOV r1, r5
+		LDR r2, bl_data_metadata_offset
+		ADD r1, r2
+		STR r1, [r4], #4		// metdata_ptr
+
+		MOV r1, r5	// r1=base
+		MOV r2, r6	// r2=size
+		ADD r1, r6	// r1=&command_word (src)
+		LDR r1, [r1] // command_word
+		STR r1, [r4], #4	// command_word
+			
+		B 1f
+
+	.L_blsrv_apply_update:
 
 		LDR r0, bl_data_update_image_start
-		BL bl_validate_image // r0=ret_code, r1=size
+		BL bl_validate_image
+		MOV r6, r1	// size
+		MOVS r4, r0	// result
+	
+		BNE 1f	// if (result!=0) return
 
-		MOV r5, r1	// r5 = size
-		MOVS r6, r0 // r6 = validation ret value
-		BNE 0f	// if (ret_code != 0) return ret_code
-		
-		LDR r1, [r4] // load command-word
-		MOVS r1, r1	 // and test for != 0
-		BEQ 0f	// r0 still contains the ret value
-
-		// write command-word to flash
-		MOV r0, r5
+		MOV r0, r6
+		MOV r1, #0x000000FF
 		BL bl_set_command_word
-
-		MOV r0, r5 // and return success
-		B 0f
-
-	.L_blsrv_get_update_metadata_ptr:
-		LDR r0, bl_data_update_image_start	// base
-		LDR r1, bl_data_metadata_offset	// offset
-		ADD r0, r1	// add
-		STR r0, [r4]	// r4 is the ptr to the 'start' field
-		MOV r0, 1	// and return success
-		B 0f
-
+		B 1f
+	
+1:
+MOV r0, 1
 0:
 POP {r4, r5, r6, pc}
 
@@ -278,7 +308,7 @@ bl_start:
 	LDR r0, bl_data_update_image_start
 	ADD r0, r6		// r0: &command_word
 	LDR r0, [r0]	// r0: command_word
-	LDR r1, =#0x0000FFFF
+	MOV r1, #0x000000FF
 	CMP r1, r0
 	BNE .L_start_app	// skip update, because if command-word
 
@@ -318,7 +348,6 @@ bl_start:
 */
 .type bl_set_command_word, %function
 bl_set_command_word:
-PUSH {lr}
 
 	LDR r2, bl_data_update_image_start
 	ADD r0, r2		// r0 (dest): &command_word_in_flash
@@ -331,7 +360,7 @@ PUSH {lr}
 	BL bl_hal_flash_memcpy	// perform the write
 	ADD sp, #4		// dealloc on stack
 
-POP {pc}
+MOV pc, lr
 
 /*************************************************************************
 	void bl_update(int size)
@@ -421,12 +450,12 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 	// and do the compare
 	CMP r6, r7
-	BHI .L_validate_image	// continue
+	BHI .L_validate_image_data	// continue
 		// return error 2 (InvalidMetadata)
 		MOV r0, 2
 		B .L_ret
 
-.L_validate_image:
+.L_validate_image_data:
 
 	// r5 current address, will be incremented by 4 in the loop
 	MOV r5, r4
@@ -464,6 +493,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 		BEQ .L_unverfiyable
 
 		// return error 3 (InvalidImage)
+		MOV r1, r8
 		MOV r0, 3
 		B .L_ret
 
@@ -471,6 +501,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 	// return error 4 (UnverifyableImage)
 	MOV r0, 4
+	MOV r1, r8
 	B .L_ret
 
 	.L_success:

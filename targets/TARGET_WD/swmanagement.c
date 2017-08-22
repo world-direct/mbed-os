@@ -28,9 +28,7 @@ void swmanagement_get_status(swmanagement_status * status)
 	status->update_image_information.image_validation_result = desc.args.validate_image.validation_result;
 	m_set_md(desc.args.validate_image.metadata_ptr, &status->update_image_information);
 
-	desc.operation = blsrv_get_update_status;
-	blsrv_call(&desc);
-	status->update_status = desc.args.get_update_status.update_status;
+	status->update_status = desc.args.validate_image.command_word;
 }
 
 void swmanagement_prepare_new_download(void)
@@ -59,9 +57,11 @@ void swmangement_append_download_data(const void * buffer, size_t buffer_size)
 
 }
 
-void swmanagement_update_apply(void)
+image_validation_result swmanagement_update_apply(void)
 {
 	struct blsrv_desc desc;
-	desc.operation = blsrv_apply_update_with_reset;
+	desc.operation = blsrv_apply_update;
 	blsrv_call(&desc);
+
+	return desc.args.apply_update.validation_result;
 }

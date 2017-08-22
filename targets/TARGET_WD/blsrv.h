@@ -18,8 +18,7 @@ extern "C" {
 #define blsrv_write_update_region		0x02
 #define blsrv_validate_update_image		0x03
 #define blsrv_validate_boot_image		0x04
-#define blsrv_apply_update_with_reset	0x05
-#define blsrv_get_update_status			0x06
+#define blsrv_apply_update				0x05
 
 
 struct blsrv_desc {
@@ -37,17 +36,14 @@ struct blsrv_desc {
 		struct {
 			// output fields
 			int validation_result;	// output field, will be set by the service
-			int update_status;	// output
 			intptr_t metadata_ptr;
+			int command_word;	// the word following the image
 		} validate_image;
 
 		struct {
 			int validation_result;	// output field, will be set by the service but only if != 0 , otherwise the call will not return but reset and apply!
-		} apply_update_with_reset;
+		} apply_update;
 
-		struct {
-			int update_status;	// output field, will be set by the service but only if != 0 , otherwise the call will not return but reset and apply!
-		} get_update_status;
 		
 	} args;
 };

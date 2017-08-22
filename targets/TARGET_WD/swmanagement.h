@@ -52,8 +52,7 @@ typedef enum {
 
 	Default = 0xFFFFFFFF,
 	UpdatePending = 0xFFFFFF00,
-	UpdateSuccessfull = 0x00000001,
-	UpdateValidationFailed = 0x00000002
+	UpdateSuccessfull = 0x00000000
 
 } swmanagement_update_status;
 
@@ -93,7 +92,7 @@ void swmangement_update_append(const void * buffer, size_t buffer_size);
 *	The image will only be applied if the status is valid.
 *
 */
-void swmanagement_update_apply(void);
+image_validation_result swmanagement_update_apply(void);
 
 #ifdef __cplusplus
 }
