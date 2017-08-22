@@ -63,7 +63,7 @@ typedef struct {
 
 	swmanagement_image_information update_image_information;
 	
-	swmanagement_update_status status;
+	swmanagement_update_status update_status;
 	
 } swmanagement_status;
 

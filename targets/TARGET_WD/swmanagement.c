@@ -4,47 +4,33 @@
 
 static size_t m_download_offset;
 
+static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * info){
+	info->image_total_length = *((size_t*)(mdroot + 0x04));
+	info->image_application_name = (const char *)(mdroot + 0x08);
+	info->image_application_version = (const char *)(mdroot + 0x28);
+}
+
 void swmanagement_get_status(swmanagement_status * status)
 {
 	struct blsrv_desc desc;
 
 	// validate boot image
+	//////////////////////////////////////////////////////////////////////////
 	desc.operation = blsrv_validate_boot_image;
 	blsrv_call(&desc);
+	status->boot_image_information.image_validation_result = desc.args.validate_image.validation_result;
+	m_set_md(desc.args.validate_image.metadata_ptr, &status->boot_image_information);
 
-	status->update_image_information.image_validation_result = desc.args.validate_update_image.validation_result;
+	// validate update image
+	//////////////////////////////////////////////////////////////////////////
+	desc.operation = blsrv_validate_update_image;
+	blsrv_call(&desc);
+	status->update_image_information.image_validation_result = desc.args.validate_image.validation_result;
+	m_set_md(desc.args.validate_image.metadata_ptr, &status->update_image_information);
 
-	// we can set the MD pointers directly
-	status->update_image_information.image_total_length = *((size_t*)(0x08004300 + 0x04));
-	status->update_image_information.image_application_name = (const char *)(0x08004300 + 0x08);
-	status->update_image_information.image_application_version = (const char *)(0x08004300 + 0x28);
-
-
-	//desc.operation = blsrv_validate_update_image;
-//
-	//blsrv_call(&desc);
-	//status->update_image_information.image_validation_result = desc.args.validate_update_image.validation_result;
-//
-	//// set 
-//
-	//status->image_validation_result = res; 
-	//if(res == 0 || res >= 3){
-		//
-		//desc.operation = blsrv_get_update_metadata_ptr;
-		//blsrv_call(&desc);
-		//intptr_t md = desc.args.get_update_metadata_ptr.start;
-//
-		//// TODO: we really need to pass this from the bootloader....
-		//status->image_total_length = *((size_t*)(md + 0x04));
-		//status->image_application_name = (const char *)(md + 0x08);
-		//status->image_application_version = (const char *)(md + 0x28);
-	//} else {
-		//status->image_application_name = NULL;
-		//status->image_application_version = NULL;
-		//status->image_total_length = NULL;
-	//}
-	//
-	//return MC_RES_OK;
+	desc.operation = blsrv_get_update_status;
+	blsrv_call(&desc);
+	status->update_status = desc.args.get_update_status.update_status;
 }
 
 void swmanagement_prepare_new_download(void)
