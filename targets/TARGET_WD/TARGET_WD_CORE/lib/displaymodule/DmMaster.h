@@ -70,6 +70,11 @@ public:
      */
 	void stopDemo(void);
 	
+	/** @brief Check module connection
+	 *
+     */
+	bool isConnected(void);
+	
 	DmOledSSD1306 Display;
 	DmUI UI;
 	

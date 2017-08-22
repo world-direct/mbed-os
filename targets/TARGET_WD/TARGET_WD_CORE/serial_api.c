@@ -262,7 +262,7 @@ void serial_init(serial_t *obj, PinName tx, PinName rx)
     // Configure UART
     UART_HandleTypeDef *handle = &UartHandle[SERIAL_OBJ(index)];
     handle->Instance          = (USART_TypeDef *)instance;
-    handle->Init.BaudRate     = 9600;
+    handle->Init.BaudRate     = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE;
     handle->Init.WordLength   = UART_WORDLENGTH_8B;
     handle->Init.StopBits     = UART_STOPBITS_1;
     handle->Init.Parity       = UART_PARITY_NONE;
@@ -1317,29 +1317,28 @@ int serial_irq_handler_asynch(serial_t *obj)
         return_event |= SERIAL_EVENT_RX_OVERRUN_ERROR & SERIAL_OBJ(events);
     }
 
-    //RX PART
-    // increment rx_buff.pos
-    if (handle->RxXferSize != 0) {
-        obj->rx_buff.pos = handle->RxXferSize - handle->RxXferCount;
-    }
-    
-    if ((handle->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
-        return_event |= SERIAL_EVENT_RX_COMPLETE & SERIAL_OBJ(events);
-    }
-    
-    // Check if char_match is present
-    if (SERIAL_OBJ(events) & SERIAL_EVENT_RX_CHARACTER_MATCH) {
-      if (buf != NULL){
-        while((buf[i] != obj->char_match) && (i < handle->RxXferSize)){
-          i++;
-        }
-        if (i < handle->RxXferSize){
-            obj->rx_buff.pos = i;
-            return_event |= SERIAL_EVENT_RX_CHARACTER_MATCH & SERIAL_OBJ(events);
-        }
-      }
-    }
-    
+	//RX PART
+	if (handle->RxXferSize != 0) {
+		obj->rx_buff.pos = handle->RxXferSize - handle->RxXferCount;
+	}
+	if ((handle->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
+		return_event |= SERIAL_EVENT_RX_COMPLETE & SERIAL_OBJ(events);
+	}
+
+	// Check if char_match is present
+	if (SERIAL_OBJ(events) & SERIAL_EVENT_RX_CHARACTER_MATCH) {
+		if (buf != NULL) {
+			for (i = 0; i < obj->rx_buff.pos; i++) {
+				if (buf[i] == obj->char_match) {
+					obj->rx_buff.pos = i;
+					return_event |= (SERIAL_EVENT_RX_CHARACTER_MATCH & SERIAL_OBJ(events));
+					serial_rx_abort_asynch(obj);
+					break;
+				}
+			}
+		}
+	}
+
     return return_event;  
 }
 

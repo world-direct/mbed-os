@@ -104,7 +104,7 @@ typedef enum {
     SPI_SCK     = PB_13,
     SPI_CS0     = PC_7,
 	SPI_CS1     = PC_6,
-	SPI_CS2     = PB_2,
+	SPI_CS_FLASH     = PB_2,	// SPI_CS2
 	
 	BUS_nINT	= PC_0,
 	

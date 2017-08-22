@@ -50,6 +50,12 @@ void DmMaster::stopDemo(void) {
 	printLogo();
 }
 
+bool DmMaster::isConnected(void) {
+	
+	return (this->UI.getHwVersion() < 3);	// we will read 0xFF on SPI if NC
+	
+}
+
 uint32_t led1_color = 0;
 uint32_t led2_color = 0;
 void DmMaster::toggleLedColor(uint32_t color) {

@@ -41,7 +41,7 @@ void test_flash_read_id(PinName cs) {
 }
 
 void test_flash_1_read_id(void) {
-	test_flash_read_id(SPI_CS2);
+	test_flash_read_id(SPI_CS_FLASH);
 }
 
 void test_flash_prohibit_write_of_protected_region(void) {
@@ -49,7 +49,7 @@ void test_flash_prohibit_write_of_protected_region(void) {
 }
 
 void test_flash_write_page_overlapping(void) {
-	flash_init(SPI_CS2, SPI_MOSI, SPI_MISO, SPI_SCK);
+	flash_init(SPI_CS_FLASH, SPI_MOSI, SPI_MISO, SPI_SCK);
 	
 	uint8_t dummy_data[2] = { 0x55, 0x55 };
 	uint32_t address = 0xFE; // write multiple pages

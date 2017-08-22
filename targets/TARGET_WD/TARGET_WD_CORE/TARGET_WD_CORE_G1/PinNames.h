@@ -183,7 +183,7 @@ typedef enum {
     SPI_CS0     = PD_12,
 	SPI_CS1     = PD_13,
 	SPI_CS2     = PD_14,
-	SPI_CS3     = PD_15,
+	SPI_CS_FLASH     = PD_15,	// SPI_CS3
 	SPI_CS4     = PC_6,
 	
 	N_WAKEUP	= PD_9,

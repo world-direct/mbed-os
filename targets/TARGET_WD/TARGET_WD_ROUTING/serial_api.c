@@ -222,7 +222,7 @@ void serial_init(serial_t *obj, PinName tx, PinName rx)
     }
 
     // Configure UART
-    obj_s->baudrate = 9600;
+    obj_s->baudrate = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE;
     obj_s->databits = UART_WORDLENGTH_8B;
     obj_s->stopbits = UART_STOPBITS_1;
     obj_s->parity   = UART_PARITY_NONE;

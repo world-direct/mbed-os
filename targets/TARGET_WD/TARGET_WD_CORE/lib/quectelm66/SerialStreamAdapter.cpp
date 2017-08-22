@@ -54,7 +54,7 @@ size_t SerialStreamAdapter::space() {
 }
 
 void SerialStreamAdapter::read_callback(int a){
-	SerialStreamAdapter::_complete_sem.release();
+	//SerialStreamAdapter::_complete_sem.release();
 }
 
 void SerialStreamAdapter::write_callback(int a) {
@@ -79,12 +79,22 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 	Timer timer;
 	timer.start();
 	
-	while (timer.read_ms() < timeout && !_complete_sem.wait(DMA_READ_SEM_COMPLETE_TIMEOUT_MS)) {}
+	int dma_producer_pointer = 0;
 	
-	// timeout or callback occurred!!
-	int remainingBytes = SerialStreamAdapter::_serial->GetLength();
-	int dma_producer_pointer = DMA_BUFFER_SIZE - remainingBytes;
+	do{
+		dma_producer_pointer = DMA_BUFFER_SIZE - SerialStreamAdapter::_serial->GetLength();
+		if (dma_producer_pointer == _dma_consumer_pointer) {
+			Thread::wait(DMA_READ_SEM_COMPLETE_TIMEOUT_MS < timeout ? DMA_READ_SEM_COMPLETE_TIMEOUT_MS : timeout);
+		}
+	} while (dma_producer_pointer == _dma_consumer_pointer && timer.read_ms() < timeout);
 	
+	// Handle ongoing DMA-transfer
+	do{
+		dma_producer_pointer = DMA_BUFFER_SIZE - SerialStreamAdapter::_serial->GetLength();
+		Thread::wait(10);
+	} while(dma_producer_pointer != (DMA_BUFFER_SIZE - SerialStreamAdapter::_serial->GetLength()));
+	
+	dma_producer_pointer = DMA_BUFFER_SIZE - SerialStreamAdapter::_serial->GetLength();
 	int length = 0;
 	if (_dma_consumer_pointer < dma_producer_pointer) {
 		// normal

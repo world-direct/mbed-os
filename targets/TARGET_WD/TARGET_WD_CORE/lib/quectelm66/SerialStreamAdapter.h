@@ -20,7 +20,7 @@
 #include "IOStream.h"
 #include "DMASerial.h"
 
-#define DMA_BUFFER_SIZE						512
+#define DMA_BUFFER_SIZE						2048
 #define DMA_READ_SEM_COMPLETE_TIMEOUT_MS	100
 
 class SerialStreamAdapter : public IOStream

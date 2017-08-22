@@ -14,8 +14,13 @@
 #include "DMASerial.h"
 #include "Mutex.h"
 
-#define BT_RX_BUFFER_SIZE	512
-#define BT_TX_BUFFER_SIZE	512
+#define BT_BUFFER_SIZE	512
+#define BT_EOF_CHAR_MATCH			(126)
+#define BT_RX_CHECK_INTERVAL_MSEC	100
+
+#define BT_RX_READ_TIMEOUT1			10
+#define BT_RX_READ_TIMEOUT2			100
+#define BT_TX_WRITE_TIMEOUT			100
 
 extern DMA_HandleTypeDef DmaTxHandle[5];
 extern DMA_HandleTypeDef DmaRxHandle[5];
@@ -27,18 +32,20 @@ public:
 protected:
 private:
 	
-	static rtos::Mutex _mutex;
-	
 	char * _bt_rx_buffer;
 	char * _bt_tx_buffer;
+	
+	char * _bt_rx_buffer_step;
+	
 	unsigned int _bt_rx_consumer;
 	unsigned int _bt_rx_producer;
 	
-	Ticker * _bt_timeout;
 	DMASerial *_dmaSerial;
 	
-	EventQueue _queue;
-	Thread _eventThread;
+	rtos::Mutex _mutex;
+	rtos::Semaphore _tx_semaphore;
+	Timer _stepTimer;
+	Thread _readProcessingThread;
 	
 //functions
 public:
@@ -54,7 +61,9 @@ private:
 	BusTransceiver(const BusTransceiver &c);
 	BusTransceiver& operator=(const BusTransceiver &c);
 
-	void _bt_rx_frame_received(void);
+	void _bt_rx_entry(void);
+	void _bt_rx_step(void);
+	void _bt_rx_locked_step(void);
 	void _bt_tx_complete(int evt);
 	void _bt_rx_complete(int evt);
 
