@@ -128,6 +128,9 @@ public:
 	
 	virtual bool TestATOK();
 	
+	char* GetAPN(void){ return _apn; };
+	
+	int GetRSSI(void);
 
 protected:
 	
@@ -155,7 +158,6 @@ private:
 	QuectelM66CommandCoordinator _commandCoordinator;
 	SerialStreamAdapter* _serialStreamAdapter;
 	
-	Thread _readProcessingThread;
 	Queue <QuectelM66Interface, 10> _readNotificationQueue;
 	
 	bool _dhcp;
@@ -169,9 +171,7 @@ private:
 	
 	pppos_context_t _pppos_ctx;
 	
-	uint8_t _serialBuffer[QUECTEL_M66_READ_BUFFER_SIZE];
-	
-	void serial_read_thread_entry();
+	void serial_read_thread_entry(dma_frame_t * frame);
 	static int pppos_write_wrapper(pppos_context_t* pppos_context, uint8_t* buf, size_t length, uint32_t timeout = osWaitForever);
 
 };

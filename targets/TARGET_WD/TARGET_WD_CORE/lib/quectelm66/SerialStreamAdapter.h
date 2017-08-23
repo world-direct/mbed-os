@@ -20,8 +20,10 @@
 #include "IOStream.h"
 #include "DMASerial.h"
 
-#define DMA_BUFFER_SIZE						2048
+#define DMA_BUFFER_SIZE						DMASERIAL_RX_BUFFER_SIZE
+#define DMA_RX_QUEUE_SIZE					DMASERIAL_RX_QUEUE_SIZE
 #define DMA_READ_SEM_COMPLETE_TIMEOUT_MS	100
+#define DMA_WRITE_SEM_COMPLETE_TIMEOUT_MS	100
 
 class SerialStreamAdapter : public IOStream
 {
@@ -29,14 +31,11 @@ class SerialStreamAdapter : public IOStream
 	private:
 	
 		char _dma_buffer[DMA_BUFFER_SIZE] = {};
-		int _dma_consumer_pointer = 0;
 		bool _reading_started = false;
-	
+        
 		DMASerial* _serial;
-		Mutex _mutex;
-		Semaphore _complete_sem;
-		void start_reading();
-		void read_callback(int a);
+		Semaphore _tx_sem;
+		void start_reading(void);
 		void write_callback(int a);
 	
 	public: 
@@ -50,7 +49,8 @@ class SerialStreamAdapter : public IOStream
 		virtual int write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) override;
 		virtual size_t space() override;
 		virtual size_t available() override;
-	
+		void attachRxCallback(Callback<void(dma_frame_t *)> cb);
+		void detachRxCallback(void);
 };
 
 #endif // SERIALSTREAMADAPTER_H_
