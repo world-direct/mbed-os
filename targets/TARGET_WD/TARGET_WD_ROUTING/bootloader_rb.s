@@ -1,13 +1,13 @@
 
 /*
- * bootloader_cb.s
+ * bootloader_rb.s
  *
- * Created: 14.08.2017 14:37:44
+ * Created: 23.08.2017 17:24:13
  *  Author: Guenter.Prossliner
  */ 
 
 .syntax unified
-.cpu cortex-m4
+.cpu cortex-m1
 .thumb
 
 .section .bl_text,"ax",%progbits
@@ -29,15 +29,14 @@ PUSH {lr}
 	//	GPIOE (for bus-led): bit #4 (GPIOEEN) on the RCC_AHB1ENR register (@40023830)
 	//  CRC (for validation): bit #12 (CRCEN) also on the RCC_AHB1ENR register (@40023830)
 
-	// set enable bits in RCC_AHB1ENR register (@40023830)
+/*	// set enable bits in RCC_AHB1ENR register (@40023830)
 	// this register has a default value of != 0, so we need to read it
 	LDR r3, bl_hal_rcc_ahb1enr_address	// use r3 for register address
 	LDR r2, [r3]		// read current value into r2 (should be 0x00100000 as documented)
 	LDR r1, =#0x1010	// the mask
 	ORR r2, r2, r1	// perform OR
 	STR r2, [r3, #0]	// and write to register
-
-
+*/
 POP {pc}
 
 /*************************************************************************
@@ -60,13 +59,13 @@ PUSH {lr}
 
 	// enable output on BUS-LED
 	// *((volatile int *)0x40210000) = 0x100000;
-	LDR r3, bl_hal_gpioe_address
-	MOV r2, #0x100000
+	/*LDR r3, bl_hal_gpioe_address
+	MOVS r2, #0x100000
 	STR r2, [r3, #0]
 
 	// and turn it on
 	MOV r2, #0x400
-	STR r2, [r3, #0x14]
+	STR r2, [r3, #0x14]*/
 
 POP {pc}
 
@@ -80,10 +79,10 @@ bl_hal_crc_init:
 
 PUSH {lr}
 	
-	MOV r1, #1
+	/*MOV r1, #1
 	LDR r2, bl_hal_crc_address		// CRC_ base address
 	STR r1, [r2, #0x8]				// CRC_CR, set bit #0 (RESET) which clears the DR
-
+*/
 POP {pc}
 
 /*************************************************************************
@@ -96,10 +95,10 @@ bl_hal_crc_update:
 
 PUSH {lr}
 	
-	LDR r2, bl_hal_crc_address
+	/*LDR r2, bl_hal_crc_address
 	STR r0, [r2, #0]		// CRC_DR, we have the argument passed in r0
 	LDR r0, [r2, #0]		// read the updated value and return it in r0
-
+*/
 POP {pc}
 
 
@@ -112,7 +111,7 @@ POP {pc}
 bl_hal_flash_unlock:
 
 PUSH {lr}
-
+/*
 	BL bl_hal_flash_wait_idle
 	
 	LDR r1, bl_hal_flashc_address
@@ -125,7 +124,7 @@ PUSH {lr}
 	STR r0, [r1, #0x04] // FLASH_KEYR
 	LDR r0, bl_hal_flash_key2
 	STR r0, [r1, #0x04] // FLASH_KEYR
-
+*/
 0:
 POP {pc}
 
@@ -138,7 +137,7 @@ POP {pc}
 bl_hal_flash_lock:
 
 PUSH {lr}
-
+/*
 	BL bl_hal_flash_wait_idle
 	
 	LDR r1, bl_hal_flashc_address
@@ -149,7 +148,7 @@ PUSH {lr}
 	MOV r0, #0x80000000
 	STR r0, [r1, #0x10] // FLASH_CR
 
-0:
+0:*/
 POP {pc}
 
 /*************************************************************************
@@ -159,7 +158,7 @@ POP {pc}
 */
 .type bl_hal_erase_sector, %function
 bl_hal_erase_sector:
-
+/*
 PUSH {r4, lr}
 
 	MOV r4, r0 // sector_nr
@@ -179,7 +178,7 @@ PUSH {r4, lr}
 	STR r2, [r1, #0x10]
 
 	BL bl_hal_flash_lock
-0:
+0:*/
 POP {r4, pc}
 
 /*************************************************************************
@@ -193,17 +192,17 @@ bl_hal_flash_memcpy:
 
 PUSH {r4, r5, r6, lr}
 
-	MOV r4, r0 // dest, will be postincremented
+	/*MOV r4, r0 // dest, will be postincremented
 	MOV r5, r1 // src, will be postincremented
 	MOV r6, r2 // size, will be decremented to check for completion
 
 	BL bl_hal_flash_unlock
 	BL bl_hal_flash_wait_idle
 
-	/* enable programming mode for 32 bit
-	bit 25:		ERRIE
-	bits 8..9:	PSIZE 10 (32)
-	bit 0:		PG (enable Programming) */
+	// enable programming mode for 32 bit
+	//bit 25:		ERRIE
+	//bits 8..9:	PSIZE 10 (32)
+	//bit 0:		PG (enable Programming)
 	LDR r2, =#0x2000201
 
 	LDR r1, bl_hal_flashc_address
@@ -220,7 +219,7 @@ PUSH {r4, r5, r6, lr}
 
 	// disable programming mode
 	BL bl_hal_flash_lock
-
+*/
 0:
 POP {r4, r5, r6, pc}
 
@@ -234,12 +233,12 @@ POP {r4, r5, r6, pc}
 .type bl_hal_erase_boot_image, %function
 bl_hal_erase_boot_image:
 PUSH {lr}
-
+/*
 	MOV r0, #1	// start and current sector
 	MOV r1, #11  // last sector
 
 	BL bl_hal_erase_sectors
-
+*/
 0:
 POP {pc}
 
@@ -255,11 +254,11 @@ POP {pc}
 bl_hal_erase_update_image:
 PUSH {lr}
 
-	MOV r0, #13	// start and current sector
+	/*MOV r0, #13	// start and current sector
 	MOV r1, #23  // last sector
 
 	BL bl_hal_erase_sectors
-
+*/
 0:
 POP {pc}
 
@@ -272,7 +271,7 @@ POP {pc}
 bl_hal_erase_sectors:
 PUSH {r4, r5, lr}
 
-	MOV r4, r0	// start and current sector
+	/*MOV r4, r0	// start and current sector
 	MOV r5, r1  // last sector
 
 	1:
@@ -281,7 +280,7 @@ PUSH {r4, r5, lr}
 	ADD r4, #1
 	CMP r4, r5
 	BNE 1b
-
+*/
 
 0:
 POP {r4, r5, pc}
@@ -295,7 +294,7 @@ POP {r4, r5, pc}
 bl_hal_flash_wait_idle:
 
 PUSH {lr}
-	
+	/*
 	LDR r1, bl_hal_flashc_address
 
 1:
@@ -303,7 +302,7 @@ PUSH {lr}
 	ANDS r0, #0x00010000		// bit 16: BSY
 	BNE 1b	// retest
 
-
+*/
 POP {pc}
 
 

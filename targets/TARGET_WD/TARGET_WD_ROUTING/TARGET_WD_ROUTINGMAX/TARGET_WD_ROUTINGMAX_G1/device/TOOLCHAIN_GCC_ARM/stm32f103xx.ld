@@ -27,28 +27,67 @@
  */
 
 /* Entry Point */
-ENTRY(Reset_Handler)
+ENTRY(bl_start)
 
 M_VECTOR_RAM_SIZE = 0x400;
 
 STACK_SIZE = 0x400;
 HEAP_SIZE = 0x6000;
 
-#define MBED_APP_START	0x08000000
-#define MBED_APP_SIZE	512k
-
-/* Specify the memory areas */
+/* Specify the memory areas
 MEMORY
 {
 	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
 	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
     FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
+
+	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
+	UPDATE (rw) :			ORIGIN = 0x08104000, LENGTH = 0xFC000
+
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 0x17FFF
+}*/
+
+/* Specify the memory areas */
+MEMORY
+{
+	/* BOOTLOADER:
+		To allow the application to be updated without affecting the bootloader,
+		the bootloader has be resist in an own sector of the flash.
+		It also has to be the first sector, so that the reset-vector is in the bootloader.
+
+		On the STM32103 the Sector 1 is 2k in size.
+	*/
+
+	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
+	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x0500
+    VECTORS (rx) :			ORIGIN = 0x08000800, LENGTH = 0x0300
+	METADATA (rw):			ORIGIN = 0x08000B00, LENGTH = 0x0100
+    FLASH (rx)   :			ORIGIN = 0x08000C00, LENGTH = 0x80000 - 0x0800 - 0x400 /* = 0x7F400 = 521216 = 509k) */
+
+	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x0800 
+	UPDATE (rw) :			ORIGIN = 0x08080800, LENGTH = 0x7F400
+
+	RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 0x17FFF
 }
+
 
 /* Define output sections */
 SECTIONS
 {
+
+	.bl_vectors :
+	{
+		KEEP(*(.bl_vectors))
+         . = ALIGN(4);
+	} > BL_VECTORS
+
+	.bl_text :
+	{
+		*(.bl_text)
+         . = ALIGN(4);
+	} > BL_TEXT
+
+
 	.isr_vector :
     {
 		__image_start = .;
@@ -201,4 +240,15 @@ SECTIONS
     
     /* Check if data + heap + stack exceeds RAM limit */
     ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+
+
+	
+	__config_start = ORIGIN(CONFIG);
+	__update_image_start = ORIGIN(UPDATE);
+	__application_max_size = LENGTH(UPDATE);
+
+	__metadata_magic = 0x01020304;
+	__metadata_offset = 0x300;
+
+
 }
