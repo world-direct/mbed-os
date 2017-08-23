@@ -52,8 +52,7 @@ typedef enum {
 
 	Default = 0xFFFFFFFF,
 	UpdatePending = 0xFFFFFF00,
-	UpdateSuccessfull = 0x00000001,
-	UpdateValidationFailed = 0x00000002
+	UpdateSuccessfull = 0x00000000
 
 } swmanagement_update_status;
 
@@ -79,13 +78,13 @@ void swmanagement_get_status(swmanagement_status * status);
 *	Prepares a new image to be downloaded (maybe to drop a partial invalid one)
 *	The internal stream position (for swmangement_update_append) is set to zero.
 */
-void swmanagement_update_clear(void);
+void swmanagement_prepare_new_download(void);
 
 /**
 * @brief
 *	Appends raw data to the download area.
 */
-void swmangement_update_append(const void * buffer, size_t buffer_size);
+void swmangement_append_download_data(const void * buffer, size_t buffer_size);
 
 /**
 * @brief  
@@ -93,7 +92,7 @@ void swmangement_update_append(const void * buffer, size_t buffer_size);
 *	The image will only be applied if the status is valid.
 *
 */
-void swmanagement_update_apply(void);
+image_validation_result swmanagement_update_apply(void);
 
 #ifdef __cplusplus
 }
