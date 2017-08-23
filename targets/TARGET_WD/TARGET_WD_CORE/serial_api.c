@@ -87,7 +87,7 @@ DMA_Stream_TypeDef *DMA_UartTx_Stream[UART_NUM] = {
 };
 DMA_HandleTypeDef DmaHandle;
 
-static DMA_HandleTypeDef DmaTxHandle[UART_NUM];
+DMA_HandleTypeDef DmaTxHandle[UART_NUM];
 DMA_HandleTypeDef DmaRxHandle[UART_NUM];
 #endif
 // DEVICE_SERIAL_ASYNCH_DMA
@@ -95,7 +95,7 @@ DMA_HandleTypeDef DmaRxHandle[UART_NUM];
 uint32_t serial_irq_ids[UART_NUM] = {0, 0, 0, 0, 0, 0, 0, 0};
 static uart_irq_handler irq_handler;
 
-static UART_HandleTypeDef UartHandle[UART_NUM];
+UART_HandleTypeDef UartHandle[UART_NUM];
 
 int stdio_uart_inited = 0;
 serial_t stdio_uart;
@@ -146,7 +146,7 @@ static void init_dma(serial_t *obj)
         hdma_rx->Init.MemInc              = DMA_MINC_ENABLE;
         hdma_rx->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
         hdma_rx->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_rx->Init.Mode                = DMA_CIRCULAR;
+        hdma_rx->Init.Mode                = DMA_NORMAL;
         hdma_rx->Init.Priority            = DMA_PRIORITY_HIGH;
         hdma_rx->Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
         hdma_rx->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_HALFFULL;
@@ -446,38 +446,34 @@ static void uart_irq(int id)
             irq_handler(serial_irq_ids[id], RxIrq);
             __HAL_UART_CLEAR_FLAG(handle, UART_FLAG_RXNE);
         }
+		if (__HAL_UART_GET_FLAG(handle, UART_FLAG_IDLE) != RESET) {
+			if (__HAL_UART_GET_IT_SOURCE(handle, UART_IT_IDLE) != RESET) {
+				irq_handler(serial_irq_ids[id], RxIrq);
+				__HAL_UART_CLEAR_FLAG(handle, UART_FLAG_IDLE);
+			}
+		}
     }
 }
 
 #if DEVICE_SERIAL_ASYNCH_DMA
 static void dma_irq(DMAName name, int id, SerialIrq txrxirq)
 {
+	DMA_HandleTypeDef * hdma = txrxirq == RxIrq ? &DmaRxHandle[id] : &DmaTxHandle[id];
 
-	
-  if (serial_irq_ids[id] != 0) {
-    if (txrxirq == RxIrq) {
-      if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-            irq_handler(serial_irq_ids[id], RxIrq);
-            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF2_6);
-        }
-    } else {
-      if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-            irq_handler(serial_irq_ids[id], TxIrq);
-            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF0_4);
-        }
-    }    
-  }
-//    DmaHandle.Instance = (DMA_Stream_TypeDef *)name;
-//    if (serial_irq_ids[id] != 0) {
-//        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-//            irq_handler(serial_irq_ids[id], TxIrq);
-//            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF0_4);
-//        }
-//        if (__HAL_DMA_GET_TC_FLAG_INDEX(&DmaHandle) != RESET) {
-//            irq_handler(serial_irq_ids[id], RxIrq);
-//            __HAL_DMA_CLEAR_FLAG(&DmaHandle, DMA_FLAG_TCIF2_6);
-//        }
-//    }
+	if (serial_irq_ids[id] != 0) {
+		if (txrxirq == RxIrq) {
+			if (__HAL_DMA_GET_TC_FLAG_INDEX(hdma) != RESET) {
+				irq_handler(serial_irq_ids[id], RxIrq);
+				__HAL_DMA_CLEAR_FLAG(hdma, DMA_FLAG_TCIF2_6);
+			}
+			} else {
+			if (__HAL_DMA_GET_TC_FLAG_INDEX(hdma) != RESET) {
+				irq_handler(serial_irq_ids[id], TxIrq);
+				__HAL_DMA_CLEAR_FLAG(hdma, DMA_FLAG_TCIF0_4);
+			}
+		}
+	}
+
 }
 #endif
 // DEVICE_SERIAL_ASYNCH_DMA
@@ -744,6 +740,7 @@ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
 
         if (irq == RxIrq) {
             __HAL_UART_ENABLE_IT(handle, UART_IT_RXNE);
+			__HAL_UART_ENABLE_IT(handle, UART_IT_IDLE);
 #if DEVICE_SERIAL_ASYNCH_DMA
             NVIC_SetVector(irq_n, vector_dma);
             NVIC_EnableIRQ(irq_n);
@@ -768,6 +765,7 @@ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
 
         if (irq == RxIrq) {
             __HAL_UART_DISABLE_IT(handle, UART_IT_RXNE);
+			__HAL_UART_DISABLE_IT(handle, UART_IT_IDLE);
             // Check if TxIrq is disabled too
             if ((handle->Instance->CR1 & USART_CR1_TXEIE) == 0) all_disabled = 1;
         } else { // TxIrq
@@ -1231,6 +1229,10 @@ void serial_rx_asynch(serial_t *obj, void *rx, size_t rx_length, uint8_t rx_widt
     NVIC_EnableIRQ(irqn);
     // following HAL function will program and enable the DMA transfer
     HAL_UART_Receive_DMA(handle, (uint8_t*)rx, rx_length);    
+	    
+    /* Enable the UART Idle line interrupt: */
+    __HAL_UART_ENABLE_IT(handle, UART_IT_IDLE);
+
 #else
     // following HAL function will enable the RXNE interrupt + error interrupts    
     HAL_UART_Receive_IT(handle, (uint8_t*)rx, rx_length);
@@ -1338,6 +1340,14 @@ int serial_irq_handler_asynch(serial_t *obj)
 			}
 		}
 	}
+	
+	// Idle line interrupt
+	if (__HAL_UART_GET_FLAG(handle, UART_FLAG_IDLE) != RESET) {
+		if (__HAL_UART_GET_IT_SOURCE(handle, UART_IT_IDLE) != RESET) {
+			__HAL_UART_CLEAR_IDLEFLAG(handle);
+			return_event |= (SERIAL_EVENT_RX_IDLE & SERIAL_OBJ(events));
+		}
+	}
 
     return return_event;  
 }
@@ -1355,6 +1365,14 @@ void serial_tx_abort_asynch(serial_t *obj)
     __HAL_UART_CLEAR_PEFLAG(handle);
     // reset states
     handle->TxXferCount = 0;
+	
+	#if DEVICE_SERIAL_ASYNCH_DMA
+	if (handle->hdmatx != NULL)
+	{
+		HAL_DMA_Abort(handle->hdmatx);
+	}
+	#endif
+	
     // update handle state
     if(handle->gState == HAL_UART_STATE_BUSY_TX_RX) {
         handle->gState = HAL_UART_STATE_BUSY_RX;
@@ -1372,11 +1390,21 @@ void serial_rx_abort_asynch(serial_t *obj)
 {
     UART_HandleTypeDef *handle = &UartHandle[SERIAL_OBJ(index)];
     __HAL_UART_DISABLE_IT(handle, UART_IT_RXNE);
+    __HAL_UART_DISABLE_IT(handle, UART_IT_IDLE);
     // clear flags
     __HAL_UART_CLEAR_PEFLAG(handle);
+	__HAL_UART_CLEAR_IDLEFLAG(handle);
     // reset states
     handle->RxXferCount = 0;
-    // update handle state
+    
+	#if DEVICE_SERIAL_ASYNCH_DMA
+	if (handle->hdmarx != NULL)
+	{
+		HAL_DMA_Abort(handle->hdmarx);
+	}
+	#endif
+	
+	// update handle state
     if(handle->RxState == HAL_UART_STATE_BUSY_TX_RX) {
         handle->RxState = HAL_UART_STATE_BUSY_TX;
     } else {

@@ -12,6 +12,7 @@
 #include "mbed.h"
 #include "device.h"
 #include "rtos.h"
+#include "wd_logging.h"
 
 #define DMASERIAL_RX_BUFFER_SIZE	512
 #define DMASERIAL_RX_QUEUE_SIZE		5
@@ -27,7 +28,10 @@ class DMASerial : public RawSerial{
 public:
 	
     DMASerial(PinName tx, PinName rx, int baud);
+	
+	void getFrame(uint8_t * buffer, int * length, uint32_t timeout = osWaitForever);
 	void attachRxCallback(Callback<void(dma_frame_t *)> func);
+	void detachRxCallback(void);
 	
 private:
 	Thread _queueProcessingThread;

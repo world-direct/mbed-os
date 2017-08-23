@@ -1198,7 +1198,15 @@ void serial_tx_abort_asynch(serial_t *obj)
     
     // reset states
     huart->TxXferCount = 0;
-    // update handle state
+    
+#if DEVICE_SERIAL_ASYNCH_DMA
+	if (huart->hdmatx != NULL)
+	{
+		HAL_DMA_Abort(huart->hdmatx);
+	}
+	#endif
+	
+	// update handle state
     if(huart->State == HAL_UART_STATE_BUSY_TX_RX) {
         huart->State = HAL_UART_STATE_BUSY_RX;
     } else {
@@ -1228,6 +1236,13 @@ void serial_rx_abort_asynch(serial_t *obj)
 	__HAL_UART_CLEAR_FLAG(huart, UART_FLAG_IDLE);
     volatile uint32_t tmpval = huart->Instance->DR; // Clear errors flag
     
+	#if DEVICE_SERIAL_ASYNCH_DMA
+	if (huart->hdmarx != NULL)
+	{
+		HAL_DMA_Abort(huart->hdmarx);
+	}
+	#endif
+	
     // reset states
     huart->RxXferCount = 0;
     // update handle state
