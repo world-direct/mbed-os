@@ -75,7 +75,6 @@ PUSH {lr}
 	// enable "Alternate function output Push-pull" output on BUS-LED
 	// needs MODE8 to be 0b10, so the mask is 2
 
-	// 0x40010c00 
 	LDR r1, [r0, #4]	// this has an ugly default of 0x44..., so we need to clear
 	BFC r1, #0, #4
 	MOV r2, #0x2
@@ -97,13 +96,13 @@ POP {pc}
 .global bl_hal_crc_init
 .type bl_hal_crc_init, %function
 bl_hal_crc_init:
-
 PUSH {lr}
 	
-	/*MOV r1, #1
-	LDR r2, bl_hal_crc_address		// CRC_ base address
-	STR r1, [r2, #0x8]				// CRC_CR, set bit #0 (RESET) which clears the DR
-*/
+	LDR r0, bl_hal_crc_address
+	MOV r1, #1
+
+	STR r1, [r0, #0x08]	// (CRC_CR)
+
 POP {pc}
 
 /*************************************************************************
@@ -116,10 +115,10 @@ bl_hal_crc_update:
 
 PUSH {lr}
 	
-	/*LDR r2, bl_hal_crc_address
-	STR r0, [r2, #0]		// CRC_DR, we have the argument passed in r0
-	LDR r0, [r2, #0]		// read the updated value and return it in r0
-*/
+	LDR r1, bl_hal_crc_address
+	STR r0, [r1, #0]		// CRC_DR, we have the argument passed in r0
+	LDR r0, [r1, #0]		// read the updated value and return it in r0
+	
 POP {pc}
 
 

@@ -148,6 +148,16 @@ SECTIONS
     __etext = .;
     _sidata = .;
 
+	.crc32 : 
+	{
+		. = ALIGN(4);
+		__crc32_ptr = .;
+		KEEP(*(.crc32))
+	} > FLASH
+
+	__image_end = .;
+	__image_size = __image_end - __image_start;
+
 	.interrupts_ram :
     {
         . = ALIGN(4);
@@ -196,9 +206,6 @@ SECTIONS
         _edata = .;
 
     } > RAM AT > FLASH
-
-	__image_end = .;
-	__image_size = __image_end - __image_start;
 
 	/* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
