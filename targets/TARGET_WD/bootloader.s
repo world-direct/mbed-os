@@ -251,13 +251,17 @@ PUSH {r4, r5, r6, lr}
 		LDR r0, bl_data_update_image_start
 		BL bl_validate_image
 		MOV r6, r1	// size
-		MOVS r4, r0	// result
-	
+		MOVS r5, r0	// result
+
+		// set validation result to output struct field
+		STR r5, [r4], #4	
+
 		BNE 1f	// if (result!=0) return
 
 		MOV r0, r6
 		MOV r1, #0x000000FF
 		BL bl_set_command_word
+
 		B 1f
 	
 1:
@@ -348,7 +352,7 @@ bl_start:
 */
 .type bl_set_command_word, %function
 bl_set_command_word:
-
+PUSH {r4, lr}
 	LDR r2, bl_data_update_image_start
 	ADD r0, r2		// r0 (dest): &command_word_in_flash
 	
@@ -360,7 +364,7 @@ bl_set_command_word:
 	BL bl_hal_flash_memcpy	// perform the write
 	ADD sp, #4		// dealloc on stack
 
-MOV pc, lr
+POP {r4, pc}
 
 /*************************************************************************
 	void bl_update(int size)
