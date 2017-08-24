@@ -10,6 +10,15 @@
 .cpu cortex-m3
 .thumb
 
+// these defines has been taken from stm32f103xg.h
+#define PERIPH_BASE           0x40000000
+#define APB1PERIPH_BASE       PERIPH_BASE
+#define APB2PERIPH_BASE       (PERIPH_BASE + 0x10000)
+#define AHBPERIPH_BASE        (PERIPH_BASE + 0x20000)
+#define GPIOB_BASE            (APB2PERIPH_BASE + 0x0C00)
+#define CRC_BASE              (AHBPERIPH_BASE + 0x3000)
+#define RCC_BASE              (AHBPERIPH_BASE + 0x1000)
+
 .section .bl_text,"ax",%progbits
 
 /*************************************************************************
@@ -23,21 +32,28 @@ bl_hal_init:
 PUSH {lr}
 
 	/////////////////////////////////////////////////////
-	// CLOCKS:
-	// 
-	// first we need to enable the clocks needed in bootloader in AHB1 bus
-	//	GPIOE (for bus-led): bit #4 (GPIOEEN) on the RCC_AHB1ENR register (@40023830)
-	//  CRC (for validation): bit #12 (CRCEN) also on the RCC_AHB1ENR register (@40023830)
+	// Enabled Clocks with RCC:
+	LDR r0, bl_hal_rcc_base_address
 
-/*	// set enable bits in RCC_AHB1ENR register (@40023830)
-	// this register has a default value of != 0, so we need to read it
-	LDR r3, bl_hal_rcc_ahb1enr_address	// use r3 for register address
-	LDR r2, [r3]		// read current value into r2 (should be 0x00100000 as documented)
-	LDR r1, =#0x1010	// the mask
-	ORR r2, r2, r1	// perform OR
-	STR r2, [r3, #0]	// and write to register
-*/
+	// first we need to enable the clocks needed in bootloader in AHB bus
+	//	RCC_AHBENR (0x14):
+	//		Bit 4 FLITFEN
+	//		Bit 6 CRCEN
+	//			-> 0x50
+	LDR r1, [r0, #0x14]	// load existing value, because this register has some undefined bits we want to keep
+	MOV r2, #0x50
+	ORR r1, r2	// new value
+	STR r1, [r0, 0x14]	// write it back
+
+	//	RCC_APB2ENR (0x18)
+	//		Bit 3 IOPBEN (for Bus-Led)	-> 0x08
+	LDR r1, [r0, #0x18]
+	MOV r2, #0x08
+	ORR r1, r2
+	STR r1, [r0, 0x18]
+
 POP {pc}
+
 
 /*************************************************************************
 	void bl_hal_ui(void):
@@ -49,23 +65,28 @@ bl_hal_ui:
 
 PUSH {lr}
 
+	//	BUS_LED	= PB_8 (0x18)#
+	//	Port: 0x18 >> 4 = 1 (=GPIOB)
+	//  Pin:  0x18 & 0f = 8	
 
-	// turn on the BUS-LED (PE10 = 0x4A)
-	// port = 0x4A >> 4 =  0x4 GPIOE_BASE = 0x40021000
+	LDR r0, bl_hal_gpiob_base_address
 
-	// pin = 0x4A & 0xF = 0xA
-	// init-mask = 0xA*2 = 1 << 0xA * 2 (2 bits wide) = 100000
-	// on-value-mask = 1 << 0xA = 400 
+	// we need to use GPIOx_CRH (Offset 4) for the Pin 8
+	// enable "Alternate function output Push-pull" output on BUS-LED
+	// needs MODE8 to be 0b10, so the mask is 2
 
-	// enable output on BUS-LED
-	// *((volatile int *)0x40210000) = 0x100000;
-	/*LDR r3, bl_hal_gpioe_address
-	MOVS r2, #0x100000
-	STR r2, [r3, #0]
+	// 0x40010c00 
+	LDR r1, [r0, #4]	// this has an ugly default of 0x44..., so we need to clear
+	BFC r1, #0, #4
+	MOV r2, #0x2
+	ORR r1, r1, r2
+	STR r1, [r0, #4]
 
-	// and turn it on
-	MOV r2, #0x400
-	STR r2, [r3, #0x14]*/
+	// and turn it on with the
+	// Port output data register (GPIOx_ODR) (GPIOB_ODR Offset=0x0C)
+	// Bit: 1<<8 = 0x100
+	MOV r1, #0x100
+	STR r1, [r0, #0x0C]
 
 POP {pc}
 
@@ -306,12 +327,10 @@ PUSH {lr}
 POP {pc}
 
 
-bl_hal_gpioe_address:	.word 0x40021000
-bl_hal_rcc_ahb1enr_address: .word 0x40023830
-bl_hal_crc_address:		.word 0x40023000
-bl_hal_flashc_address:	.word 0x40023C00
-bl_hal_flash_key1:		.word 0x45670123
-bl_hal_flash_key2:		.word 0xCDEF89AB
+.align 4
+bl_hal_rcc_base_address:	.word RCC_BASE
+bl_hal_gpiob_base_address:	.word GPIOB_BASE
+bl_hal_crc_address:			.word CRC_BASE
 
 
 
