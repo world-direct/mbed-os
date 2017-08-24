@@ -259,7 +259,7 @@ PUSH {r4, r5, r6, lr}
 		BNE 1f	// if (result!=0) return
 
 		MOV r0, r6
-		MOV r1, #0x000000FF
+		ADR r1, bl_data_commandword_apply
 		BL bl_set_command_word
 
 		B 1f
@@ -321,7 +321,7 @@ bl_start:
 
 	// update command-word to zero
 	MOV r0, r6
-	MOV r1, #0	
+	ADR r1, bl_data_commandword_success	
 	BL bl_set_command_word
 
 	.L_start_app:
@@ -341,7 +341,7 @@ bl_start:
 
 
 /*************************************************************************
-	void bl_set_command_word(int image-size, int command_word)
+	void bl_set_command_word(int image-size, int * command_word)
 	updates the command-word in flash.
 	
 	NOTE: There is no erase here, so after erase (after factory programming or sw-update), you can only update bits from 1 to 0.
@@ -353,16 +353,16 @@ bl_start:
 .type bl_set_command_word, %function
 bl_set_command_word:
 PUSH {r4, lr}
+
 	LDR r2, bl_data_update_image_start
 	ADD r0, r2		// r0 (dest): &command_word_in_flash
 	
+	MOV r4, r1		// command_word
+
 	// local buffer (we uses stack) needed for flash_memcpy
-	STR r1, [sp]	// store arg command_word in local 4 bytes buffer
-	MOV r1, sp		//  r1 (str): &local_buffer
-	SUB sp, #4		// alloc
+	MOV r1, r4
 	MOV r2, #4		// r2: (size): always 4
 	BL bl_hal_flash_memcpy	// perform the write
-	ADD sp, #4		// dealloc on stack
 
 POP {r4, pc}
 
@@ -520,6 +520,8 @@ bl_data_update_image_start : .word __update_image_start
 bl_data_metadata_offset : .word __metadata_offset
 bl_data_metadata_magic: .word __metadata_magic
 bl_data_application_max_size: .word __application_max_size
+bl_data_commandword_apply: .word 0x000000FF
+bl_data_commandword_success: .word 0x00000000
 
 bl_HardFault_Handler:
 	B .
