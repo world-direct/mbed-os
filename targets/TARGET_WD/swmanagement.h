@@ -42,6 +42,10 @@ typedef struct {
 	///< returns a pointer to the version string of the downloaded image.
 	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
 	const char * image_application_version;
+
+	///< returns the value of the commit-id (should use HEX output)
+	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
+	uint32_t image_commit_id;
 	
 	///< returns validation result. This is a not-cached or persistent value.
 	image_validation_result image_validation_result;

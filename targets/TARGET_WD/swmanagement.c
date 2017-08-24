@@ -8,6 +8,8 @@ static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * in
 	info->image_total_length = *((size_t*)(mdroot + 0x04));
 	info->image_application_name = (const char *)(mdroot + 0x08);
 	info->image_application_version = (const char *)(mdroot + 0x28);
+	info->image_commit_id = *((uint32_t *)(mdroot + 0x38));
+
 }
 
 void swmanagement_get_status(swmanagement_status * status)
