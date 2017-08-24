@@ -7,7 +7,7 @@
  */ 
 
 .syntax unified
-.cpu cortex-m1
+.cpu cortex-m3
 .thumb
 
 .section .bl_text,"ax",%progbits
