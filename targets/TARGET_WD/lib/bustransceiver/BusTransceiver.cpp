@@ -27,7 +27,7 @@ BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PL
 	this->_dmaSerial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
 	this->_dmaSerial->set_dma_usage_tx(DMA_USAGE_ALWAYS);
 	
-	this->_dmaSerial->attachRxCallback(Callback<void(dma_frame_t *)>(this, &BusTransceiver::_bt_rx_process_frame));
+	this->_dmaSerial->attachRxCallback(Callback<void(dma_frame_meta_t *)>(this, &BusTransceiver::_bt_rx_process_frame));
 	
 }
 
@@ -47,28 +47,33 @@ void BusTransceiver::_bt_tx_complete(int evt) {
 
 }
 
-void BusTransceiver::_bt_rx_process_frame(dma_frame_t * frame) {
+void BusTransceiver::_bt_rx_process_frame(dma_frame_meta_t * frame_meta) {
 	
-	if (frame->size < 5) {// crc already 4 bytes
-		wd_log_warn("Frame is too short to be valid! (length: %d)", frame->size);
+	if (frame_meta->frame_size < 5) {// crc already 4 bytes
+		wd_log_warn("Frame is too short to be valid! (length: %d)", frame_meta->frame_size);
 		return;
 	}
 	
+	char buffer[frame_meta->frame_size] = {};
+	size_t length;
+	
+	this->_dmaSerial->getFrame(frame_meta, buffer, &length);
+	
 	// crc check
 	uint32_t crc = UINT32_MAX;
-	for (int i = 0; i < frame->size; i++) {
-		crc = update_crc_32(crc, frame->data[i]);
+	for (int i = 0; i < length; i++) {
+		crc = update_crc_32(crc, buffer[i]);
 	}
 	
 	if (crc != 0) { // CRC error
-		wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", frame->size, crc, frame->data[0]);
+		wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", length, crc, buffer[0]);
 	}
-	else if (memcmp(this->_bt_tx_buffer, frame->data, frame->size) == 0) { // Tx echo
-		wd_log_warn("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", frame->size, crc, frame->data[0]);
+	else if (memcmp(this->_bt_tx_buffer, buffer, length) == 0) { // Tx echo
+		wd_log_warn("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", length, crc, buffer[0]);
 	}
 	else { // valid frame
-		wd_log_info("BusTranceiver: Received valid frame (length: %d, first byte: %x).", frame->size, frame->data[0]);
-		this->bt_handle_frame(frame->data, frame->size-4); // exclude crc in upper layer
+		wd_log_info("BusTranceiver: Received valid frame (length: %d, first byte: %x).", length, buffer[0]);
+		this->bt_handle_frame(buffer, length-4); // exclude crc in upper layer
 	}
 
 }

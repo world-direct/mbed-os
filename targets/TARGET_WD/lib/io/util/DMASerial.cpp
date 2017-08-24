@@ -6,50 +6,50 @@
  */ 
 
 #include "DMASerial.h"
+extern DMA_HandleTypeDef DmaRxHandle[8];
+static Mail<dma_frame_meta_t, DMASERIAL_RX_QUEUE_SIZE> _dma_frame_queue;
+static int consumer_pointer = 0;
 
-static Mail<dma_frame_t, DMASERIAL_RX_QUEUE_SIZE> _dma_frame_queue;
-
-static void _dma_rx_capture(UART_HandleTypeDef * huart, uint8_t * data, uint16_t size) {
+static void _dma_rx_capture(UART_HandleTypeDef * huart, uint8_t * data, uint16_t producer_pointer) {
 	
-	/*
-	 * TODO:
-	 * avoid performance bottleneck by replacing copy of DMA
-	 * buffer with buffer switching as DMA is paused during
-	 * copy operation!
-	 */
+	dma_frame_meta_t * frame_meta = _dma_frame_queue.alloc();
 	
-	// copy and enqueue received data
-	dma_frame_t * dma_frame = _dma_frame_queue.alloc();
-	if (dma_frame != NULL) {
-		memcpy(dma_frame->data, data, size);
-		dma_frame->size = size;
-		dma_frame->data[size] = "\0";
-
-		wd_log_debug("DMASerial: Received frame: %s", dma_frame->data);
-		
-		if (_dma_frame_queue.put(dma_frame) != osOK) {
-			wd_log_error("DMASerial: Unable to enqueue frame!");
-		}	
+	size_t frame_size;
+	if (consumer_pointer < producer_pointer) {
+		frame_size = producer_pointer - consumer_pointer;
+	} else if (consumer_pointer > producer_pointer){
+		frame_size = huart->RxXferSize - consumer_pointer + producer_pointer;
 	} else {
-		wd_log_error("DMASerial: Discarding received frame as queue is out of memory!");
+		return;
 	}
 	
-	// restart DMA transfer
-	HAL_UART_Receive_DMA(huart, huart->pRxBuffPtr, huart->RxXferSize);
+	if (frame_meta != NULL) {
+		frame_meta->buffer = data;
+		frame_meta->buffer_size = huart->RxXferSize;
+		frame_meta->frame_start_pos = consumer_pointer;
+		frame_meta->frame_size = frame_size;
+		if (_dma_frame_queue.put(frame_meta) != osOK) {
+			wd_log_error("DMASerial: Unable to enqueue frame!");
+		}
+	} else {
+		wd_log_error("DMASerial: Error allocating memory for frame queue!");
+	}
+	
+	consumer_pointer = (consumer_pointer + frame_size) % huart->RxXferSize;
 	
 }
 
 void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
 	
-	uint16_t rxXferCount = 0;
+	uint16_t producer_pointer = 0;
 	if(huart->hdmarx != NULL)
 	{
 		DMA_HandleTypeDef *hdma = huart->hdmarx;
 		
-		/* Determine size/amount of received data */
-		rxXferCount = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
+		//HAL_DMA_Abort(huart->hdmarx);
 		
-		HAL_DMA_Abort(huart->hdmarx);
+		/* Determine size/amount of received data */
+		producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 		
 		huart->RxXferCount = 0;
 		/* Check if a transmit process is ongoing or not */
@@ -73,28 +73,37 @@ void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
 		
 	}
 	
-	_dma_rx_capture(huart, huart->pRxBuffPtr, rxXferCount);
+	_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
 	
+}
+
+int DMASerial::GetLength()
+{
+	DMA_HandleTypeDef *serial_handle = &DmaRxHandle[this->_serial.serial.index];
+	return __HAL_DMA_GET_COUNTER(serial_handle);
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	
-	// DMA buffer full...
+	wd_log_warn("DMASerial: Rx complete callback (buffer is full -> rollover if circular)!");
 	
-	// disable idle interrupt (otherwise it would be called as well)
-	__HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
-	
-	// chances are this won't be a valid frame, however we need to clean the buffer
-	_dma_rx_capture(huart, huart->pRxBuffPtr, huart->RxXferSize);
-	
-	__HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
+//	// DMA buffer full...
+//	HAL_DMA_Abort(huart->hdmarx);
+//	
+//	// disable idle interrupt (otherwise it would be called as well)
+//	__HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
+//	
+//	// chances are this won't be a valid frame, however we need to clean the buffer
+//	_dma_rx_capture(huart, huart->pRxBuffPtr, huart->RxXferSize);
+//	
+//	__HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
 	
 }
 
 DMASerial::DMASerial(PinName tx, PinName rx, int baud)
 : RawSerial(tx, rx, baud) { }
 
-void DMASerial::getFrame(uint8_t * buffer, int * length, uint32_t timeout) {
+void DMASerial::popFrame(char * buffer, int * length, uint32_t timeout) {
 	
 	if (this->_rx_cb) {
 		// cb is attached so we do not permit reads
@@ -106,12 +115,13 @@ void DMASerial::getFrame(uint8_t * buffer, int * length, uint32_t timeout) {
 	
 	if (evt.status == osEventMail) {
 		
-		dma_frame_t * dma_frame = (dma_frame_t *) evt.value.p;
+		dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
 		
-		*length = dma_frame->size;
-		memcpy(buffer, dma_frame->data, dma_frame->size);
+		*length = frame_meta->frame_size;
 		
-		_dma_frame_queue.free(dma_frame);
+		getFrame(frame_meta, buffer, length);
+		
+		_dma_frame_queue.free(frame_meta);
 		
 	} else {
 		*length = 0;
@@ -120,7 +130,19 @@ void DMASerial::getFrame(uint8_t * buffer, int * length, uint32_t timeout) {
 	
 }
 
-void DMASerial::attachRxCallback(Callback<void(dma_frame_t *)> func) {
+void DMASerial::getFrame(dma_frame_meta_t * frame_meta, char * buffer, int * length) {
+	*length = frame_meta->frame_size;
+
+	if (frame_meta->frame_start_pos + frame_meta->frame_size < frame_meta->buffer_size) {
+		memcpy(buffer, frame_meta->buffer + frame_meta->frame_start_pos, frame_meta->frame_size);
+	} else {
+		int len = frame_meta->buffer_size - frame_meta->frame_start_pos;
+		memcpy(buffer, frame_meta->buffer + frame_meta->frame_start_pos, len);
+		memcpy(buffer + len, frame_meta->buffer, frame_meta->frame_size - len);
+	}
+}
+
+void DMASerial::attachRxCallback(Callback<void(dma_frame_meta_t *)> func) {
 
 	if (func){
 		this->_rx_cb = func;
@@ -145,9 +167,9 @@ void DMASerial::_process_queue_loop(void) {
 		
 		if (evt.status == osEventMail) {
 			
-			dma_frame_t * dma_frame = (dma_frame_t *) evt.value.p;
-			this->_rx_cb.call(dma_frame);
-			_dma_frame_queue.free(dma_frame);
+			dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
+			this->_rx_cb.call(frame_meta);
+			_dma_frame_queue.free(frame_meta);
 			
 		}
 		

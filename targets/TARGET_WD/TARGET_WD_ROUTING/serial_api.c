@@ -106,7 +106,7 @@ static void init_dma(serial_t *obj)
 		hdma_rx->Init.MemInc              = DMA_MINC_ENABLE;
 		hdma_rx->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
 		hdma_rx->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-		hdma_rx->Init.Mode                = DMA_NORMAL;
+		hdma_rx->Init.Mode                = DMA_CIRCULAR;
 		hdma_rx->Init.Priority            = DMA_PRIORITY_HIGH;
 
 		if (HAL_DMA_Init(hdma_rx) != HAL_OK) {
@@ -1202,7 +1202,7 @@ void serial_tx_abort_asynch(serial_t *obj)
 #if DEVICE_SERIAL_ASYNCH_DMA
 	if (huart->hdmatx != NULL)
 	{
-		HAL_DMA_Abort(huart->hdmatx);
+//		HAL_DMA_Abort(huart->hdmatx);
 	}
 	#endif
 	
@@ -1239,7 +1239,7 @@ void serial_rx_abort_asynch(serial_t *obj)
 	#if DEVICE_SERIAL_ASYNCH_DMA
 	if (huart->hdmarx != NULL)
 	{
-		HAL_DMA_Abort(huart->hdmarx);
+//		HAL_DMA_Abort(huart->hdmarx);
 	}
 	#endif
 	

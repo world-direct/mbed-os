@@ -44,7 +44,7 @@ private:
 	BusTransceiver(const BusTransceiver &c);
 	BusTransceiver& operator=(const BusTransceiver &c);
 
-	void _bt_rx_process_frame(dma_frame_t * frame);
+	void _bt_rx_process_frame(dma_frame_meta_t * frame_meta);
 	void _bt_tx_complete(int evt);
 
 }; //BusTransceiver

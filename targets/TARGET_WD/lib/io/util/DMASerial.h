@@ -15,13 +15,14 @@
 #include "wd_logging.h"
 
 #define DMASERIAL_RX_BUFFER_SIZE	512
-#define DMASERIAL_RX_QUEUE_SIZE		5
+#define DMASERIAL_RX_QUEUE_SIZE		10
 
-// TODO: currently we need lots of memory here...
 typedef struct {
-	char data[DMASERIAL_RX_BUFFER_SIZE];
-	size_t size;
-} dma_frame_t;
+	uint8_t * buffer;
+	size_t buffer_size;
+	unsigned int frame_start_pos;
+	size_t frame_size;
+} dma_frame_meta_t;
 
 class DMASerial : public RawSerial{
     
@@ -29,16 +30,17 @@ public:
 	
     DMASerial(PinName tx, PinName rx, int baud);
 	
-	void getFrame(uint8_t * buffer, int * length, uint32_t timeout = osWaitForever);
-	void attachRxCallback(Callback<void(dma_frame_t *)> func);
+	void popFrame(char * buffer, int * length, uint32_t timeout = osWaitForever);
+	void getFrame(dma_frame_meta_t * frame_meta, char * buffer, int * length);
+	void attachRxCallback(Callback<void(dma_frame_meta_t *)> func);
 	void detachRxCallback(void);
-	
+	int GetLength(void);
+
 private:
 	Thread _queueProcessingThread;
-	Callback<void(dma_frame_t *)> _rx_cb; 
+	Callback<void(dma_frame_meta_t *)> _rx_cb; 
 	
 	void _process_queue_loop(void);
-
 };
 
 
