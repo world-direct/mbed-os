@@ -24,8 +24,12 @@ MEMORY
     VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
 	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
     FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
+
+	CONFIG (rw) :			ORIGIN = 0x08100000, LENGTH = 0x4000
+
     CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K /* len: 0x10000 */
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k /* len : 0x30000 */
+
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -289,6 +293,14 @@ SECTIONS
         __HeapLimit = .;
         __uvisor_heap_end = .;
     } > RAM
+
+	.factoryconfig :
+	{
+		KEEP(*(.flashconfig_factory))
+	} > CONFIG
+
+	__flashconfig_start = ORIGIN(CONFIG);
+	__flashconfig_end = ORIGIN(CONFIG) + LENGTH(CONFIG);
 
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
     __stack = __StackTop;
