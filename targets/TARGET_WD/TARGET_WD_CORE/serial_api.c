@@ -1268,6 +1268,29 @@ uint8_t serial_rx_active(serial_t *obj)
 	return ((HAL_UART_GetState(handle) == HAL_UART_STATE_BUSY_RX) ? 1 : 0);
 }
 
+#if DEVICE_SERIAL_ASYNCH_DMA
+
+void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
+	
+	//uint16_t producer_pointer = 0;
+	//if(huart->hdmarx != NULL)
+	//{
+		//DMA_HandleTypeDef *hdma = huart->hdmarx;
+		//
+		///* Determine size/amount of received data */
+		//producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
+		//
+		///* Check if a transmit process is ongoing or not */
+		//
+		//huart->RxState = HAL_UART_STATE_READY;
+		//
+	//}
+	//_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
+	
+}
+
+#endif
+
 /** The asynchronous TX and RX handler.
  *
  * @param obj The serial object
@@ -1390,10 +1413,10 @@ void serial_rx_abort_asynch(serial_t *obj)
 {
     UART_HandleTypeDef *handle = &UartHandle[SERIAL_OBJ(index)];
     __HAL_UART_DISABLE_IT(handle, UART_IT_RXNE);
-    __HAL_UART_DISABLE_IT(handle, UART_IT_IDLE);
+//    __HAL_UART_DISABLE_IT(handle, UART_IT_IDLE);
     // clear flags
     __HAL_UART_CLEAR_PEFLAG(handle);
-	__HAL_UART_CLEAR_IDLEFLAG(handle);
+//	__HAL_UART_CLEAR_IDLEFLAG(handle);
     // reset states
     handle->RxXferCount = 0;
     

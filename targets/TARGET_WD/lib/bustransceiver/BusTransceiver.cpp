@@ -15,7 +15,8 @@ extern "C" {
 }
 
 BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
-	: _tx_semaphore(1) {
+	: _tx_complete_sem(1),
+	  _tx_echo_received_sem(1) {
 
 	this->_dmaSerial = new DMASerial(Tx, Rx, baud);
 		
@@ -43,7 +44,7 @@ BusTransceiver::~BusTransceiver() {
 void BusTransceiver::_bt_tx_complete(int evt) {
 
 	wd_log_debug("_bt_tx_complete");
-	this->_tx_semaphore.release();
+	this->_tx_complete_sem.release();
 
 }
 
@@ -69,7 +70,8 @@ void BusTransceiver::_bt_rx_process_frame(dma_frame_meta_t * frame_meta) {
 		wd_log_error("BusTranceiver: CRC error, discarding frame! (length: %d, crc: %x, first byte: %x)", length, crc, buffer[0]);
 	}
 	else if (memcmp(this->_bt_tx_buffer, buffer, length) == 0) { // Tx echo
-		wd_log_warn("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", length, crc, buffer[0]);
+		wd_log_debug("BusTranceiver: Received echo, discarding frame! (length: %d, crc: %x, first byte: %x)", length, crc, buffer[0]);
+		this->_tx_echo_received_sem.release();
 	}
 	else { // valid frame
 		wd_log_info("BusTranceiver: Received valid frame (length: %d, first byte: %x).", length, buffer[0]);
@@ -81,10 +83,9 @@ void BusTransceiver::_bt_rx_process_frame(dma_frame_meta_t * frame_meta) {
 void BusTransceiver::bt_start(void) {
 
 	// start async read
-	this->_dmaSerial->read(
+	this->_dmaSerial->startRead(
 		this->_bt_rx_buffer, 
-		BT_BUFFER_SIZE, 
-		NULL
+		BT_BUFFER_SIZE
 	);
 
 }
@@ -111,8 +112,15 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	
 	// send frame
 	this->_dmaSerial->write(this->_bt_tx_buffer, size, callback(this, &BusTransceiver::_bt_tx_complete));
-	this->_tx_semaphore.wait(BT_TX_WRITE_TIMEOUT);
-	this->_tx_semaphore.release();
+	
+	// wait for transmit completion
+	this->_tx_complete_sem.wait(BT_TX_WRITE_TIMEOUT);
+	this->_tx_complete_sem.release();
+	
+	// wait for echo reception
+	this->_tx_echo_received_sem.wait(BT_TX_ECHO_TIMEOUT);
+	this->_tx_echo_received_sem.release();
+	
 }
 
 // implement this in the upper layer to handle valid frames

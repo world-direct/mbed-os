@@ -20,7 +20,7 @@ SerialStreamAdapter::SerialStreamAdapter() : _tx_sem(1) {
 	wd_log_debug("SerialStreamAdapter --> ctor");
 	_serial = new DMASerial(GSM_TXD, GSM_RXD, MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE);
 	_serial->set_dma_usage_rx(DMA_USAGE_ALWAYS);
-	_serial->set_dma_usage_tx(DMA_USAGE_ALWAYS);
+	_serial->set_dma_usage_tx(DMA_USAGE_NEVER);
 }
 
 int SerialStreamAdapter::abortRead() {
@@ -45,7 +45,7 @@ size_t SerialStreamAdapter::available() {
 	return 0;
 }
 
-void SerialStreamAdapter::attachRxCallback(Callback<void(dma_frame_t *)> cb) {
+void SerialStreamAdapter::attachRxCallback(Callback<void(dma_frame_meta_t *)> cb) {
 	
 	this->_serial->attachRxCallback(cb);
 	if(!_reading_started){
@@ -56,6 +56,11 @@ void SerialStreamAdapter::attachRxCallback(Callback<void(dma_frame_t *)> cb) {
 
 void SerialStreamAdapter::detachRxCallback(void) {
 	this->_serial->detachRxCallback();
+}
+
+void SerialStreamAdapter::getFrame(dma_frame_meta_t * frame_meta, char * buffer, int * length)
+{
+	this->_serial->getFrame(frame_meta, buffer, length);
 }
 
 int SerialStreamAdapter::waitSpace(uint32_t timeout /* = osWaitForever */) {
@@ -72,7 +77,7 @@ void SerialStreamAdapter::write_callback(int a) {
 }
 
 void SerialStreamAdapter::start_reading() {
-	_serial->read(_dma_buffer, DMA_BUFFER_SIZE, NULL);
+	_serial->startRead(_dma_buffer, DMA_BUFFER_SIZE);
 	_reading_started = true;
 }
 
@@ -82,14 +87,14 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 		start_reading();
 	}
 	
-	_serial->getFrame(buf, pLength, timeout);
+	_serial->popFrame(buf, pLength, timeout);
 	
 	if (*pLength > maxLength) {
 		wd_log_error("SerialStreamAdapter: MaxLength exceeded!");	// todo: handle max length limit
 	}
 	
 	if (*pLength == 0) {
-		wd_log_warn("SerialStreamAdapter: Length of frame is 0!");
+		wd_log_debug("SerialStreamAdapter: Length of frame is 0!");
 		return NET_UNKNOWN;
 	}
 	
@@ -100,9 +105,13 @@ int SerialStreamAdapter::read(uint8_t* buf, size_t* pLength, size_t maxLength, u
 int SerialStreamAdapter::write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) {
 	wd_log_debug("SerialStreamAdapter --> write");
 	
-	this->_serial->write(buf, length, callback(this, &SerialStreamAdapter::write_callback));
-	this->_tx_sem.wait(timeout);
-	this->_tx_sem.release();
+	for(int i = 0; i < length; i++){
+        _serial->putc(buf[i]);
+    }
+
+//	this->_serial->write(buf, length, callback(this, &SerialStreamAdapter::write_callback));
+//	this->_tx_sem.wait(timeout);
+//	this->_tx_sem.release();
 	
 	return OK;
 }

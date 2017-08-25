@@ -171,7 +171,7 @@ private:
 	
 	pppos_context_t _pppos_ctx;
 	
-	void serial_read_thread_entry(dma_frame_t * frame);
+	void serial_read_thread_entry(dma_frame_meta_t * frame);
 	static int pppos_write_wrapper(pppos_context_t* pppos_context, uint8_t* buf, size_t length, uint32_t timeout = osWaitForever);
 
 };

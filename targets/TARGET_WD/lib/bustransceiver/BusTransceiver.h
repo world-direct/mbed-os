@@ -15,6 +15,7 @@
 
 #define BT_BUFFER_SIZE			DMASERIAL_RX_BUFFER_SIZE
 #define BT_TX_WRITE_TIMEOUT		100
+#define BT_TX_ECHO_TIMEOUT		100
 
 class BusTransceiver {
 	
@@ -28,7 +29,8 @@ private:
 	
 	DMASerial *_dmaSerial;
 	
-	rtos::Semaphore _tx_semaphore;
+	rtos::Semaphore _tx_complete_sem;
+	rtos::Semaphore _tx_echo_received_sem;
 	
 //functions
 public:

@@ -1081,6 +1081,33 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     }
 }
 
+#if DEVICE_SERIAL_ASYNCH_DMA
+
+void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
+	
+	//uint16_t producer_pointer = 0;
+	//if(huart->hdmarx != NULL)
+	//{
+		//DMA_HandleTypeDef *hdma = huart->hdmarx;
+		//
+		///* Determine size/amount of received data */
+		//producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
+		//
+		///* Check if a transmit process is ongoing or not */
+		//
+		//if(huart->State == HAL_UART_STATE_BUSY_TX_RX) {
+			//huart->State = HAL_UART_STATE_BUSY_TX;
+			//} else {
+			//huart->State = HAL_UART_STATE_READY;
+		//}
+		//
+	//}
+	//_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
+	
+}
+
+#endif
+
 /**
  * The asynchronous TX and RX handler.
  *

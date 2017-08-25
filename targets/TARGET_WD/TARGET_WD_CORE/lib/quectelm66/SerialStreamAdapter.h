@@ -21,7 +21,6 @@
 #include "DMASerial.h"
 
 #define DMA_BUFFER_SIZE						DMASERIAL_RX_BUFFER_SIZE
-#define DMA_RX_QUEUE_SIZE					DMASERIAL_RX_QUEUE_SIZE
 #define DMA_READ_SEM_COMPLETE_TIMEOUT_MS	100
 #define DMA_WRITE_SEM_COMPLETE_TIMEOUT_MS	100
 
@@ -49,8 +48,9 @@ class SerialStreamAdapter : public IOStream
 		virtual int write(uint8_t* buf, size_t length, uint32_t timeout /* = osWaitForever */) override;
 		virtual size_t space() override;
 		virtual size_t available() override;
-		void attachRxCallback(Callback<void(dma_frame_t *)> cb);
+		void attachRxCallback(Callback<void(dma_frame_meta_t *)> cb);
 		void detachRxCallback(void);
+		void getFrame(dma_frame_meta_t * frame_meta, char * buffer, int * length);
 };
 
 #endif // SERIALSTREAMADAPTER_H_

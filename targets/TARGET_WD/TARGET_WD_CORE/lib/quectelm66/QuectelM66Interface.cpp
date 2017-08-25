@@ -149,7 +149,7 @@ int QuectelM66Interface::pppos_write_wrapper(pppos_context_t* pppos_context, uin
 nsapi_error_t QuectelM66Interface::connect() {
 	wd_log_info("QuectelM66Interface --> connect");
 	
-	((SerialStreamAdapter *) this->_pppos_ctx.serial_stream_adapter)->attachRxCallback(Callback<void(dma_frame_t *)>(this, &QuectelM66Interface::serial_read_thread_entry));
+	((SerialStreamAdapter *) this->_pppos_ctx.serial_stream_adapter)->attachRxCallback(Callback<void(dma_frame_meta_t *)>(this, &QuectelM66Interface::serial_read_thread_entry));
 	
 	if (mbed_lwip_quectelm66_bringup(
             _ip_address[0] ? _ip_address : 0,
@@ -166,9 +166,14 @@ nsapi_error_t QuectelM66Interface::connect() {
 	
 }
 
-void QuectelM66Interface::serial_read_thread_entry(dma_frame_t * frame) {
+void QuectelM66Interface::serial_read_thread_entry(dma_frame_meta_t * frame_meta) {
 	
-	pppos_input_tcpip(mbed_get_ppp_pcb(), frame->data, frame->size);
+	char buffer[frame_meta->frame_size] = {};
+	size_t length;
+	
+	this->_serialStreamAdapter->getFrame(frame_meta, buffer, &length);
+	
+	pppos_input_tcpip(mbed_get_ppp_pcb(), buffer, length);
 	
 	//wd_log_debug("QuectelM66Interface --> serial_read_thread_entry");
 	//
