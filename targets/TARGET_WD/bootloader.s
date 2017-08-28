@@ -100,7 +100,7 @@ if CRC word == 0 => IMAGE_UNVERIFYABLE (no crc signature found)
  */ 
 
 
-
+#include "WD_ABI.h"
 
 .syntax unified
 .thumb
@@ -492,7 +492,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 		// check if the CRC word was 0xFFFFFFFF, that is an unverifyable image
 		LDR r0, [r5, #-4];	// r5 points one word next to the length
-		MOV r1, 0xFFFFFFFF
+		LDR r1, bl_data_unverifiable_crc_value
 		CMP r0, r1
 		BEQ .L_unverfiyable
 
@@ -517,11 +517,12 @@ POP {r4, r5, r6, r7, r8, pc}
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
-bl_data_metadata_offset : .word __metadata_offset
-bl_data_metadata_magic: .word __metadata_magic
+bl_data_metadata_offset : .word WD_ABI_METADATA_SECTION_OFFSET
+bl_data_metadata_magic: .word WD_ABI_METADATA_MAGIC
 bl_data_application_max_size: .word __application_max_size
 bl_data_commandword_apply: .word 0x000000FF
 bl_data_commandword_success: .word 0x00000000
+bl_data_unverifiable_crc_value: .word WD_ABI_UNVERIFIABLE_CRC_VALUE
 
 bl_HardFault_Handler:
 	B .

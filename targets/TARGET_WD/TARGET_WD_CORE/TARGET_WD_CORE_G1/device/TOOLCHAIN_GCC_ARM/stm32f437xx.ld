@@ -243,14 +243,14 @@ SECTIONS
         . = ALIGN(32);
         __uvisor_secure_end = .;
 
+    } > FLASH
+
+	.crc32 : 
+	{
 		. = ALIGN(4);
 		__crc32_ptr = .;
 		KEEP(*(.crc32))
-
-    } > FLASH
-
-	__image_end = .;
-	__image_size = __image_end - __image_start;
+	} > FLASH
 
     /* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
@@ -301,10 +301,9 @@ SECTIONS
     __uvisor_public_sram_start = ORIGIN(RAM);
     __uvisor_public_sram_end = ORIGIN(RAM) + LENGTH(RAM);
 
+	__image_size = ADDR(.crc32) - __image_start + 4;
+	
 	__config_start = ORIGIN(CONFIG);
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
-
-	__metadata_magic = 0x01020304;
-	__metadata_offset = 0x300;
 }

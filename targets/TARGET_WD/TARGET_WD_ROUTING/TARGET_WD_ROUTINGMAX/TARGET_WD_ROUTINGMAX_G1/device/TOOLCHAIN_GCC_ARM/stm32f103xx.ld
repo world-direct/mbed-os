@@ -145,18 +145,8 @@ SECTIONS
     } > FLASH
     __exidx_end = .;
 
-    __etext = .;
+	__etext = .;
     _sidata = .;
-
-	.crc32 : 
-	{
-		. = ALIGN(4);
-		__crc32_ptr = .;
-		KEEP(*(.crc32))
-	} > FLASH
-
-	__image_end = .;
-	__image_size = __image_end - __image_start;
 
 	.interrupts_ram :
     {
@@ -207,6 +197,14 @@ SECTIONS
 
     } > RAM AT > FLASH
 
+	.crc32 : 
+	{
+		. = ALIGN(4);
+		__crc32_ptr = .;
+		KEEP(*(.crc32))
+	} > FLASH
+
+
 	/* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
      * store state across soft reboots. */
@@ -248,14 +246,10 @@ SECTIONS
     /* Check if data + heap + stack exceeds RAM limit */
     ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
 
-
+	__image_size = ADDR(.crc32) - __image_start + 4;
 	
 	__config_start = ORIGIN(CONFIG);
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
-
-	__metadata_magic = 0x01020304;
-	__metadata_offset = 0x300;
-
 
 }
