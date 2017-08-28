@@ -12,18 +12,10 @@
 #include "mbed.h"
 #include "objects.h"
 #include "DMASerial.h"
-#include "Mutex.h"
 
-#define BT_BUFFER_SIZE	512
-#define BT_EOF_CHAR_MATCH			(126)
-#define BT_RX_CHECK_INTERVAL_MSEC	100
-
-#define BT_RX_READ_TIMEOUT1			10
-#define BT_RX_READ_TIMEOUT2			100
-#define BT_TX_WRITE_TIMEOUT			100
-
-extern DMA_HandleTypeDef DmaTxHandle[5];
-extern DMA_HandleTypeDef DmaRxHandle[5];
+#define BT_BUFFER_SIZE			DMASERIAL_RX_BUFFER_SIZE
+#define BT_TX_WRITE_TIMEOUT		100
+#define BT_TX_ECHO_TIMEOUT		100
 
 class BusTransceiver {
 	
@@ -35,17 +27,10 @@ private:
 	char * _bt_rx_buffer;
 	char * _bt_tx_buffer;
 	
-	char * _bt_rx_buffer_step;
-	
-	unsigned int _bt_rx_consumer;
-	unsigned int _bt_rx_producer;
-	
 	DMASerial *_dmaSerial;
 	
-	rtos::Mutex _mutex;
-	rtos::Semaphore _tx_semaphore;
-	Timer _stepTimer;
-	Thread _readProcessingThread;
+	rtos::Semaphore _tx_complete_sem;
+	rtos::Semaphore _tx_echo_received_sem;
 	
 //functions
 public:
@@ -61,11 +46,8 @@ private:
 	BusTransceiver(const BusTransceiver &c);
 	BusTransceiver& operator=(const BusTransceiver &c);
 
-	void _bt_rx_entry(void);
-	void _bt_rx_step(void);
-	void _bt_rx_locked_step(void);
+	void _bt_rx_process_frame(dma_frame_meta_t * frame_meta);
 	void _bt_tx_complete(int evt);
-	void _bt_rx_complete(int evt);
 
 }; //BusTransceiver
 
