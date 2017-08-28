@@ -243,10 +243,6 @@ SECTIONS
         . = ALIGN(32);
         __uvisor_secure_end = .;
 
-		. = ALIGN(4);
-		__crc32_ptr = .;
-		KEEP(*(.crc32))
-
     } > FLASH
 
 	__image_end = .;
