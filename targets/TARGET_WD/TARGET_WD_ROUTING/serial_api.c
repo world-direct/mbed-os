@@ -41,7 +41,7 @@
 #define UART_NUM (5)
 
 static uint32_t serial_irq_ids[UART_NUM] = {0};
-static UART_HandleTypeDef uart_handlers[UART_NUM];
+UART_HandleTypeDef uart_handlers[UART_NUM];
 
 static uart_irq_handler irq_handler;
 
@@ -359,6 +359,12 @@ static void uart_irq(int id)
                 __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
             }
         }
+		if (__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) {
+			if (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET) {
+				irq_handler(serial_irq_ids[id], RxIrq);
+				__HAL_UART_CLEAR_FLAG(huart, UART_FLAG_IDLE);
+			}
+		}
         if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET) {
             if (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_ERR) != RESET) {
                 volatile uint32_t tmpval = huart->Instance->DR; // Clear ORE flag
@@ -569,6 +575,7 @@ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
     if (enable) {
         if (irq == RxIrq) {
             __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+			__HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
 			#if DEVICE_SERIAL_ASYNCH_DMA
 			NVIC_SetVector(irq_n, vector_dma);
 			NVIC_EnableIRQ(irq_n);
@@ -593,6 +600,7 @@ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
         int all_disabled = 0;
         if (irq == RxIrq) {
             __HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
+			__HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
             // Check if TxIrq is disabled too
             if ((huart->Instance->CR1 & USART_CR1_TXEIE) == 0) {
                 all_disabled = 1;
@@ -1010,6 +1018,9 @@ void serial_rx_asynch(serial_t *obj, void *rx, size_t rx_length, uint8_t rx_widt
 	NVIC_EnableIRQ(irq_n);
 	// following HAL function will program and enable the DMA transfer
 	HAL_UART_Receive_DMA(huart, (uint8_t*)rx, rx_length);
+	
+	/* Enable the UART Idle line interrupt: */
+	__HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
 	#else
 	// following HAL function will enable the RXNE interrupt + error interrupts
 	HAL_UART_Receive_IT(huart, (uint8_t*)rx, rx_length);
@@ -1070,6 +1081,33 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     }
 }
 
+#if DEVICE_SERIAL_ASYNCH_DMA
+
+void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
+	
+	//uint16_t producer_pointer = 0;
+	//if(huart->hdmarx != NULL)
+	//{
+		//DMA_HandleTypeDef *hdma = huart->hdmarx;
+		//
+		///* Determine size/amount of received data */
+		//producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
+		//
+		///* Check if a transmit process is ongoing or not */
+		//
+		//if(huart->State == HAL_UART_STATE_BUSY_TX_RX) {
+			//huart->State = HAL_UART_STATE_BUSY_TX;
+			//} else {
+			//huart->State = HAL_UART_STATE_READY;
+		//}
+		//
+	//}
+	//_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
+	
+}
+
+#endif
+
 /**
  * The asynchronous TX and RX handler.
  *
@@ -1112,7 +1150,7 @@ int serial_irq_handler_asynch(serial_t *obj)
         if (__HAL_UART_GET_IT_SOURCE(huart, USART_IT_ERR) != RESET) {
             return_event |= (SERIAL_EVENT_RX_PARITY_ERROR & obj_s->events);
         }
-}
+	}
 
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET) {
         if (__HAL_UART_GET_IT_SOURCE(huart, USART_IT_ERR) != RESET) {
@@ -1126,8 +1164,9 @@ int serial_irq_handler_asynch(serial_t *obj)
         }
     }
     
-    HAL_UART_IRQHandler(huart);	//todo: move up??
-    
+	// read flags for return event first as they are cleared in IRQ handler
+	HAL_UART_IRQHandler(huart);	
+	
     // Abort if an error occurs
     if (return_event & SERIAL_EVENT_RX_PARITY_ERROR ||
             return_event & SERIAL_EVENT_RX_FRAMING_ERROR ||
@@ -1135,27 +1174,34 @@ int serial_irq_handler_asynch(serial_t *obj)
         return return_event;
     }
     
-    //RX PART
-    if (huart->RxXferSize != 0) {
-        obj->rx_buff.pos = huart->RxXferSize - huart->RxXferCount;
-    }
-    if ((huart->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
-        return_event |= (SERIAL_EVENT_RX_COMPLETE & obj_s->events);
-    }
-    
-    // Check if char_match is present
-    if (obj_s->events & SERIAL_EVENT_RX_CHARACTER_MATCH) {
-        if (buf != NULL) {
-            for (i = 0; i < obj->rx_buff.pos; i++) {
-                if (buf[i] == obj->char_match) {
-                    obj->rx_buff.pos = i;
-                    return_event |= (SERIAL_EVENT_RX_CHARACTER_MATCH & obj_s->events);
-                    serial_rx_abort_asynch(obj);
-                    break;
-                }
-            }
-        }
-    }
+    // RX PART:
+	 if (huart->RxXferSize != 0) {
+		 obj->rx_buff.pos = huart->RxXferSize - huart->RxXferCount;
+	 }
+	 if ((huart->RxXferCount == 0) && (obj->rx_buff.pos >= (obj->rx_buff.length - 1))) {
+		 return_event |= (SERIAL_EVENT_RX_COMPLETE & obj_s->events);
+	 }
+	 
+	 // Check if char_match is present
+	 if (obj_s->events & SERIAL_EVENT_RX_CHARACTER_MATCH) {
+		 if (buf != NULL) {
+			 for (i = 0; i < obj->rx_buff.pos; i++) {
+				 if (buf[i] == obj->char_match) {
+					 obj->rx_buff.pos = i;
+					 return_event |= (SERIAL_EVENT_RX_CHARACTER_MATCH & obj_s->events);
+					 serial_rx_abort_asynch(obj);
+					 break;
+				 }
+			 }
+		 }
+	 }
+	 
+	 if (__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) {
+		 if (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET) {
+			 __HAL_UART_CLEAR_IDLEFLAG(huart);
+			 return_event |= (SERIAL_EVENT_RX_IDLE & obj_s->events);
+		 }
+	 }
     
     return return_event;  
 }
@@ -1179,7 +1225,15 @@ void serial_tx_abort_asynch(serial_t *obj)
     
     // reset states
     huart->TxXferCount = 0;
-    // update handle state
+    
+#if DEVICE_SERIAL_ASYNCH_DMA
+	if (huart->hdmatx != NULL)
+	{
+//		HAL_DMA_Abort(huart->hdmatx);
+	}
+	#endif
+	
+	// update handle state
     if(huart->State == HAL_UART_STATE_BUSY_TX_RX) {
         huart->State = HAL_UART_STATE_BUSY_RX;
     } else {
@@ -1200,13 +1254,22 @@ void serial_rx_abort_asynch(serial_t *obj)
     
     // disable interrupts
     __HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
+	__HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
     __HAL_UART_DISABLE_IT(huart, UART_IT_PE);
     __HAL_UART_DISABLE_IT(huart, UART_IT_ERR);
     
     // clear flags
     __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_RXNE);
+	__HAL_UART_CLEAR_FLAG(huart, UART_FLAG_IDLE);
     volatile uint32_t tmpval = huart->Instance->DR; // Clear errors flag
     
+	#if DEVICE_SERIAL_ASYNCH_DMA
+	if (huart->hdmarx != NULL)
+	{
+//		HAL_DMA_Abort(huart->hdmarx);
+	}
+	#endif
+	
     // reset states
     huart->RxXferCount = 0;
     // update handle state

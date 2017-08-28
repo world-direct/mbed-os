@@ -855,6 +855,9 @@ HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *huart, uint8_t *pData,
 
     /* Enable the UART Parity Error and Data Register not empty Interrupts */
     SET_BIT(huart->Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
+	
+	/* Enable the UART IDLE Line Interrupt */
+	__HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
     
     return HAL_OK;
   }
@@ -1540,6 +1543,14 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
       UART_Receive_IT(huart);
       return;
     }
+	  
+	/* UART RX Idle interrupt --------------------------------------------------*/
+	if(((isrflags & USART_SR_IDLE) != RESET) && ((cr1its & USART_CR1_IDLEIE) != RESET))
+	{
+		//__HAL_UART_CLEAR_IDLEFLAG(huart);
+		HAL_UART_RxIdleCallback(huart);
+	}
+
   }  
 
   /* If some errors occur */
@@ -1761,6 +1772,24 @@ __weak void HAL_UART_AbortReceiveCpltCallback (UART_HandleTypeDef *huart)
             the HAL_UART_AbortReceiveCpltCallback can be implemented in the user file.
    */
 }
+
+/**
+  * @brief  Rx idle callback.
+  * @param  huart: Pointer to a UART_HandleTypeDef structure that contains
+  *                the configuration information for the specified UART module.
+  * @retval None
+  */
+ __weak void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(huart);
+  /* NOTE: This function should not be modified, when the callback is needed,
+           the HAL_UART_RxIdleCallback can be implemented in the user file
+   */
+}
+
+/**
+
 
 /**
   * @}
@@ -2120,7 +2149,8 @@ static HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, 
         /* Disable TXE, RXNE, PE and ERR (Frame error, noise error, overrun error) interrupts for the interrupt process */
         CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE | USART_CR1_TXEIE));
         CLEAR_BIT(huart->Instance->CR3, USART_CR3_EIE);
-        
+        __HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
+
         huart->gState  = HAL_UART_STATE_READY;
         huart->RxState = HAL_UART_STATE_READY;
         
@@ -2159,6 +2189,7 @@ static void UART_EndRxTransfer(UART_HandleTypeDef *huart)
   /* Disable RXNE, PE and ERR (Frame error, noise error, overrun error) interrupts */
   CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
   CLEAR_BIT(huart->Instance->CR3, USART_CR3_EIE);
+  __HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
 
   /* At end of Rx process, restore huart->RxState to Ready */
   huart->RxState = HAL_UART_STATE_READY;
