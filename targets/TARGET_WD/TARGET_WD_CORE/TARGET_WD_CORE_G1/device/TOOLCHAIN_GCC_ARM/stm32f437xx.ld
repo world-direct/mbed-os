@@ -10,55 +10,47 @@ STACK_SIZE = 0x400;
  * heap and the page heap in uVisor applications. */
 HEAP_SIZE = 0x6000;
 
-#if !defined(MBED_APP_START)
-  #define MBED_APP_START 0x08000000
-#endif
-
-#if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 1024k
-#endif
-
 /* Specify the memory areas */
 MEMORY
 {
-    VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
-	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
-    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
-    CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K /* len: 0x10000 */
-    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k /* len : 0x30000 */
+	/* BOOTLOADER:
+		To allow the application to be updated without affecting the bootloader,
+		the bootloader has be resist in an own sector of the flash.
+		It also has to be the first sector, so that the reset-vector is in the bootloader.
+
+		On the STM32F437 the Sector 1 is 16k in size.
+	*/
+
+	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
+	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x3D00
+    VECTORS (rx) :			ORIGIN = 0x08004000, LENGTH = 0x0300
+	METADATA (rw):			ORIGIN = 0x08004300, LENGTH = 0x0100
+    FLASH (rx)   :			ORIGIN = 0x08004400, LENGTH = 0x100000 - 0x4000 - 0x400 /* = 0xFBC00 = 1031168 = 1007k) */
+
+	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
+	UPDATE (rw) :			ORIGIN = 0x08104000, LENGTH = 0xFC000
+
+    CCM (rwx)    :			ORIGIN = 0x10000000, LENGTH = 64K /* len: 0x10000 */
+    RAM (rwx)    :			ORIGIN = 0x20000000, LENGTH = 192k /* len : 0x30000 */
 }
 
-/* Linker script to place sections and symbol values. Should be used together
- * with other linker script that defines memory regions FLASH and RAM.
- * It references following symbols, which must be defined in code:
- *   Reset_Handler : Entry of reset handler
- *
- * It defines following symbols, which code can use without definition:
- *   __exidx_start
- *   __exidx_end
- *   __etext
- *   __data_start__
- *   __preinit_array_start
- *   __preinit_array_end
- *   __init_array_start
- *   __init_array_end
- *   __fini_array_start
- *   __fini_array_end
- *   __data_end__
- *   __bss_start__
- *   __bss_end__
- *   __end__
- *   end
- *   __HeapLimit
- *   __StackLimit
- *   __StackTop
- *   __stack
- *   _estack
- */
-ENTRY(Reset_Handler)
+ENTRY(bl_start)
 
 SECTIONS
 {
+
+	.bl_vectors :
+	{
+		KEEP(*(.bl_vectors))
+         . = ALIGN(4);
+	} > BL_VECTORS
+
+	.bl_text :
+	{
+		*(.bl_text)
+         . = ALIGN(4);
+	} > BL_TEXT
+
     .isr_vector :
     {
 
@@ -250,10 +242,15 @@ SECTIONS
 
         . = ALIGN(32);
         __uvisor_secure_end = .;
+
     } > FLASH
 
-	__image_end = .;
-	__image_size = __image_end - __image_start;
+	.crc32 : 
+	{
+		. = ALIGN(4);
+		__crc32_ptr = .;
+		KEEP(*(.crc32))
+	} > FLASH
 
     /* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
@@ -303,4 +300,10 @@ SECTIONS
     __uvisor_sram_end = ORIGIN(CCM) + LENGTH(CCM);
     __uvisor_public_sram_start = ORIGIN(RAM);
     __uvisor_public_sram_end = ORIGIN(RAM) + LENGTH(RAM);
+
+	__image_size = ADDR(.crc32) - __image_start + 4;
+	
+	__config_start = ORIGIN(CONFIG);
+	__update_image_start = ORIGIN(UPDATE);
+	__application_max_size = LENGTH(UPDATE);
 }
