@@ -91,7 +91,14 @@ int ATCommandsInterface::init() {
 		return err;
 	}
 	wd_log_debug("ATCommandsInterface --> Setup echo succeeded");
-		
+	
+	wd_log_info("ATCommandsInterface --> \"Enable network registration unsolicited result code with location information\"");
+	if (executeSimple("AT+CGREG=2", &res, 100, 5 /* Acc. to spec command takes maximal up to 300 ms. 100ms * 2^(5-1) = 1600 ms should be safe. */) != 0) {
+		wd_log_warn("ATCommandsInterface --> \"Enable network registration unsolicited result code with location information\" failed, continue anyway");
+	} else {
+		wd_log_debug("ATCommandsInterface --> \"Enable network registration unsolicited result code with location information\" succeeded");
+	}
+	
 	enableEvents();
 	wd_log_debug("ATCommandsInterface --> AT interface initialized");
 	

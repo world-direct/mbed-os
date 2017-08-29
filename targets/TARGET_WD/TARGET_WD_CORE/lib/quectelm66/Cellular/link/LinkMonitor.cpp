@@ -36,6 +36,8 @@ LinkMonitor::LinkMonitor(ATCommandsInterface* pIf)
 	, m_gsmRegistrationState(REGISTRATION_STATE_UNKNOWN)
 	, m_gprsRegistrationState(REGISTRATION_STATE_UNKNOWN)
 	, m_bearer(BEARER_UNKNOWN)
+	, m_locationAreaCode()
+	, m_cellId()
 {
 }
 
@@ -49,6 +51,8 @@ int LinkMonitor::Init()
 	wd_log_debug("LinkMonitor --> Line is % s", line);
 	char n[32] = "";
 	char s[32] = "";
+	char lac[4] = "";
+	char ci[4] = "";
 	int v;
 	if (sscanf(line, "+CREG: %*d,%d", &v) >= 1) //Reg state is valid
 	{
@@ -78,7 +82,7 @@ int LinkMonitor::Init()
 			break;
 		}
 	}
-	else if (sscanf(line, "+CGREG: %*d,%d", &v) >= 1) //Reg state is valid
+	else if (sscanf(line, "+CGREG: %*d,%d,\"%4c\",\"%4c\"", &v, lac, ci) >= 1) //Reg state is valid	%*c%[4]c%*c
 	{
 		wd_log_info("LinkMonitor --> +CGREG %d", v);
 		switch (v)
@@ -104,6 +108,13 @@ int LinkMonitor::Init()
 		default:
 			m_gprsRegistrationState = REGISTRATION_STATE_UNKNOWN;  
 			break;
+		}
+		
+		if (m_gprsRegistrationState == REGISTRATION_STATE_HOME_NETWORK || m_gprsRegistrationState == REGISTRATION_STATE_ROAMING) {
+			memset(m_locationAreaCode, '\0', sizeof(m_locationAreaCode));
+			memcpy(m_locationAreaCode, lac, 4);
+			memset(m_cellId, '\0', sizeof(m_locationAreaCode));
+			memcpy(m_cellId, ci, 4);
 		}
 	}
 	else if (sscanf(line, "+COPS: %*d,%*d,\"%*[^\"]\",%d", &v) >= 1)
@@ -161,7 +172,7 @@ int LinkMonitor::Init()
   return OK;
 }
 
-int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, int timeout)
+int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, char * locationAreaCode, char * cellId, int timeout)
 {
 	m_rssi = 0;
 	m_gsmRegistrationState = REGISTRATION_STATE_UNKNOWN;
@@ -176,6 +187,9 @@ int LinkMonitor::GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState,
 	*pGsmRegistrationState = m_gsmRegistrationState;
 	*pGprsRegistrationState = m_gprsRegistrationState;
 	*pBearer = m_bearer;
+	strcpy(locationAreaCode, m_locationAreaCode);
+	strcpy(cellId, m_cellId);
+	
 	return OK;
 }
 

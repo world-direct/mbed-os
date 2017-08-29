@@ -131,6 +131,10 @@ public:
 	char* GetAPN(void){ return _apn; };
 	
 	int GetRSSI(void);
+	
+	char * GetLocationAreaCode(void);
+	
+	char * GetCellId(void);
 
 protected:
 	

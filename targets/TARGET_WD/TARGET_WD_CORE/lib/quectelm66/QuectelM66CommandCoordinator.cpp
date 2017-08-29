@@ -36,7 +36,6 @@ QuectelM66CommandCoordinator::QuectelM66CommandCoordinator(ATCommandsInterface* 
 		this->_atCommandInterface = atCommandsInterface;
 		this->_linkMonitor = new LinkMonitor(atCommandsInterface);
 		this->_basicInformationsProcessor = new BasicInformationsProcessor(atCommandsInterface);
-		
 }
 
 QuectelM66CommandCoordinator::~QuectelM66CommandCoordinator() {
@@ -128,11 +127,19 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		return false;
 	}
 	
+	ATCommandsInterface::ATResult result;
+	
+	// Setup UNC for RSSI
+	//wd_log_info("QuectelM66CommandCoordinator --> \"Setup UNC for RSSI\"");
+	//if (_atCommandInterface->executeSimple("AT+QEXTUNSOL=\"SQ\",1", &result, 100, 5 /* Acc. to spec command takes maximal up to 300 ms. 100ms * 2^(5-1) = 1600 ms should be safe. */) != 0) {
+		//wd_log_warn("QuectelM66CommandCoordinator --> \"Setup UNC for RSSI\" failed, continue anyway");
+	//}
+	//wd_log_debug("QuectelM66CommandCoordinator --> \"Setup UNC for RSSI\" succeeded");
+	
 	// ====== PPP ========
 	// 1.Synchronization between TE and TA 
 	// 2. Fix and save baudrate by AT+IPR=xxx&W
 	wd_log_info("QuectelM66CommandCoordinator --> \"Fix and save baudrate\"");
-	ATCommandsInterface::ATResult result;
 	if (_atCommandInterface->executeSimple("AT+IPR=115200&W", &result, 100, 5 /* Acc. to spec command takes maximal up to 300 ms. 100ms * 2^(5-1) = 1600 ms should be safe. */) != 0) {
 		wd_log_error("QuectelM66CommandCoordinator --> \"Fix and save baudrate\" failed");
 		return false;
@@ -186,7 +193,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		registered = true;
 		
 		wd_log_info("QuectelM66CommandCoordinator --> LinkMonitor getState (remaining tries %d)", tries);
-		if (_linkMonitor->GetState(&_rssi, &_gsmRegistrationState, &_gprsRegistrationState, &_bearer, 1000) != OK) {
+		if (_linkMonitor->GetState(&_rssi, &_gsmRegistrationState, &_gprsRegistrationState, &_bearer, _locationAreaCode, _cellId, 1000) != OK) {
 			wd_log_error("QuectelM66CommandCoordinator --> LinkMonitor getState failed");	
 			return false;
 		}
@@ -232,6 +239,14 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		return false;
 	}
 	wd_log_debug("QuectelM66CommandCoordinator --> Check network bearer succeeded");
+	
+	// Disable 
+	wd_log_info("QuectelM66CommandCoordinator --> \"Disable network registration unsolicited result code with location information\"");
+	if (_atCommandInterface->executeSimple("AT+CGREG=0", &result, 100, 5 /* Acc. to spec command takes maximal up to 300 ms. 100ms * 2^(5-1) = 1600 ms should be safe. */) != 0) {
+		wd_log_warn("QuectelM66CommandCoordinator --> \"Disable network registration unsolicited result code with location information\" failed, continue anyway");
+	} else {
+		wd_log_debug("QuectelM66CommandCoordinator --> \"Disable network registration unsolicited result code with location information\" succeeded");
+	}
 	
 	/*
 		APN configuration： 
@@ -336,6 +351,14 @@ int QuectelM66CommandCoordinator::GetRSSI() {
 
 char* QuectelM66CommandCoordinator::GetPhoneNumber() {
 	return this->_phoneNumber;
+}
+
+char * QuectelM66CommandCoordinator::GetLocationAreaCode(void) {
+	return this->_locationAreaCode;
+}
+
+char * QuectelM66CommandCoordinator::GetCellId(void) {
+	return this->_cellId;
 }
 
 char* QuectelM66CommandCoordinator::GetICCID(){

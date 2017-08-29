@@ -168,7 +168,7 @@ nsapi_error_t QuectelM66Interface::connect() {
 
 void QuectelM66Interface::serial_read_thread_entry(dma_frame_meta_t * frame_meta) {
 	
-	char buffer[frame_meta->frame_size] = {};
+	char buffer[frame_meta->frame_size] = {0};
 	size_t length;
 	
 	this->_serialStreamAdapter->getFrame(frame_meta, buffer, &length);
@@ -225,6 +225,14 @@ bool QuectelM66Interface::TestATOK(){
 int QuectelM66Interface::GetRSSI(void) {
 	return this->_commandCoordinator.GetRSSI();
 
+}
+
+char * QuectelM66Interface::GetLocationAreaCode(void) {
+	return this->_commandCoordinator.GetLocationAreaCode();
+}
+
+char * QuectelM66Interface::GetCellId(void) {
+	return this->_commandCoordinator.GetCellId();
 }
 
 NetworkStack *QuectelM66Interface::get_stack() {

@@ -74,7 +74,7 @@ public:
 	  @param pBearer pointer to store the current bearer
 	  @return 0 on success, error code on failure
 	*/
-	int GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, int timeout);
+	int GetState(int* pRssi, REGISTRATION_STATE* pGsmRegistrationState, REGISTRATION_STATE* pGprsRegistrationState, BEARER* pBearer, char * locationAreaCode, char * cellId, int timeout);
   
 	/** Get my phone number
 	  @param phoneNumber pointer to store the current phoneNumber
@@ -95,6 +95,8 @@ private:
 	REGISTRATION_STATE m_gprsRegistrationState;
 	BEARER m_bearer;
 	char m_phoneNumber[16];
+	char m_locationAreaCode[5];
+	char m_cellId[5];
 };
 
 #endif /* LINKMONITOR_H_ */

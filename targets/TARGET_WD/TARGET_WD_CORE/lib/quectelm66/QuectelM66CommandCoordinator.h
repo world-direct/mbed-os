@@ -52,6 +52,10 @@ public:
 	
 	char* GetPhoneNumber();
 	
+	char * GetLocationAreaCode(void);
+	
+	char * GetCellId(void);
+	
 	char* GetICCID();
 	
 	char* GetIMEI();
@@ -72,6 +76,8 @@ private:
 	LinkMonitor::REGISTRATION_STATE _gprsRegistrationState;
 	LinkMonitor::BEARER _bearer;
 	char _phoneNumber[16];
+	char _locationAreaCode[5];
+	char _cellId[5];
 	
 	DigitalOut _pwrKeyPin;
 	DigitalIn _vdd_extPin;
