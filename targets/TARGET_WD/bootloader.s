@@ -141,6 +141,7 @@ g_bl_vectors:
 	// aligns to 0x200
 	.p2align 9
 	.word bl_srv_call
+	.word __bootloader_size
 	
 .section .bl_text,"ax",%progbits
 

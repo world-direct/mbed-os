@@ -18,6 +18,9 @@
 #define GPIOB_BASE            (APB2PERIPH_BASE + 0x0C00)
 #define CRC_BASE              (AHBPERIPH_BASE + 0x3000)
 #define RCC_BASE              (AHBPERIPH_BASE + 0x1000)
+#define FLASH_R_BASE          (AHBPERIPH_BASE + 0x2000) 
+#define FLASH_BANK1_END       (0x0807FFFF)
+
 
 .section .bl_text,"ax",%progbits
 
@@ -123,53 +126,89 @@ POP {pc}
 
 
 /*************************************************************************
-	void bl_hal_flash_unlock():
+	void bl_hal_ldr_flash_reg(ptr):
 	
-	Unlocks flash controller if not yet done 
+	Returns the FLASH-SR address for the given ptr.
+	This is needed because the Dual-Bank Flash uses spearate registers for both banks.
+	
+	The registers can be accessed by:
+		[0]	=> FLASH_SR
+		[4] => FLASH_CR
+		[8] => FLASH_AR
 */
-.type bl_hal_flash_unlock, %function
-bl_hal_flash_unlock:
-
+.type bl_hal_ldr_flash_reg, %function
+bl_hal_ldr_flash_reg:
 PUSH {lr}
-/*
-	BL bl_hal_flash_wait_idle
-	
-	LDR r1, bl_hal_flashc_address
-	LDR r0, [r1, #0x10]		// FLASH_CR
-	ANDS r0, #0x80000000
-	BEQ 0f	// return if true
 
-	// unlock sequence
-	LDR r0, bl_hal_flash_key1
-	STR r0, [r1, #0x04] // FLASH_KEYR
-	LDR r0, bl_hal_flash_key2
-	STR r0, [r1, #0x04] // FLASH_KEYR
-*/
+	MOV r2, r0
+	LDR r0, bl_hal_flash_base_address
+	ADD r0, #0x0C	// SR bank1
+
+	LDR r1, bl_hal_flash_bank1_end
+	CMP r2, r1
+	BLS 0f
+
+	ADD r0, #0x40	// SR bank2
+
 0:
 POP {pc}
 
 /*************************************************************************
-	void bl_hal_flash_lock():
+	void bl_hal_flash_unlock(ptr):
+	
+	Unlocks flash controller for ptr if not yet done 
+*/
+.type bl_hal_flash_unlock, %function
+bl_hal_flash_unlock:
+
+PUSH {r4, lr}
+
+	MOV r4, r0	// ptr
+
+	BL bl_hal_flash_wait_idle
+
+	MOV r0, r4
+	BL bl_hal_ldr_flash_reg	// r0: &FLASH_SR
+
+	LDR r1, [r0, #0x04]		// r1: FLASH_CR
+	ANDS r1, #0x80
+	BEQ 0f	// return if true
+
+	// unlock sequence
+	LDR r1, bl_hal_flash_key1
+	STR r1, [r0, #-0x08] // FLASH_KEYR
+	LDR r1, bl_hal_flash_key2
+	STR r1, [r0, #-0x08] // FLASH_KEYR
+
+0:
+POP {r4, pc}
+
+/*************************************************************************
+	void bl_hal_flash_lock(ptr):
 	
 	Locks flash controller if not yet done 
 */
 .type bl_hal_flash_lock, %function
 bl_hal_flash_lock:
 
-PUSH {lr}
-/*
+PUSH {r4, lr}
+
+	MOV r4, r0
+
 	BL bl_hal_flash_wait_idle
+
+	MOV r0, r4
+	BL bl_hal_ldr_flash_reg	// r0: &FLASH_SR
 	
-	LDR r1, bl_hal_flashc_address
-	LDR r0, [r1, #0x10]		// FLASH_CR
-	ANDS r0, #0x80000000
+	LDR r1, [r0, #0x04]		// FLASH_CR
+	ANDS r1, #0x80
 	BNE 0f	// return if already locked
 
-	MOV r0, #0x80000000
-	STR r0, [r1, #0x10] // FLASH_CR
+	MOV r1, #0x80
+	STR r1, [r0, #0x04] // FLASH_CR
 
-0:*/
-POP {pc}
+0:
+POP {r4, pc}
 
 /*************************************************************************
 	void bl_hal_erase_sector(int sector_nr):
@@ -178,27 +217,38 @@ POP {pc}
 */
 .type bl_hal_erase_sector, %function
 bl_hal_erase_sector:
-/*
+
 PUSH {r4, lr}
 
-	MOV r4, r0 // sector_nr
+	MOV r4, r0 // r4: sector_nr
 
+	// RB uses addresses instead of nrs, so let's get the address into r5
+	// sector size is 0x800
+	MOV r0, #0x800
+	MUL r4, r0, r4	// r4: sector_ptr offset
+	LDR r0, bl_hal_flash_base
+	ADD r4, r0		// r4: sector_ptr
+
+	MOV r0, r4	// ptr arg
 	BL bl_hal_flash_unlock
-	BL bl_hal_flash_wait_idle
+	
+	MOV r0, r4	// ptr arg
+	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
+	
+	// enable PER in CR
+	MOV r1, #0x02	
+	STR r1, [r0, #0x04]
 
-	// construct value of FLASH_CR
-	MOV r2, r4, LSL #3 // sector number bit 3-6
+	// set address in FLASH_AR
+	STR r4, [r0, #0x08]
 
-	ORR r2, #0x10000	// STRT: bit 16
-	ORR r2, #0x200 // PSIZE=b10 : bit 89
-	ORR r2, #0x2 // SER: bit1
-	ORR r2, #0x2000000	// ERRIE: bit 25
+	// start by setting STRT (we keep PER)
+	MOV r1, #0x42
+	STR r1, [r0, #0x04]
 
-	LDR r1, bl_hal_flashc_address
-	STR r2, [r1, #0x10]
-
+	MOV r0, r4	// ptr arg, lock waits for !BSY
 	BL bl_hal_flash_lock
-0:*/
+0:
 POP {r4, pc}
 
 /*************************************************************************
@@ -210,38 +260,41 @@ POP {r4, pc}
 .type bl_hal_flash_memcpy, %function
 bl_hal_flash_memcpy:
 
-PUSH {r4, r5, r6, lr}
+PUSH {r4, r5, r6, r7, lr}
 
-	/*MOV r4, r0 // dest, will be postincremented
+	MOV r4, r0 // dest, will be postincremented
 	MOV r5, r1 // src, will be postincremented
 	MOV r6, r2 // size, will be decremented to check for completion
 
+	BL bl_hal_ldr_flash_reg
+	MOV r7, r0	// FLASH-SR
+
+	MOV r0, r4 // ptr arg
 	BL bl_hal_flash_unlock
+
+	MOV r0, r4 // ptr arg
 	BL bl_hal_flash_wait_idle
 
-	// enable programming mode for 32 bit
-	//bit 25:		ERRIE
-	//bits 8..9:	PSIZE 10 (32)
-	//bit 0:		PG (enable Programming)
-	LDR r2, =#0x2000201
-
-	LDR r1, bl_hal_flashc_address
-	STR r2, [r1, #0x10]
+	// enable programming mode 
+	MOV r0, #0x01
+	STR r0, [r7, #0x04]
 
 	.L_memcpy_next:
-		LDR r0, [r5], #4	// load src word
-		STR r0, [r4], #4	// write to dest
+		LDRH r0, [r5], #2	// load src halfword
+		STRH r0, [r4], #2	// write to dest
 
+		MOV r0, r4 // ptr arg
 		BL bl_hal_flash_wait_idle
 
-		SUBS r6, #4	// size -=4
+		SUBS r6, #2	// size -=4
 		BNE .L_memcpy_next	// while !=0
 
 	// disable programming mode
+	MOV r0, r4 // ptr arg
 	BL bl_hal_flash_lock
-*/
+
 0:
-POP {r4, r5, r6, pc}
+POP {r4, r5, r6, r7, pc}
 
 
 /*************************************************************************
@@ -253,12 +306,11 @@ POP {r4, r5, r6, pc}
 .type bl_hal_erase_boot_image, %function
 bl_hal_erase_boot_image:
 PUSH {lr}
-/*
+
 	MOV r0, #1	// start and current sector
-	MOV r1, #11  // last sector
+	MOV r1, #255  // last sector
 
 	BL bl_hal_erase_sectors
-*/
 0:
 POP {pc}
 
@@ -274,11 +326,11 @@ POP {pc}
 bl_hal_erase_update_image:
 PUSH {lr}
 
-	/*MOV r0, #13	// start and current sector
-	MOV r1, #23  // last sector
+	LDR r0, =#257	// start and current sector
+	LDR r1, =#511  // last sector
 
 	BL bl_hal_erase_sectors
-*/
+
 0:
 POP {pc}
 
@@ -291,38 +343,34 @@ POP {pc}
 bl_hal_erase_sectors:
 PUSH {r4, r5, lr}
 
-	/*MOV r4, r0	// start and current sector
+	MOV r4, r0	// start and current sector
 	MOV r5, r1  // last sector
 
 	1:
-	MOV r0, r4
-	BL bl_hal_erase_sector
-	ADD r4, #1
-	CMP r4, r5
+		MOV r0, r4
+		BL bl_hal_erase_sector
+		ADD r4, #1
+		CMP r4, r5
 	BNE 1b
-*/
 
 0:
 POP {r4, r5, pc}
 
 /*************************************************************************
-	void bl_hal_flash_wait_idle():
+	void bl_hal_flash_wait_idle(ptr):
 	
-	Polls to the FLASH_SR to wait for an operation to finish
+	Polls to the FLASH_SR to wait for an operation in bank of ptr to finish
 */
 .type bl_hal_flash_wait_idle, %function
 bl_hal_flash_wait_idle:
 
 PUSH {lr}
-	/*
-	LDR r1, bl_hal_flashc_address
-
+	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
 1:
-	LDR r0, [r1, #0x0C]		// FLASH_SR
-	ANDS r0, #0x00010000		// bit 16: BSY
+	LDR r1, [r0, #0x00]		// FLASH_SR
+	ANDS r0, #0x01			// bit 1: BSY
 	BNE 1b	// retest
 
-*/
 POP {pc}
 
 
@@ -330,7 +378,11 @@ POP {pc}
 bl_hal_rcc_base_address:	.word RCC_BASE
 bl_hal_gpiob_base_address:	.word GPIOB_BASE
 bl_hal_crc_address:			.word CRC_BASE
-
+bl_hal_flash_base_address:	.word FLASH_R_BASE
+bl_hal_flash_base:			.word 0x08000000
+bl_hal_flash_bank1_end:		.word FLASH_BANK1_END
+bl_hal_flash_key1:			.word 0x45670123
+bl_hal_flash_key2:			.word 0xCDEF89AB
 
 
 // the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file
