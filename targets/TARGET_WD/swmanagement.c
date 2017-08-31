@@ -1,15 +1,31 @@
 #include "swmanagement.h"
 #include "blsrv.h"
 
-
+static char m_null_termination;
 static size_t m_download_offset;
 
-static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * info){
+static inline void m_set_valid_md(intptr_t mdroot, swmanagement_image_information * info){
 	info->image_total_length = *((size_t*)(mdroot + 0x04));
 	info->image_application_name = (const char *)(mdroot + 0x08);
 	info->image_application_version = (const char *)(mdroot + 0x28);
 	info->image_commit_id = *((uint32_t *)(mdroot + 0x38));
+}
 
+static inline m_set_invalid_md(swmanagement_image_information * info){
+	info->image_total_length = 0;
+	info->image_application_name = &m_null_termination;
+	info->image_application_version = &m_null_termination;
+	info->image_commit_id = 0x00000000;
+}
+
+static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * info){
+	if (info->image_validation_result == NoMetadata || 
+		info->image_validation_result == InvalidMetadata) {
+		m_set_invalid_md(info);
+	}
+	else{
+		m_set_valid_md(mdroot, info);
+	}
 }
 
 void swmanagement_get_status(swmanagement_status * status)
