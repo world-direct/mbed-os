@@ -81,17 +81,17 @@
 #define DEFAULT_ACCEPTMBOX_SIZE     8
 
 #ifdef LWIP_DEBUG
-#define TCPIP_THREAD_STACKSIZE      1200*2
+#define TCPIP_THREAD_STACKSIZE      2048
 #else
-#define TCPIP_THREAD_STACKSIZE      1200
+#define TCPIP_THREAD_STACKSIZE      2048
 #endif
 
 #define TCPIP_THREAD_PRIO           (osPriorityNormal)
 
 #ifdef LWIP_DEBUG
-#define DEFAULT_THREAD_STACKSIZE    512*2
+#define DEFAULT_THREAD_STACKSIZE    2048
 #else
-#define DEFAULT_THREAD_STACKSIZE    512
+#define DEFAULT_THREAD_STACKSIZE    2048
 #endif
 
 #define MEMP_NUM_SYS_TIMEOUT        16
@@ -108,7 +108,7 @@
 // Number of pool pbufs.
 // Each requires 684 bytes of RAM.
 #ifndef PBUF_POOL_SIZE
-#define PBUF_POOL_SIZE              5
+#define PBUF_POOL_SIZE              10
 #endif
 
 // One tcp_pcb_listen is needed for each TCPServer.
@@ -116,7 +116,7 @@
 #ifdef MBED_CONF_LWIP_TCP_SERVER_MAX
 #define MEMP_NUM_TCP_PCB_LISTEN     MBED_CONF_LWIP_TCP_SERVER_MAX
 #else
-#define MEMP_NUM_TCP_PCB_LISTEN     4
+#define MEMP_NUM_TCP_PCB_LISTEN     1
 #endif
 
 // One is tcp_pcb needed for each TCPSocket.
@@ -124,7 +124,7 @@
 #ifdef MBED_CONF_LWIP_TCP_SOCKET_MAX
 #define MEMP_NUM_TCP_PCB            MBED_CONF_LWIP_TCP_SOCKET_MAX
 #else
-#define MEMP_NUM_TCP_PCB            4
+#define MEMP_NUM_TCP_PCB            1
 #endif
 
 // One udp_pcb is needed for each UDPSocket.
@@ -132,7 +132,7 @@
 #ifdef MBED_CONF_LWIP_UDP_SOCKET_MAX
 #define MEMP_NUM_UDP_PCB            MBED_CONF_LWIP_UDP_SOCKET_MAX
 #else
-#define MEMP_NUM_UDP_PCB            4
+#define MEMP_NUM_UDP_PCB            2
 #endif
 
 // Number of non-pool pbufs.
@@ -151,7 +151,7 @@
 #ifdef MBED_CONF_LWIP_SOCKET_MAX
 #define MEMP_NUM_NETCONN            MBED_CONF_LWIP_SOCKET_MAX
 #else
-#define MEMP_NUM_NETCONN            4
+#define MEMP_NUM_NETCONN            2
 #endif
 
 #define TCP_QUEUE_OOSEQ             0
@@ -251,13 +251,13 @@
 #define TCP_SND_BUF                     (3 * 536)
 #define TCP_WND                         (2 * 536)
 
-#define LWIP_ARP 0
+#define LWIP_ARP						0
 
-#define PPP_SUPPORT 1
+#define PPP_SUPPORT						1
 #define CHAP_SUPPORT                    1
 #define PAP_SUPPORT                     1
-#define PPP_THREAD_STACKSIZE            4*192
-#define PPP_THREAD_PRIO 0
+#define PPP_THREAD_STACKSIZE            2048
+#define PPP_THREAD_PRIO					0
 
 #define MAXNAMELEN                      64     /* max length of hostname or name for auth */
 #define MAXSECRETLEN                    64
