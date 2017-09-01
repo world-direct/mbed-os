@@ -303,7 +303,8 @@ SECTIONS
 
 	__image_size = ADDR(.crc32) - __image_start + 4;
 	
-	__config_start = ORIGIN(CONFIG);
+	__flashconfig_start = ORIGIN(CONFIG);
+	__flashconfig_end = ORIGIN(CONFIG) + LENGTH(CONFIG);
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 

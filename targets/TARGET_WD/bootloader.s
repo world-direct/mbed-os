@@ -491,7 +491,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	MOVS r6, r6	//seem like a nop, but is not. It updates the flags!
 	BEQ .L_success	// continue
 
-		// check if the CRC word was 0xFFFFFFFF, that is an unverifyable image
+		// check if the CRC word has the link time constant representing an unverifyable image
 		LDR r0, [r5, #-4];	// r5 points one word next to the length
 		LDR r1, bl_data_unverifiable_crc_value
 		CMP r0, r1
