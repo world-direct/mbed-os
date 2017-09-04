@@ -41,7 +41,10 @@ void WatchDog::Start(uint32_t prescaler /* = IWDG_PRESCALER_256 */, uint32_t rel
 	_handle.Init.Prescaler = prescaler; // e.g.: IWDG_PRESCALER_256
 	_handle.Init.Reload = reload;		// Range: 0x0000, 0x0FFFU
 	
-	HAL_IWDG_Init(&_handle);
+	if(HAL_IWDG_Init(&_handle) != HAL_OK){
+		wd_log_error("WatchDog cannot be initialized");
+		mbed_die();
+	}
 	
 	_healthCheckTicker.attach(
 		mbed::Callback<void()>(this, &WatchDog::Check),
