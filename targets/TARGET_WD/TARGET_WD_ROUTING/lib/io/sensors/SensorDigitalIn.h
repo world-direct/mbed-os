@@ -27,6 +27,10 @@ public:
 	int getValue(void) { return _value; };
 	int getCount(void) { return _edgeCounter; };
 	void resetCount(void) { _edgeCounter = 0; };
+		
+	float getPulseDuration(void);
+	int getPulseDurationFilterSize(void) { return _pulseDurationFilterSize; };
+	void setPulseDurationFilterSize(int size);
 	
 private:
 	void setValue(int value);
@@ -34,7 +38,7 @@ private:
 	void onEdge(bool countEdge);
 	void onObservingEdge(void) { onEdge(true); }
 	void onIgnoringEdge(void) { onEdge(false); }
-	void confirmEdge(bool countEdge, int value);
+	void confirmEdge(bool countEdge, int value, int durationUs);
 	
 	void onPollingTick(void);
 	
@@ -43,6 +47,10 @@ private:
 	uint16_t _instanceMetadata;
 	int _value;
 	int _edgeCounter;
+	Timer _pulseDurationTimer;
+	MeasurementBuffer * _pulseDurationBuffer;
+	int _pulseDurationOffset;
+	int _pulseDurationFilterSize;
 	
 	Ticker _ticker;
 	Timeout _confirmationDelay;
