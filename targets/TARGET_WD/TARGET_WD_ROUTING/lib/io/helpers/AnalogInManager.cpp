@@ -12,7 +12,7 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 		_queue(&IOEventQueue::getInstance()) {
 	
 	// allocate memory for dynamic buffers
-	this->_measurementBuffers = new AINMeasurementBuffer[inputCount]();
+	this->_measurementBuffers = new AINMeasurementBuffer[inputCount](AIN_MEASUREMENT_BUFFER_SIZE);
 	this->_currentValue = new uint16_t[inputCount]();
 	this->_minValue = new uint16_t[inputCount]();
 	this->_maxValue = new uint16_t[inputCount]();

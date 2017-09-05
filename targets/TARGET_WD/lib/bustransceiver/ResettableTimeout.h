@@ -22,8 +22,8 @@ private:
 public:
 	ResettableTimeout(Callback<void()> func, timestamp_t us);
 	~ResettableTimeout();
-	//void start(void);
-	//void stop(void);
+	
+	void reset(timestamp_t us);
 	void reset(void);
 	
 protected:

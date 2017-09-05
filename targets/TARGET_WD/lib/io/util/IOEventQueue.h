@@ -4,7 +4,7 @@
 #include "mbed_events.h"
 #include "rtos.h"
 
-#define IO_EVENT_QUEUE_SIZE		24
+#define IO_EVENT_QUEUE_SIZE		32
 
 class IOEventQueue {
 	
@@ -21,6 +21,11 @@ class IOEventQueue {
 
 		template <typename R, typename A0, typename A1>
 		Event<void(A0, A1)> event(mbed::Callback<R(A0, A1)> cb) {
+			return _queue.event(cb);
+		}
+	
+		template <typename R, typename A0, typename A1, typename A2>
+		Event<void(A0, A1, A2)> event(mbed::Callback<R(A0, A1, A2)> cb) {
 			return _queue.event(cb);
 		}
 		

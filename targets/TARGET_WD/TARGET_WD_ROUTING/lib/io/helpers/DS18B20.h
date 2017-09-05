@@ -12,7 +12,7 @@
 #define DS18B20_INVALID_VALUE				-999.99
 #define DS18B20_FAMILY_CODE					0x28
 #define DS18B20_MEASUREMENT_BUFFER_SIZE		9
-#define DS18B20_MEASUREMENT_INTERVAL_S		10
+#define DS18B20_MEASUREMENT_INTERVAL_S		5
 
 class DS18B20 {
 public:
@@ -47,7 +47,7 @@ private:
 	IOEventQueue * _queue;
 	Ticker _ticker;
 	
-	typedef MeasurementBuffer<float, DS18B20_MEASUREMENT_BUFFER_SIZE> DS18B20MeasurementBuffer;
+	typedef MeasurementBuffer<float> DS18B20MeasurementBuffer;
 	map<uint64_t, DS18B20MeasurementBuffer> _mSensors;
 	int _sensorCount;
 	

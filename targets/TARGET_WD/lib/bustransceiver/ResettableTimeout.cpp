@@ -37,3 +37,10 @@ void ResettableTimeout::reset(void) {
 	this->setup(this->_delay);
 
 }
+
+void ResettableTimeout::reset(timestamp_t us) {
+	
+	this->_delay = us;
+	this->reset();
+	
+}

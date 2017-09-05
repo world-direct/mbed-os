@@ -28,11 +28,12 @@
 static void donothing(uint64_t id) {}
 
 DS18B20::DS18B20(OneWire * oneWire, uint measurementIntervalSeconds)
-	: _sensorCount(0), _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance())  {
+	: _sensorCount(0), _sensorAddedCallback(donothing), _sensorRemovedCallback(donothing), _ticker(), _queue(&IOEventQueue::getInstance()) {
 	
 	this->_oneWire = oneWire;
 
-	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));
+	this->_ticker.attach(callback(this, &DS18B20::collectMeasurement), (float)(measurementIntervalSeconds));	
+		
 }
 
 
@@ -92,7 +93,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 		// add sensor if it is not yet in sensor map
 		if(this->_mSensors.find(id) == this->_mSensors.end()) {
 			
-			this->_mSensors.insert(make_pair<uint64_t, DS18B20MeasurementBuffer>(id, DS18B20MeasurementBuffer()));
+			this->_mSensors.insert(make_pair<uint64_t, DS18B20MeasurementBuffer>(id, DS18B20MeasurementBuffer(DS18B20_MEASUREMENT_BUFFER_SIZE)));
 			this->_sensorAddedCallback.call(id);
 		}
 		

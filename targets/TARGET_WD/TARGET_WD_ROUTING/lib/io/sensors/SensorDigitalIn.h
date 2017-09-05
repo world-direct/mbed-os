@@ -7,6 +7,8 @@ ___________________INCLUDES____________________________
 #include "mbed.h"
 #include "PinNames.h"
 #include "IOEventQueue.h"
+#include "MeasurementBuffer.h"
+#include "ResettableTimeout.h"
 
 /******************************************************
 ___________________DECLARATION_________________________
@@ -42,13 +44,16 @@ private:
 	
 	void onPollingTick(void);
 	
+	void onPulseDurationResetTimeout(void);
+	
 	Callback<void(uint16_t)> _irq;
 	InterruptIn _interruptIn;
 	uint16_t _instanceMetadata;
 	int _value;
 	int _edgeCounter;
 	Timer _pulseDurationTimer;
-	MeasurementBuffer * _pulseDurationBuffer;
+	ResettableTimeout * _pulseDurationResetTimout;
+	MeasurementBuffer<int> * _pulseDurationBuffer;
 	int _pulseDurationOffset;
 	int _pulseDurationFilterSize;
 	

@@ -3,12 +3,26 @@
 #include <iterator>
 #include <cmath>
 
-template <typename T, int size>
-class MeasurementBuffer {
+#define DEFAULT_MEASUREMENT_BUFFER_SIZE		9
+
+template <typename T>
+struct IMeasurementBuffer {
+	IMeasurementBuffer(){}
+	virtual ~IMeasurementBuffer(){}
+	
+	virtual void clear(void) = 0;
+	virtual void add(T v) = 0;
+	virtual T get(void) = 0;
+	virtual T MAD(void) = 0;
+};
+
+template <typename T>
+class MeasurementBuffer : public IMeasurementBuffer<T> {
 
 public:
 	
-	MeasurementBuffer(){};
+	MeasurementBuffer() : MeasurementBuffer(DEFAULT_MEASUREMENT_BUFFER_SIZE){};
+	MeasurementBuffer(int size) : _size(size){};
 	
 	void clear() {
 		buf.clear();
@@ -16,7 +30,7 @@ public:
 	
 	void add(T v){
 		buf.push_back(v);
-		if (buf.size() > size) buf.pop_front();
+		if (buf.size() > _size) buf.pop_front();
 	};
 	
 	T get() {
@@ -36,6 +50,7 @@ public:
 
 private:
 	std::list<T> buf;
+	int _size;
 	
 	T _median(std::list<T> & b) {
 		

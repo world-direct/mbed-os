@@ -6,7 +6,8 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
-#define DEFAULT_PULSE_DURATION_FILTER_SIZE	9
+#define DEFAULT_PULSE_DURATION_FILTER_SIZE		9
+#define PULSE_DURATION_RESET_TIMEOUT_FACTOR		3
 
 /******************************************************
 ___________________IMPLEMENTATION______________________
@@ -17,7 +18,7 @@ SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint1
 	: _interruptIn(pin), 
 	_instanceMetadata(instanceMetadata), 
 	_ticker(), 
-	_pulseDurationTimer();
+	_pulseDurationTimer(),
 	_queue(&IOEventQueue::getInstance()), 
 	_value(0), 
 	_pulseDurationOffset(0),
@@ -38,8 +39,9 @@ SensorDigitalIn::SensorDigitalIn(PinName pin, EdgeSelection edgeSelection, uint1
 	_irq = donothing;
 	
 	this->_pulseDurationTimer.start();
-	this->_pulseDurationBuffer = new MeasurementBuffer<int, _pulseDurationFilterSize>();
+	this->_pulseDurationBuffer = new MeasurementBuffer<int>(_pulseDurationFilterSize);
 	this->_pulseDurationBuffer->clear();
+	this->_pulseDurationResetTimout = new ResettableTimeout(callback(this, &SensorDigitalIn::onPulseDurationResetTimeout), 5000000); // 5 seconds default timeout
 	
 	// set initial value
 	this->setValue(_interruptIn.read());
@@ -57,7 +59,7 @@ SensorDigitalIn::~SensorDigitalIn(){
 void SensorDigitalIn::onEdge(bool countEdge) {
 	
 	// exit irq context and execute confirmation in event queue thread
-	Callback<void(bool, int)> e = _queue->event(callback(this, &SensorDigitalIn::confirmEdge));
+	Event<void(bool, int, int)> e = _queue->event(callback(this, &SensorDigitalIn::confirmEdge));
 	e.call(countEdge, this->_interruptIn.read(), this->_pulseDurationTimer.read_us());
 	
 }
@@ -75,6 +77,9 @@ void SensorDigitalIn::confirmEdge(bool countEdge, int value, int durationUs) {
 			this->_pulseDurationBuffer->add(durationUs + this->_pulseDurationOffset);
 			this->_pulseDurationOffset = this->_pulseDurationTimer.read_us() - durationUs;
 			this->_pulseDurationTimer.reset();
+			timestamp_t resetTimeout = durationUs * PULSE_DURATION_RESET_TIMEOUT_FACTOR;
+			if (resetTimeout > 60000000) resetTimeout = 60000000;	// limit to 60 sec max.
+			this->_pulseDurationResetTimout->reset(resetTimeout);
 		}
 		
 		this->setValue(value);
@@ -92,6 +97,12 @@ void SensorDigitalIn::onPollingTick(void) {
 	
 }
 
+
+void SensorDigitalIn::onPulseDurationResetTimeout(void) {
+	
+	this->_pulseDurationBuffer->clear();
+
+}
 
 void SensorDigitalIn::attach(mbed::Callback<void(uint16_t)> func) {
 	
@@ -118,7 +129,7 @@ float SensorDigitalIn::getPulseDuration(void) {
 void SensorDigitalIn::setPulseDurationFilterSize(int size) {
 	this->_pulseDurationFilterSize = size;
 	delete this->_pulseDurationBuffer;
-	this->_pulseDurationBuffer = new MeasurementBuffer<int, _pulseDurationFilterSize>();
+	this->_pulseDurationBuffer = new MeasurementBuffer<int>(_pulseDurationFilterSize);
 	this->_pulseDurationBuffer->clear();
 }
 

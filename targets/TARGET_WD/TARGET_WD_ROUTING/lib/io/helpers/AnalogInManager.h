@@ -42,7 +42,7 @@ private:
 	int _inputCount;
 	int _currentInputSelection;
 	
-	typedef MeasurementBuffer<uint16_t, AIN_MEASUREMENT_BUFFER_SIZE> AINMeasurementBuffer;
+	typedef MeasurementBuffer<uint16_t> AINMeasurementBuffer;
 	AINMeasurementBuffer * _measurementBuffers;
 	
 	uint16_t * _currentValue;
