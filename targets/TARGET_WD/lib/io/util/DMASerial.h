@@ -38,6 +38,8 @@ public:
 private:
 	Mail<dma_frame_meta_t, DMASERIAL_RX_QUEUE_SIZE> _dma_frame_queue;
 	int consumer_pointer;
+	uint8_t * _read_buffer;
+	int _read_buffer_size;
 	
 	Thread _queueProcessingThread;
 	Callback<void(dma_frame_meta_t *)> _rx_cb; 

@@ -42,6 +42,7 @@
 #include "pinmap.h"
 #include <string.h>
 #include "PeripheralPins.h"
+#include "wd_logging.h"
 #ifdef YOTTA_CFG_MBED_OS
 #include "mbed-drivers/mbed_error.h"
 #else
@@ -1268,28 +1269,20 @@ uint8_t serial_rx_active(serial_t *obj)
 	return ((HAL_UART_GetState(handle) == HAL_UART_STATE_BUSY_RX) ? 1 : 0);
 }
 
-#if DEVICE_SERIAL_ASYNCH_DMA
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 
-void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
+	wd_log_debug("HAL_UART_ErrorCallback -> Uart: %x, ErrorCode: %d", huart, huart->ErrorCode);
 	
-	//uint16_t producer_pointer = 0;
-	//if(huart->hdmarx != NULL)
-	//{
-		//DMA_HandleTypeDef *hdma = huart->hdmarx;
-		//
-		///* Determine size/amount of received data */
-		//producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
-		//
-		///* Check if a transmit process is ongoing or not */
-		//
-		//huart->RxState = HAL_UART_STATE_READY;
-		//
-	//}
-	//_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
-	
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE) != RESET) {
+        volatile uint32_t tmpval = huart->Instance->DR; // Clear PE flag
+    } else if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET) {
+        volatile uint32_t tmpval = huart->Instance->DR; // Clear FE flag
+    } else if (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE) != RESET) {
+        volatile uint32_t tmpval = huart->Instance->DR; // Clear NE flag
+    } else if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET) {
+        volatile uint32_t tmpval = huart->Instance->DR; // Clear ORE flag
+    }
 }
-
-#endif
 
 /** The asynchronous TX and RX handler.
  *
@@ -1314,34 +1307,52 @@ int serial_irq_handler_asynch(serial_t *obj)
         HAL_DMA_IRQHandler(handle->hdmarx);
     }
 #endif
-    HAL_UART_IRQHandler(handle);
     
     // TX PART:
-    if (__HAL_UART_GET_FLAG(handle, UART_FLAG_TC) != RESET) {
-        __HAL_UART_CLEAR_FLAG(handle, UART_FLAG_TC);
-        // return event SERIAL_EVENT_TX_COMPLETE if requested
-        if ((SERIAL_OBJ(events) & SERIAL_EVENT_TX_COMPLETE ) != 0){
+	if (__HAL_UART_GET_FLAG(handle, UART_FLAG_TC) != RESET) {
+        if (__HAL_UART_GET_IT_SOURCE(handle, UART_IT_TC) != RESET) {
+            // Return event SERIAL_EVENT_TX_COMPLETE if requested
+            if ((SERIAL_OBJ(events) & SERIAL_EVENT_TX_COMPLETE ) != 0){
             return_event |= SERIAL_EVENT_TX_COMPLETE & obj->serial.events;
         }
+        }
     }
+	
     // handle error events:
-    if (__HAL_UART_GET_FLAG(handle, HAL_UART_ERROR_PE)) {
-        __HAL_UART_CLEAR_FLAG(handle, HAL_UART_ERROR_PE);
-        return_event |= SERIAL_EVENT_RX_PARITY_ERROR & obj->serial.events;
-    }
+    if (__HAL_UART_GET_FLAG(handle, UART_FLAG_PE) != RESET) {
+        if (__HAL_UART_GET_IT_SOURCE(handle, USART_IT_ERR) != RESET) {
+			return_event |= SERIAL_EVENT_RX_PARITY_ERROR & obj->serial.events;
+		}
+	}
+	
     if (__HAL_UART_GET_FLAG(handle, HAL_UART_ERROR_NE)||(handle->ErrorCode & HAL_UART_ERROR_NE)!=0) {
-      __HAL_UART_CLEAR_FLAG(handle, HAL_UART_ERROR_NE);
-      // not supported by mbed
+      if (__HAL_UART_GET_IT_SOURCE(handle, USART_IT_ERR) != RESET) {
+            // not supported by mbed
+        }
     }
-    if (__HAL_UART_GET_FLAG(handle, HAL_UART_ERROR_FE)||(handle->ErrorCode & HAL_UART_ERROR_FE)!=0) {
-      __HAL_UART_CLEAR_FLAG(handle, HAL_UART_ERROR_FE);
-        return_event |= SERIAL_EVENT_RX_FRAMING_ERROR & SERIAL_OBJ(events);
+	
+    if (__HAL_UART_GET_FLAG(handle, UART_FLAG_FE) != RESET) {
+        if (__HAL_UART_GET_IT_SOURCE(handle, USART_IT_ERR) != RESET) {
+			return_event |= SERIAL_EVENT_RX_FRAMING_ERROR & SERIAL_OBJ(events);
+	    }
     }
-    if (__HAL_UART_GET_FLAG(handle, HAL_UART_ERROR_ORE)||(handle->ErrorCode & HAL_UART_ERROR_ORE)!=0) {
-      __HAL_UART_CLEAR_FLAG(handle, HAL_UART_ERROR_ORE);
-        return_event |= SERIAL_EVENT_RX_OVERRUN_ERROR & SERIAL_OBJ(events);
+	
+    if (__HAL_UART_GET_FLAG(handle, UART_FLAG_ORE) != RESET) {
+        if (__HAL_UART_GET_IT_SOURCE(handle, USART_IT_ERR) != RESET) {
+			return_event |= SERIAL_EVENT_RX_OVERRUN_ERROR & SERIAL_OBJ(events);
+	    }
     }
 
+	// read flags for return event first as they are cleared in IRQ handler
+	HAL_UART_IRQHandler(handle);	
+	
+    // Abort if an error occurs
+    if (return_event & SERIAL_EVENT_RX_PARITY_ERROR ||
+            return_event & SERIAL_EVENT_RX_FRAMING_ERROR ||
+            return_event & SERIAL_EVENT_RX_OVERRUN_ERROR) {
+        return return_event;
+    }
+	
 	//RX PART
 	if (handle->RxXferSize != 0) {
 		obj->rx_buff.pos = handle->RxXferSize - handle->RxXferCount;

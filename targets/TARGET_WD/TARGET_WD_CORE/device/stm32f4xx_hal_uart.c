@@ -1527,131 +1527,81 @@ HAL_StatusTypeDef HAL_UART_AbortReceive_IT(UART_HandleTypeDef *huart)
   */
 void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
 {
-   uint32_t isrflags   = READ_REG(huart->Instance->SR);
-   uint32_t cr1its     = READ_REG(huart->Instance->CR1);
-   uint32_t cr3its     = READ_REG(huart->Instance->CR3);
-   uint32_t errorflags = 0x00U;
-   uint32_t dmarequest = 0x00U;
+  uint32_t tmp_flag = 0, tmp_it_source = 0;
 
-  /* If no error occurs */
-  errorflags = (isrflags & (uint32_t)(USART_SR_PE | USART_SR_FE | USART_SR_ORE | USART_SR_NE));
-  if(errorflags == RESET)
-  {
-    /* UART in mode Receiver -------------------------------------------------*/
-    if(((isrflags & USART_SR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
-    {
-      UART_Receive_IT(huart);
-      return;
-    }
-	  
-	/* UART RX Idle interrupt --------------------------------------------------*/
-	if(((isrflags & USART_SR_IDLE) != RESET) && ((cr1its & USART_CR1_IDLEIE) != RESET))
-	{
-		//__HAL_UART_CLEAR_IDLEFLAG(huart);
-		HAL_UART_RxIdleCallback(huart);
-	}
-
-  }  
-
-  /* If some errors occur */
-  if((errorflags != RESET) && (((cr3its & USART_CR3_EIE) != RESET) || ((cr1its & (USART_CR1_RXNEIE | USART_CR1_PEIE)) != RESET)))
-  {
-    /* UART parity error interrupt occurred ----------------------------------*/
-    if(((isrflags & USART_SR_PE) != RESET) && ((cr1its & USART_CR1_PEIE) != RESET))
-    {
-		huart->ErrorCode |= HAL_UART_ERROR_PE;
-    }
-    
-    /* UART noise error interrupt occurred -----------------------------------*/
-    if(((isrflags & USART_SR_NE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
-    {
-		huart->ErrorCode |= HAL_UART_ERROR_NE;
-    }
-    
-    /* UART frame error interrupt occurred -----------------------------------*/
-    if(((isrflags & USART_SR_FE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
-    {
-		huart->ErrorCode |= HAL_UART_ERROR_FE;
-    }
-    
-    /* UART Over-Run interrupt occurred --------------------------------------*/
-    if(((isrflags & USART_SR_ORE) != RESET) && ((cr3its & USART_CR3_EIE) != RESET))
-    { 
-		huart->ErrorCode |= HAL_UART_ERROR_ORE;
-    }
-
-    /* Call UART Error Call back function if need be --------------------------*/    
-    if(huart->ErrorCode != HAL_UART_ERROR_NONE)
-    {
-      /* UART in mode Receiver -----------------------------------------------*/
-      if(((isrflags & USART_SR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
-      {
-        UART_Receive_IT(huart);
-      }
-
-      /* If Overrun error occurs, or if any error occurs in DMA mode reception,
-         consider error as blocking */
-      dmarequest = HAL_IS_BIT_SET(huart->Instance->CR3, USART_CR3_DMAR);
-      if(((huart->ErrorCode & HAL_UART_ERROR_ORE) != RESET) || dmarequest)
-      {
-        /* Blocking error : transfer is aborted
-           Set the UART state ready to be able to start again the process,
-           Disable Rx Interrupts, and disable Rx DMA request, if ongoing */
-        UART_EndRxTransfer(huart);
-        
-        /* Disable the UART DMA Rx request if enabled */
-        if(HAL_IS_BIT_SET(huart->Instance->CR3, USART_CR3_DMAR))
-        {
-          CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAR);
-          
-          /* Abort the UART DMA Rx channel */
-          if(huart->hdmarx != NULL)
-          {
-            /* Set the UART DMA Abort callback : 
-               will lead to call HAL_UART_ErrorCallback() at end of DMA abort procedure */
-            huart->hdmarx->XferAbortCallback = UART_DMAAbortOnError;
-            if(HAL_DMA_Abort_IT(huart->hdmarx) != HAL_OK)
-            {
-              /* Call Directly XferAbortCallback function in case of error */
-              huart->hdmarx->XferAbortCallback(huart->hdmarx);
-            }
-          }
-          else
-          {
-            /* Call user error callback */
-            HAL_UART_ErrorCallback(huart);
-          }
-        }
-        else
-        {
-          /* Call user error callback */
-          HAL_UART_ErrorCallback(huart);
-        }
-      }
-      else
-      {
-        /* Non Blocking error : transfer could go on. 
-           Error is notified to user through user error callback */
-        HAL_UART_ErrorCallback(huart);
-      }
-    }
-	huart->ErrorCode = HAL_UART_ERROR_NONE;
-    return;
-  } /* End if some error occurs */
-
-  /* UART in mode Transmitter ------------------------------------------------*/
-  if(((isrflags & USART_SR_TXE) != RESET) && ((cr1its & USART_CR1_TXEIE) != RESET))
-  {
-    UART_Transmit_IT(huart);
-    return;
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_PE);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_PE);  
+  /* UART parity error interrupt occurred ------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  { 
+    huart->ErrorCode |= HAL_UART_ERROR_PE;
   }
   
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_FE);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_ERR);
+  /* UART frame error interrupt occurred -------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  { 
+    huart->ErrorCode |= HAL_UART_ERROR_FE;
+  }
+  
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_NE);
+  /* UART noise error interrupt occurred -------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  { 
+    huart->ErrorCode |= HAL_UART_ERROR_NE;
+  }
+  
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_ORE);
+  /* UART Over-Run interrupt occurred ----------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  { 
+    huart->ErrorCode |= HAL_UART_ERROR_ORE;
+  }
+  
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_RXNE);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_RXNE);
+  /* UART in mode Receiver ---------------------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  { 
+    UART_Receive_IT(huart);
+  }
+  
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE);
+  /* UART RX Idle interrupt --------------------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  {
+	  //__HAL_UART_CLEAR_IDLEFLAG(huart);
+	  HAL_UART_RxIdleCallback(huart);
+  }
+  
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_TXE);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_TXE);
+  /* UART in mode Transmitter ------------------------------------------------*/
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
+  {
+    UART_Transmit_IT(huart);
+  }
+
+  tmp_flag = __HAL_UART_GET_FLAG(huart, UART_FLAG_TC);
+  tmp_it_source = __HAL_UART_GET_IT_SOURCE(huart, UART_IT_TC);
   /* UART in mode Transmitter end --------------------------------------------*/
-  if(((isrflags & USART_SR_TC) != RESET) && ((cr1its & USART_CR1_TCIE) != RESET))
+  if((tmp_flag != RESET) && (tmp_it_source != RESET))
   {
     UART_EndTransmit_IT(huart);
-    return;
-  }
+  }  
+
+  if(huart->ErrorCode != HAL_UART_ERROR_NONE)
+  {
+    /* Clear all the error flag at once */
+    __HAL_UART_CLEAR_PEFLAG(huart);
+    
+    /* Set the UART state ready to be able to start again the process */
+    huart->gState = HAL_UART_STATE_READY;
+    
+    HAL_UART_ErrorCallback(huart);
+  }  
 }
 
 /**

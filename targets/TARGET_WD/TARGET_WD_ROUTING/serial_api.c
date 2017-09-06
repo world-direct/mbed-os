@@ -37,6 +37,7 @@
 #include "mbed_error.h"
 #include <string.h>
 #include "PeripheralPins.h"
+#include "wd_logging.h"
 
 #define UART_NUM (5)
 
@@ -1070,6 +1071,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+
+	wd_log_debug("HAL_UART_ErrorCallback -> Uart: %x, ErrorCode: %d", huart, huart->ErrorCode);
+	
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE) != RESET) {
         volatile uint32_t tmpval = huart->Instance->DR; // Clear PE flag
     } else if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET) {
@@ -1080,33 +1084,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
         volatile uint32_t tmpval = huart->Instance->DR; // Clear ORE flag
     }
 }
-
-#if DEVICE_SERIAL_ASYNCH_DMA
-
-void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart) {
-	
-	//uint16_t producer_pointer = 0;
-	//if(huart->hdmarx != NULL)
-	//{
-		//DMA_HandleTypeDef *hdma = huart->hdmarx;
-		//
-		///* Determine size/amount of received data */
-		//producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
-		//
-		///* Check if a transmit process is ongoing or not */
-		//
-		//if(huart->State == HAL_UART_STATE_BUSY_TX_RX) {
-			//huart->State = HAL_UART_STATE_BUSY_TX;
-			//} else {
-			//huart->State = HAL_UART_STATE_READY;
-		//}
-		//
-	//}
-	//_dma_rx_capture(huart, huart->pRxBuffPtr, producer_pointer);
-	
-}
-
-#endif
 
 /**
  * The asynchronous TX and RX handler.
@@ -1149,6 +1126,12 @@ int serial_irq_handler_asynch(serial_t *obj)
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE) != RESET) {
         if (__HAL_UART_GET_IT_SOURCE(huart, USART_IT_ERR) != RESET) {
             return_event |= (SERIAL_EVENT_RX_PARITY_ERROR & obj_s->events);
+        }
+	}
+	
+	if (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE) != RESET || (huart->ErrorCode & UART_FLAG_NE)!=0) {
+        if (__HAL_UART_GET_IT_SOURCE(huart, USART_IT_ERR) != RESET) {
+            // not supported by mbed
         }
 	}
 

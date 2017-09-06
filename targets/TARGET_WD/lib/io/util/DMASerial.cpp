@@ -14,12 +14,6 @@ DMASerial::DMASerial(PinName tx, PinName rx, int baud)
 
 void DMASerial::popFrame(char * buffer, int * length, uint32_t timeout) {
 	
-//	if (this->_rx_cb) {
-//		// cb is attached so we do not permit reads
-//		*length = 0;
-//		return;
-//	}
-	
 	osEvent evt = _dma_frame_queue.get(timeout);
 	
 	if (evt.status == osEventMail) {
@@ -66,39 +60,72 @@ void DMASerial::detachRxCallback(void) {
 }
 
 int DMASerial::startRead(uint8_t *buffer, int buffer_size) {
-	this->read(buffer, buffer_size, callback(this, &DMASerial::_dma_rx_capture), SERIAL_EVENT_RX_IDLE);
+	this->_read_buffer = buffer;
+	this->_read_buffer_size = buffer_size;
+	
+	this->read(
+		buffer, 
+		buffer_size, 
+		callback(this, &DMASerial::_dma_rx_capture), 
+		(
+			SERIAL_EVENT_RX_IDLE |
+			SERIAL_EVENT_RX_OVERFLOW |
+			SERIAL_EVENT_RX_PARITY_ERROR |
+			SERIAL_EVENT_RX_FRAMING_ERROR |
+			SERIAL_EVENT_RX_OVERRUN_ERROR
+		)
+	);
 }
 
 void DMASerial::_dma_rx_capture(int evt) {
 	
-    DMA_HandleTypeDef * hdma = &DmaRxHandle[this->_serial.serial.index];
+	DMA_HandleTypeDef * hdma = &DmaRxHandle[this->_serial.serial.index];
 	UART_HandleTypeDef * huart = (UART_HandleTypeDef *) hdma->Parent;
-	uint16_t producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 	
-	dma_frame_meta_t * frame_meta = _dma_frame_queue.alloc();
+	if (evt & SERIAL_EVENT_RX_IDLE) {	// IDLE line interrupt processing
+		
+		uint16_t producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 	
-	size_t frame_size;
-	if (consumer_pointer < producer_pointer) {
-		frame_size = producer_pointer - consumer_pointer;
-		} else if (consumer_pointer > producer_pointer){
-		frame_size = huart->RxXferSize - consumer_pointer + producer_pointer;
-		} else {
-		return;
-	}
+		dma_frame_meta_t * frame_meta = _dma_frame_queue.alloc();
 	
-	if (frame_meta != NULL) {
-		frame_meta->buffer = huart->pRxBuffPtr;
-		frame_meta->buffer_size = huart->RxXferSize;
-		frame_meta->frame_start_pos = consumer_pointer;
-		frame_meta->frame_size = frame_size;
-		if (_dma_frame_queue.put(frame_meta) != osOK) {
-			wd_log_error("DMASerial: Unable to enqueue frame!");
+		size_t frame_size;
+		if (consumer_pointer < producer_pointer) {
+			frame_size = producer_pointer - consumer_pointer;
+			} else if (consumer_pointer > producer_pointer){
+			frame_size = huart->RxXferSize - consumer_pointer + producer_pointer;
+			} else {
+			return;
 		}
-		} else {
-		wd_log_error("DMASerial: Error allocating memory for frame queue!");
-	}
 	
-	consumer_pointer = (consumer_pointer + frame_size) % huart->RxXferSize;
+		if (frame_meta != NULL) {
+			frame_meta->buffer = huart->pRxBuffPtr;
+			frame_meta->buffer_size = huart->RxXferSize;
+			frame_meta->frame_start_pos = consumer_pointer;
+			frame_meta->frame_size = frame_size;
+			if (_dma_frame_queue.put(frame_meta) != osOK) {
+				wd_log_error("DMASerial: Unable to enqueue frame!");
+			}
+			} else {
+			wd_log_error("DMASerial: Error allocating memory for frame queue!");
+		}
+	
+		consumer_pointer = (consumer_pointer + frame_size) % huart->RxXferSize;
+	} else {	// Error interrupt -> restart read and hence register interrupts and configure DMA
+		wd_log_warn("DMASerial: Receiver error -> restarting read operation");
+		consumer_pointer = 0;
+		this->read(
+			this->_read_buffer, 
+			this->_read_buffer_size, 
+			callback(this, &DMASerial::_dma_rx_capture), 
+			(
+				SERIAL_EVENT_RX_IDLE |
+				SERIAL_EVENT_RX_OVERFLOW |
+				SERIAL_EVENT_RX_PARITY_ERROR |
+				SERIAL_EVENT_RX_FRAMING_ERROR |
+				SERIAL_EVENT_RX_OVERRUN_ERROR
+			)
+		);
+	}
 	
 }
 
