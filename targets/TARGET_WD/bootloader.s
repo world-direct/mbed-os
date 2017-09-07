@@ -107,7 +107,6 @@ if CRC word == 0 => IMAGE_UNVERIFYABLE (no crc signature found)
 
 .section  .bl_vectors,"a",%progbits
 .type  g_bl_vectors, %object
-.size  g_bl_vectors, .-g_bl_vectors
 
 g_bl_vectors:
 
@@ -133,15 +132,17 @@ g_bl_vectors:
 	.word 0
 	.word bl_flash_handler
 
+.size  g_bl_vectors, .-g_bl_vectors
+
 /*************************************************************************
-	entry vectors to run indirect calls from the bootloader without linking directly to static offsets,
-	because they may change between compilations
+	WDABI data elements which need to be an fixed offset (0x200)
 */
 
 	// aligns to 0x200
 	.p2align 9
-	.word bl_srv_call
-	.word __bootloader_size
+	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
+	.word __bootloader_size		// WDABI: size of bootloader for image building
+	.word __flashconfig_start	// WDABI: start of bank2 for image building
 	
 .section .bl_text,"ax",%progbits
 
@@ -159,6 +160,7 @@ g_bl_vectors:
 #define blsrv_validate_boot_image		0x04
 #define blsrv_apply_update_with_reset	0x05
 #define blsrv_get_update_status			0x06
+#define blsrv_write_config_data			0x06
 
 	(see struct blsrv_desc in blsrv.h)
 */
@@ -196,6 +198,11 @@ PUSH {r4, r5, r6, lr}
 	MOV r5, #5
 	CMP r1, r5
 	BEQ .L_blsrv_apply_update
+
+	// test for blsrv_write_config_data			0x06
+	MOV r5, #6
+	CMP r1, r5
+	BEQ .L_blsrv_write_config_data
 
 	// return false (invalid operation)
 	MOV r0, 0
@@ -264,7 +271,17 @@ PUSH {r4, r5, r6, lr}
 		BL bl_set_command_word
 
 		B 1f
-	
+
+	.L_blsrv_write_config_data:
+		// load args
+		LDR r0, [r4], #4	// load offset
+		LDR r1, bl_data_flashconfig_start	// load base address
+		ADD r0, r1			// dest = offset + base address
+		LDR r1, [r4], #4	// src
+		LDR r2, [r4], #4	// size
+		BL bl_hal_flash_memcpy
+		B 1f
+
 1:
 MOV r0, 1
 0:
@@ -518,6 +535,7 @@ POP {r4, r5, r6, r7, r8, pc}
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
+bl_data_flashconfig_start: .word __flashconfig_start
 bl_data_metadata_offset : .word WD_ABI_METADATA_SECTION_OFFSET
 bl_data_metadata_magic: .word WD_ABI_METADATA_MAGIC
 bl_data_application_max_size: .word __application_max_size

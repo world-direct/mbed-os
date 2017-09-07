@@ -19,7 +19,7 @@ extern "C" {
 #define blsrv_validate_update_image		0x03
 #define blsrv_validate_boot_image		0x04
 #define blsrv_apply_update				0x05
-
+#define blsrv_write_config_data			0x06
 
 struct blsrv_desc {
 
@@ -44,6 +44,11 @@ struct blsrv_desc {
 			int validation_result;	// output field, will be set by the service but only if != 0 , otherwise the call will not return but reset and apply!
 		} apply_update;
 
+		struct {
+			int offset;	// offset from the start of the section
+			intptr_t buffer;	// data to write
+			size_t buffer_size;
+		} write_config_data;
 		
 	} args;
 };
