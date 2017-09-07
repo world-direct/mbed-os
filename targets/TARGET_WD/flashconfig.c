@@ -30,23 +30,14 @@ extern int __flashconfig_end;
 
 static cfg_ptr m_endptr;
 
-static void m_write_data(intptr_t address, cfg_ptr data, size_t size)
+static void m_checkinit()
 {
-	struct blsrv_desc d;
-	d.operation = blsrv_write_config_data;
-	d.args.write_config_data.offset = address - start_intptr;
-	d.args.write_config_data.buffer = data.val;
-	d.args.write_config_data.buffer_size = size;
-
-	blsrv_call(&d);
-}
-
-// moves the pointer backwards until we have a null-terminator
-// and reads all of the padding \0s, so that the pointer is on the last char of the prev string
-static int m_read_terminator(cfg_ptr * ptr)
-{
-	while(ptr->c--);
-	while(!(ptr->c--));
+	// m_endptr needs to be initialized once
+	if(!m_endptr.val){
+		m_endptr.val = end_intptr;
+		while (m_endptr.val >= start_intptr && *(--m_endptr.w) == 0xFFFFFFFF);
+		m_endptr.w++;
+	}
 }
 
 flashconfig_result flashconfig_get_value(const char * name, const char ** value)
@@ -57,13 +48,7 @@ flashconfig_result flashconfig_get_value(const char * name, const char ** value)
 	size_t sname = strlen(name);
 	if (!sname) return flashconfig_args_error;
 		
-
-	// m_endptr needs to be initialized once
-	if(!m_endptr.val){
-		m_endptr.val = end_intptr;
-		while (m_endptr.val >= start_intptr && *(--m_endptr.w) == 0xFFFFFFFF);		
-		m_endptr.w++;
-	}
+	m_checkinit();
 
 	if(m_endptr.val == start_intptr){
 		return flashconfig_not_found;
@@ -129,4 +114,52 @@ flashconfig_result flashconfig_get_value(const char * name, const char ** value)
 
 
 	return flashconfig_not_found;
+}
+
+flashconfig_result flashconfig_set_value(const char * name, char * value)
+{
+	// let's start with some validation
+	if(!name) return flashconfig_args_error;
+	if(!value) return flashconfig_args_error;
+
+	size_t sname = strlen(name);
+	size_t svalue = strlen(value);
+
+	if(!sname || sname >= FLASHCONFIG_NAME_MAX) return flashconfig_args_error;
+	if(!svalue|| sname >= FLASHCONFIG_VALUE_MAX) return flashconfig_args_error;
+
+	m_checkinit();
+
+	// validate that we have enough storage left
+	cfg_ptr p = m_endptr;	// m_endptr is always word-aligned and on FFFFFFFF
+	#define align_p() do{if(p.val %4) p.val += (4-p.val % 4);} while(0)
+
+	p.c += sname + 1;	// name with \0
+	align_p();
+	size_t valoffset = p.val - m_endptr.val;
+	p.c += svalue + 1;	// value with \0
+	align_p();
+
+	if(p.val >= end_intptr)
+		return flashconfig_overrun;
+
+	size_t memsize = p.val - m_endptr.val;
+	uint32_t buffer[(FLASHCONFIG_NAME_MAX + FLASHCONFIG_VALUE_MAX + 8) / 4];	// alloc as i32 for alignment
+	char * bufferp = (char*)buffer;
+
+	memset(bufferp, 0, memsize);
+	p.c = bufferp;
+
+	memcpy(bufferp, name, sname);
+	memcpy(bufferp + valoffset, value, svalue);
+
+	// and write to flash
+	struct blsrv_desc d;
+	d.operation = blsrv_write_config_data;
+	d.args.write_config_data.offset = m_endptr.val - start_intptr;
+	d.args.write_config_data.buffer = (intptr_t)bufferp;
+	d.args.write_config_data.buffer_size = memsize;
+	blsrv_call(&d);
+
+	m_endptr.c += memsize;
 }

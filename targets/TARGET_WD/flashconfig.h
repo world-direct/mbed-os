@@ -26,6 +26,9 @@ flashconfig_result flashconfig_get_value(const char * name, const char ** value)
 
 flashconfig_result flashconfig_set_value(const char * name, char * value);
 
+#define FLASHCONFIG_NAME_MAX	16
+#define FLASHCONFIG_VALUE_MAX	16
+
 #ifdef __cplusplus
 }
 #endif
