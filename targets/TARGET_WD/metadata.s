@@ -30,13 +30,8 @@
 .endm
 
 
-padded_string EXPSTR(APPLICATION_NAME), 32
-padded_string EXPSTR(APPLICATION_VERSION), 16
-
-#define HEXLH(S) 0x ## S
-#define HEXL(S) HEXLH(S)
-
-.octa HEXL(APPLICATION_COMMIT_ID)
+padded_string EXPSTR(APPLICATION_NAME), WD_ABI_APPLICATION_NAME_SIZE
+padded_string EXPSTR(APPLICATION_VERSION), WD_ABI_APPLICATION_VERSION_SIZE
 
 
 .section .crc32,"a",%progbits
