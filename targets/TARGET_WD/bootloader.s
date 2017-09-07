@@ -12,7 +12,7 @@ For sure we should not spend time in doing unnesserary things, but we will focus
 
 # Organization:
 
-The bootloader is seperated into two files:
+The bootloader is seperated into multiple files:
 
 ## bootloader.s (this file) 
 Contains the entry-point and implements the bootloader workflow.
@@ -330,7 +330,7 @@ bl_start:
 	LDR r0, bl_data_update_image_start
 	ADD r0, r6		// r0: &command_word
 	LDR r0, [r0]	// r0: command_word
-	MOV r1, #0x000000FF
+	LDR r1, bl_data_commandword_apply
 	CMP r1, r0
 	BNE .L_start_app	// skip update, because if command-word
 
@@ -459,11 +459,11 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 .L_validate_metadata:
 
-	// load length
+	// load md pointer into r5
 	MOV r5, r4
 	LDR r6, bl_data_metadata_offset
 	ADD r5, r6
-	LDR r8, [r5, #4]	// len has offset of 4, see metadata.s
+	LDR r8, [r5, #WD_ABI_METADATA_FLDOFF_SIZE]	// load size
 	MOV r7, r8 // r7 will be used in .L_validate_image, but decremented. r8 will not be overwritten and can be returned
 
 	// load comparant to r6
@@ -478,31 +478,29 @@ PUSH {r4, r5, r6, r7, r8, lr}
 .L_validate_cpuid:
 
 	// Load CPUID into r0
-	LDR r0, bl_data_cpuid_address				//		truth table example
-	LDR r0, [r0]			// r0: running cpuid		11110000	r0: running
-	LDR r2, [r5, #0x4C]		// r2: cpuid compare		10101010	r2: compare
-	LDR r1, [r5, #0x48]		// r1: cpuid-mask			11001100	r1: mask
-	EOR r0, r2									//		01011010	r0 = r0 xor r2 (all 1 bits are different)
-	ANDS r0, r1									//		01001000	r0 = r0 and r1 (two bits dont match, so this would be incompatible)						
+	LDR r0, bl_data_cpuid_address						// truth table example
+	LDR r0, [r0]										// r0: running cpuid		11110000	r0: running
+	LDR r2, [r5, #WD_ABI_METADATA_FLDOFF_CPUID]			// r2: cpuid compare		10101010	r2: compare
+	LDR r1, [r5, #WD_ABI_METADATA_FLDOFF_CPUID_MASK]	// r1: cpuid-mask			11001100	r1: mask
+	EOR r0, r2											//							01011010	r0 = r0 xor r2 (all 1 bits are different)
+	ANDS r0, r1											//							01001000	r0 = r0 and r1 (two bits dont match, so this would be incompatible)						
 	BEQ .L_validate_image_data
 		MOV r0, #6	// return error 6 (IncompatibleImage)
 		B .L_ret
 
 .L_validate_image_data:
 
+	BL bl_hal_crc_init
+
 	// r5 current address, will be incremented by 4 in the loop
 	MOV r5, r4
 
 	// r6 will contain the current crc
-
 	// r7 remaining length, will be post-decremented (by 4) in the loop until 0 is reached
 	// r7 is already initialized from .L_validate_metadata
 
-	BL bl_hal_crc_init
-
-	// load current word
 .L_validate_next_word:
-	LDR r0, [r5], #4	// this is post-index, so it should to r5+=4
+	LDR r0, [r5], #4	// load current word, this is post-index r0=*r5 +=4
 
 	// LDR reads not the pysical order, it read LittleEndian, so we get 0x01020304, but in the file we have 0x4030201! 
 	// to allow that we can form the CRC on the file (it seems better IMO), to REV to file-order here
