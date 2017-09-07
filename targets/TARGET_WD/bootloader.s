@@ -310,10 +310,6 @@ bl_start:
 	/////////////////////////////////////////////////////
 	BL bl_hal_ui
 
-	// Test CPUID
-	LDR r0, bl_data_cpuid_address
-	LDR r0, [r0]
-
 	// get the system state
 	/////////////////////////////////////////////////////
 
@@ -431,7 +427,8 @@ POP {r4, pc}
 	1: NoMetadata (Signature != 0x01020304)
 	2: InvalidMetadata (Length > max)
 	3: InvalidImage (CRC validation failed)
-	4: UnverifiableImage (CRC validation failed && CRC==0xFFFFFFFF)
+	4: UnverifiableImage (CRC validation failed && CRC==UNVERIYFIABLE_CRC_VALUE)
+	5: IncompatibleImage (CPUID validation failed)
 */
 .type bl_validate_image, %function
 bl_validate_image:
@@ -456,10 +453,8 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 	// and do the compare
 	CMP r5, r6
-	BEQ .L_validate_metadata	// continue
-		
-		// return error 1 (NoMetadata)
-		MOV r0, 1
+	BEQ .L_validate_metadata	// continue		
+		MOV r0, 1	// return error 1 (NoMetadata)
 		B .L_ret
 
 .L_validate_metadata:
@@ -476,9 +471,21 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 	// and do the compare
 	CMP r6, r7
-	BHI .L_validate_image_data	// continue
-		// return error 2 (InvalidMetadata)
-		MOV r0, 2
+	BHI .L_validate_cpuid	// continue
+		MOV r0, #2	// return error 2 (InvalidMetadata)
+		B .L_ret
+
+.L_validate_cpuid:
+
+	// Load CPUID into r0
+	LDR r0, bl_data_cpuid_address				//		truth table example
+	LDR r0, [r0]			// r0: running cpuid		11110000	r0: running
+	LDR r2, [r5, #0x4C]		// r2: cpuid compare		10101010	r2: compare
+	LDR r1, [r5, #0x48]		// r1: cpuid-mask			11001100	r1: mask
+	EOR r0, r2									//		01011010	r0 = r0 xor r2 (all 1 bits are different)
+	ANDS r0, r1									//		01001000	r0 = r0 and r1 (two bits dont match, so this would be incompatible)						
+	BEQ .L_validate_image_data
+		MOV r0, #6	// return error 6 (IncompatibleImage)
 		B .L_ret
 
 .L_validate_image_data:
