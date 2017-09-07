@@ -11,6 +11,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
 	flashconfig_success,
 	flashconfig_args_error,
@@ -18,9 +22,13 @@ typedef enum {
 	flashconfig_overrun
 } flashconfig_result;
 
-flashconfig_result flashconfig_get_value(const char * name, char * buffer, size_t buffer_size, size_t * value_size);
+flashconfig_result flashconfig_get_value(const char * name, const char ** value);
 
 flashconfig_result flashconfig_set_value(const char * name, char * value);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* FLASHCONFIG_H_ */
