@@ -28,6 +28,10 @@ typedef enum {
 	///< The CRC validation failed, and the CRC field is 0xFFFFFFFF. This is normally caused by debug build (without ElfFileProcessor has been run on).
 	UnverifyableImage = 4,
 
+	///< The masked system's CPUID don't match the one given in the image
+	IncompatibleImage = 5
+
+
 } image_validation_result;
 
 typedef struct {
@@ -42,6 +46,13 @@ typedef struct {
 	///< returns a pointer to the version string of the downloaded image.
 	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
 	const char * image_application_version;
+
+	///< the booloader performs an AND of this mask
+	uint32_t image_cpu_id_mask;
+
+	///< to compare the CPUID register with this value
+	///< if they don't match, no update will be performed
+	uint32_t image_cpu_id;
 	
 	///< returns validation result. This is a not-cached or persistent value.
 	image_validation_result image_validation_result;

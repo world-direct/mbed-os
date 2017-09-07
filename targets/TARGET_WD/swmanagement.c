@@ -8,6 +8,8 @@ static inline void m_set_valid_md(intptr_t mdroot, swmanagement_image_informatio
 	info->image_total_length = *((size_t*)(mdroot + 0x04));
 	info->image_application_name = (const char *)(mdroot + 0x08);
 	info->image_application_version = (const char *)(mdroot + 0x28);
+	info->image_cpu_id_mask = *((uint32_t*)(mdroot + 0x48));
+	info->image_cpu_id = *((uint32_t*)(mdroot + 0x4C));
 }
 
 static inline m_set_invalid_md(swmanagement_image_information * info){

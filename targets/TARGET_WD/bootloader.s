@@ -310,6 +310,10 @@ bl_start:
 	/////////////////////////////////////////////////////
 	BL bl_hal_ui
 
+	// Test CPUID
+	LDR r0, bl_data_cpuid_address
+	LDR r0, [r0]
+
 	// get the system state
 	/////////////////////////////////////////////////////
 
@@ -542,6 +546,7 @@ bl_data_application_max_size: .word __application_max_size
 bl_data_commandword_apply: .word 0x000000FF
 bl_data_commandword_success: .word 0x00000000
 bl_data_unverifiable_crc_value: .word WD_ABI_UNVERIFIABLE_CRC_VALUE
+bl_data_cpuid_address: .word 0xE000ED00
 
 bl_HardFault_Handler:
 	B .
