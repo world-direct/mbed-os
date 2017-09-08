@@ -138,11 +138,9 @@ g_bl_vectors:
 	WDABI data elements which need to be an fixed offset (0x200)
 */
 
-	// aligns to 0x200
-	.p2align 9
-	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
-	.word __bootloader_size		// WDABI: size of bootloader for image building
-	.word __flashconfig_start	// WDABI: start of bank2 for image building
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL;	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_LENGTH;		.word __bootloader_size		// WDABI: size of bootloader for image building
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_BANK2OFFSET;.word __flashconfig_start	// WDABI: start of bank2 for image building
 	
 .section .bl_text,"ax",%progbits
 
