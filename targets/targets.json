@@ -2653,7 +2653,7 @@
     "supported_toolchains": [ "GCC_ARM" ],
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_ROUTING", "WD_ROUTINGMAX" ],
-    "macros": ["RTC_LSI=1","WD_ABI_CPUID_MASK=0xFFF0FFF0","WD_ABI_CPUID=0x4110FC230"],
+    "macros": [ "RTC_LSI=1", "WD_ABI_CPUID_MASK=0xFFF0FFF0", "WD_ABI_CPUID=0x411FC230" ],
     "device_has": [ "SERIAL", "SERIAL_ASYNCH", "SERIAL_ASYNCH_DMA", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT" ],
     "release_versions": [ "5" ]
   }
