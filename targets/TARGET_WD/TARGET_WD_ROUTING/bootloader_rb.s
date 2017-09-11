@@ -307,7 +307,7 @@ POP {r4, r5, r6, r7, pc}
 bl_hal_erase_boot_image:
 PUSH {lr}
 
-	MOV r0, #1	// start and current sector
+	MOV r0, #2	// start and current sector
 	MOV r1, #255  // last sector
 
 	BL bl_hal_erase_sectors
@@ -326,7 +326,7 @@ POP {pc}
 bl_hal_erase_update_image:
 PUSH {lr}
 
-	LDR r0, =#257	// start and current sector
+	LDR r0, =#258	// start and current sector
 	LDR r1, =#511  // last sector
 
 	BL bl_hal_erase_sectors

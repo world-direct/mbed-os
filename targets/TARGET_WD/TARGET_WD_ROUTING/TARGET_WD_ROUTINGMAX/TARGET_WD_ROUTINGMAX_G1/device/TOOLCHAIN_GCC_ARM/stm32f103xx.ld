@@ -34,19 +34,6 @@ M_VECTOR_RAM_SIZE = 0x400;
 STACK_SIZE = 0x400;
 HEAP_SIZE = 0x6000;
 
-/* Specify the memory areas
-MEMORY
-{
-	VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x300
-	METADATA (rw): ORIGIN = MBED_APP_START + 0x300, LENGTH = 0x100
-    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
-
-	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
-	UPDATE (rw) :			ORIGIN = 0x08104000, LENGTH = 0xFC000
-
-    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 0x17FFF
-}*/
-
 /* Specify the memory areas */
 MEMORY
 {
@@ -56,18 +43,20 @@ MEMORY
 		It also has to be the first sector, so that the reset-vector is in the bootloader.
 
 		On the STM32103 the Sector 1 is 2k in size.
+		To enable Write-Protection of the bootloader, we have to use 2 regions, because
+		"The write-protection granularity is two pages." (see PM0068: STM32F10xxx XL-density Flash programming p14)
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
-	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x0500
-    VECTORS (rx) :			ORIGIN = 0x08000800, LENGTH = 0x0300
-	METADATA (rw):			ORIGIN = 0x08000B00, LENGTH = 0x0100
-    FLASH (rx)   :			ORIGIN = 0x08000C00, LENGTH = 0x80000 - 0x0800 - 0x400 /* = 0x7F400 = 521216 = 509k) */
+	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x0D00
+    VECTORS (rx) :			ORIGIN = 0x08001000, LENGTH = 0x0300
+	METADATA (rw):			ORIGIN = 0x08001300, LENGTH = 0x0100
+    FLASH (rx)   :			ORIGIN = 0x08001400, LENGTH = 0x80000 - 0x1000 - 0x400 /* = 0x7EC00 = 519168 = 507k) */
 
-	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x0800 
-	UPDATE (rw) :			ORIGIN = 0x08080800, LENGTH = 0x7F400
+	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x1000 
+	UPDATE (rw) :			ORIGIN = 0x08081000, LENGTH = 0x7E800
 
-	RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 0x17FFF
+	RAM (rwx)    :			ORIGIN = 0x20000000, LENGTH = 0x18000
 }
 
 
@@ -253,5 +242,5 @@ SECTIONS
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
-	__bootloader_size = 0x800;
+	__bootloader_size = 0x1000;
 }

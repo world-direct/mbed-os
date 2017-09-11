@@ -319,3 +319,4 @@ bl_hal_flash_key2:		.word 0xCDEF89AB
 // the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file
 // so this label is to clean up the dissassembly.
 bl_hal_misc_data:
+
