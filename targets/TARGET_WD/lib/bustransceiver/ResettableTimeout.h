@@ -25,6 +25,7 @@ public:
 	
 	void reset(timestamp_t us);
 	void reset(void);
+	void stop(void);
 	
 protected:
 private:
