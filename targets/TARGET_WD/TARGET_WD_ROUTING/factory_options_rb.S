@@ -8,5 +8,5 @@
 // this section is only used for the vNextElfTool, to extract the address and value of fuses to be programmed in the factory.hex
 // this data is not included in the image
 .section .factory_options,"a",%note
-.word 0x1FFFF808	// option address of 
-.word 0x00FF01FE	// option value
+.word 0x1FFFF808	// option address of WRP0 & WRP1
+.word 0x00FF01FE	// option value to write-protect pages 0 & 1
