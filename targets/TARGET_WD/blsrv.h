@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#include "WD_ABI.h"
 
 #define blsrv_erase_update_region		0x01
 #define blsrv_write_update_region		0x02
@@ -57,7 +58,7 @@ static inline int blsrv_call(struct blsrv_desc * descriptor){
 	int retcode;
 
 	typedef int (*ct)(void *);
-	void ** vectable = (void**)0x08000200;
+	void ** vectable = (void**)(WD_FLASH_BASE + WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL);
 	void * fnptr = *vectable;
 	return ((ct)fnptr)(descriptor);
 }
