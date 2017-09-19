@@ -27,6 +27,7 @@
  */
 #include "cmsis.h"
 #include "us_ticker_api.h"
+#include "resettrace.h"
 
 // This function is called after RAM initialization and before main.
 void mbed_sdk_init()
@@ -56,6 +57,7 @@ void mbed_die(void) {
 
 	#endif
 	
+	resettrace_set_error_code(MBED_DIE);
 	NVIC_SystemReset();
 	
 }
