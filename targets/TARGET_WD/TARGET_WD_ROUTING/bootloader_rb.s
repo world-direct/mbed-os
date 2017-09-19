@@ -327,7 +327,7 @@ bl_hal_erase_update_image:
 PUSH {lr}
 
 	LDR r0, =#258	// start and current sector
-	LDR r1, =#511  // last sector
+	LDR r1, =#384  // last sector
 
 	BL bl_hal_erase_sectors
 
@@ -368,7 +368,7 @@ PUSH {lr}
 	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
 1:
 	LDR r1, [r0, #0x00]		// FLASH_SR
-	ANDS r0, #0x01			// bit 1: BSY
+	ANDS r1, #0x01			// bit 1: BSY
 	BNE 1b	// retest
 
 POP {pc}

@@ -68,10 +68,10 @@ void swmangement_append_download_data(const void * buffer, size_t buffer_size)
 	desc.args.write_update_region.src = src;
 	desc.args.write_update_region.offset = m_download_offset;
 	desc.args.write_update_region.size = buffer_size;
-
-	m_download_offset += buffer_size;
-
+		
 	blsrv_call(&desc);
+	
+	m_download_offset += buffer_size;
 
 }
 
