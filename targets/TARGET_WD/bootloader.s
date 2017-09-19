@@ -308,6 +308,8 @@ bl_start:
 	/////////////////////////////////////////////////////
 	BL bl_hal_ui
 
+	BL bl_sha256_test
+
 	// get the system state
 	/////////////////////////////////////////////////////
 
@@ -427,6 +429,7 @@ POP {r4, pc}
 	3: InvalidImage (CRC validation failed)
 	4: UnverifiableImage (CRC validation failed && CRC==UNVERIYFIABLE_CRC_VALUE)
 	5: IncompatibleImage (CPUID validation failed)
+	6: DigitalSignature check failed
 */
 .type bl_validate_image, %function
 bl_validate_image:
