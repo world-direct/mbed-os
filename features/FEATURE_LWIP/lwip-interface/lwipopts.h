@@ -19,8 +19,6 @@
 #ifndef LWIPOPTS_H
 #define LWIPOPTS_H
 
-#define LWIP_DEBUG					
-
 #include "lwipopts_conf.h"
 
 // Workaround for Linux timeval
