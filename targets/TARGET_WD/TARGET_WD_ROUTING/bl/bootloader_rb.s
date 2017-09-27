@@ -6,9 +6,7 @@
  *  Author: Guenter.Prossliner
  */ 
 
-.syntax unified
-.cpu cortex-m3
-.thumb
+#include "bl_asmoptions.inc"
 
 // these defines has been taken from stm32f103xg.h
 #define PERIPH_BASE           0x40000000

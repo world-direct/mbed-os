@@ -6,9 +6,8 @@
  *  Author: Guenter.Prossliner
  */ 
 
-.syntax unified
-.cpu cortex-m4
-.thumb
+#include "bl_asmoptions.inc"
+
 
 .section .bl_text,"ax",%progbits
 

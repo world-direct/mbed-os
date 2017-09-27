@@ -10,11 +10,13 @@
 	This Key is always compiled into the .elf, but is is not active, until WD_ABI_BL_HEADER_FLAG_PRODUCTION header flag is set
 */
 
+#include "bl_asmoptions.inc"
+
 .section .bl_ecdsa_testkey,"ax",%progbits
 
 #define BL_ECDSA_THUMBPRINT 0xCDEAE019, 0xAEAECB39, 0x077A3223, 0x87ADCC9E, 0x3461D3CB, 0x110B37A4, 0x34773A80, 0xE13851D3
-#define BL_ECDSA_PUBX 0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3
-#define BL_ECDSA_PUBY 0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F
+#define BL_ECDSA_PUBX		0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3
+#define BL_ECDSA_PUBY		0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F
 
 	.word 0xFFFFFFFF	// this is just to avoid, that if the test-key get linked directly after the bootloader, that this can be misinterpreted as a bootloader 
 

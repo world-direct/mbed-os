@@ -1,6 +1,5 @@
-
 /*
- * bootloader.s
+ * bl_main.s
  *
  * Created: 10.08.2017 11:40:20
  *  Author: Guenter.Prossliner
@@ -99,11 +98,9 @@ if CRC word == 0 => IMAGE_UNVERIFYABLE (no crc signature found)
 
  */ 
 
+#include "bl_asmoptions.inc"
 
 #include "WD_ABI.h"
-
-.syntax unified
-.thumb
 
 .section  .bl_vectors,"a",%progbits
 .type  g_bl_vectors, %object
