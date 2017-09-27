@@ -228,5 +228,5 @@ SECTIONS
 	__bootloader_size = ADDR(.bl_crc32) - __bl_start + 4;
 
 	// +4 is to skip the empty word
-	__bl_testkey_offset = ADDR(.bl_ecdsa_testkey) - __bl_start + 4;
+	__bl_testkey_address = ADDR(.bl_ecdsa_testkey) + 4;
 }
