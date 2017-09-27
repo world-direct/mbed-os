@@ -5,6 +5,9 @@ M_VECTOR_RAM_SIZE = 0x400;
 STACK_SIZE = 0x400;
 HEAP_SIZE = 0x6000;
 
+
+// https://sourceware.org/binutils/docs/ld/Scripts.html
+
 /* Specify the memory areas */
 MEMORY
 {
@@ -36,6 +39,8 @@ SECTIONS
 
 	.bl_vectors :
 	{
+		__bl_start = .;
+		
 		KEEP(*(.bl_vectors))
          . = ALIGN(4);
 	} > BL_VECTORS
@@ -44,6 +49,17 @@ SECTIONS
 	{
 		*(.bl_text)
          . = ALIGN(4);
+	} > BL_TEXT
+
+	.bl_crc32 : 
+	{
+		. = ALIGN(4);
+		KEEP(*(.bl_crc32))
+	} > BL_TEXT
+
+	.bl_ecdsa_testkey : 
+	{
+		KEEP(*(.bl_ecdsa_testkey))
 	} > BL_TEXT
 
     .isr_vector :
@@ -208,5 +224,9 @@ SECTIONS
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
-	__bootloader_size = 0x4000;
+	__bootloader_length = 0x4000;
+	__bootloader_size = ADDR(.bl_crc32) - __bl_start + 4;
+
+	// +4 is to skip the empty word
+	__bl_testkey_offset = ADDR(.bl_ecdsa_testkey) - __bl_start + 4;
 }

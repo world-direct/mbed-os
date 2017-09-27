@@ -1,4 +1,3 @@
-
 /*
  * bootloader_sign.S
  *
@@ -13,7 +12,7 @@
 .global bl_sha256_digest
 .global bl_sha256_test
 
-.type bl_sha256_digest, %function
+.type bl_sha256_test, %function
 bl_sha256_test:
 PUSH {r4, lr}
 SUB sp, #32
@@ -23,19 +22,33 @@ SUB sp, #32
 	MOV r0, 0
 	MOV r1, 0
 	MOV r2, r4
-	BL bl_sha256_digest	// *r4 => e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855
+	BL bl_sha256_digest	
+	// hash "" is:	e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855
+	// r4 is:		7852b855 a495991b 649b934c 27ae41e4	996fb924 9afbf4c8 98fc1c14 e3b0c442
 
 	ADR r0, bl_sha256_test_abc
 	MOV r1, 3
 	MOV r2, r4
-	BL bl_sha256_digest	// *r4 => ba7816bf 8f01cfea 414140de 5dae2223 b00361a3 96177a9c b410ff61 f20015ad
+	BL bl_sha256_digest	// *r4 => f20015ad b410ff61 96177a9c b00361a3 5dae2223 414140de	8f01cfea ba7816bf       
+
+	ADR r0, bl_sha256_test_long
+	MOV r1, 112
+	MOV r2, r4
+	BL bl_sha256_digest	// *r4 => 7afee9d1 afac4503 e8f07a51 0b249b11 7b049237 036ce59e 78af8380 cf5b16a7       
+
 
 ADD sp, #32
 POP {r4, pc}
-bl_sha256_test_abc: .asciz "abc"
+bl_sha256_test_abc: .ascii "abc"
+bl_sha256_test_long: .ascii "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
 
+.align 4
+	
+
+pop {r4, r5, pc}
 
 // bl_sha256_digest(void * start, size_t len, uint32_t digest[8])
+.global bl_sha256_digest
 .type bl_sha256_digest, %function
 bl_sha256_digest:
 push	{r4, r5, r6, r7, lr}
@@ -59,12 +72,12 @@ sub	sp, #104	// 0x68
 	bl	bl_sha256_final
 
 	// we have the correct sha256 in sp, 
-	// let's copy it to the output buffer digest, and REV bitness
+	// let's copy it to the output buffer digest to and reverse byte order (needed for ECDSA validation)
 	mov r6, #32
+	add r4, #28
 	0:
 		ldr r0, [r7], #4
-		rev r0, r0
-		str r0, [r4], #4
+		str r0, [r4], #-4
 		subs r6, #4
 		bne 0b
 
@@ -75,52 +88,61 @@ pop	{r4, r5, r6, r7, pc}
 
 .type bl_sha256_init, %function
 bl_sha256_init:
-push	{r4, lr}
-	mov	r4, r0
-	cbz	r0, 0f
-	adr	r1, bl_sha256_initial_hash_value
+push {r4, lr}
+
+	mov		r4, r0	// r4: ctx
+
+	// fill initial value
+	adr		r1, bl_sha256_initial_hash_value
 	movs	r2, #32
-	bl	bl_memcpy
-	movs	r2, #64	// 0x40
-	add.w	r0, r4, #40	// 0x28
+	bl		bl_memcpy
+
+	// clear rest of ctx
+	add		r0, r4, #32	// 0x20 == offsetof(bitcount)
 	movs	r1, #0
-	bl	bl_memset
-	movs	r2, #0
-	movs	r3, #0
-	strd	r2, r3, [r4, #32]
-0:
+	movs	r2, #72		// 0x48 == sizeof(ctx)-offsetof(bitcount)
+	bl		bl_memset
+
 pop	{r4, pc}
 
 .type bl_sha256_update, %function
 bl_sha256_update:
-	push	{r3, r4, r5, r6, r7, lr}
-	mov	r5, r0
-	mov	r7, r1
-	mov	r4, r2
+push {r3, r4, r5, r6, r7, lr}
+	mov	r5, r0	// r5: ctx
+	mov	r7, r1	// r7: data
+	mov	r4, r2	// r8: len)
+
+	// if (!len) return;
 	cmp	r2, #0
 	beq.n	0f
+
+	// calculate usedspace
 	ldr	r0, [r0, #32]
 	ubfx	r0, r0, #3, #6
+
+	// if(usedspace > 0) // this is if there is already data written, and could possiby be removed
 	cbz	r0, 1f
-	rsb	r6, r0, #64	// 0x40
-	cmp	r2, r6
-	add.w	r0, r0, #40	// 0x28
-	add	r0, r5
-	bcc.n	2f
-	mov	r2, r6
-	bl	bl_memcpy
-	ldrd	r2, r3, [r5, #32]
-	lsls	r1, r6, #3
-	adds	r2, r2, r1
-	adc.w	r3, r3, #0
-	strd	r2, r3, [r5, #32]
-	mov	r0, r5
-	add.w	r1, r5, #40	// 0x28
-	subs	r4, r4, r6
-	add	r7, r6
-	bl	bl_sha256_transform
-1:
+		rsb	r6, r0, #64	// 0x40
+		cmp	r2, r6
+		add.w	r0, r0, #40	// 0x28
+		add	r0, r5
+		bcc.n	2f
+		mov	r2, r6
+		bl	bl_memcpy
+		ldrd	r2, r3, [r5, #32]
+		lsls	r1, r6, #3
+		adds	r2, r2, r1
+		adc.w	r3, r3, #0
+		strd	r2, r3, [r5, #32]
+		mov	r0, r5
+		add.w	r1, r5, #40	// 0x28
+		subs	r4, r4, r6
+		add	r7, r6
+		bl	bl_sha256_transform
+
+	1:
 	mov	r6, r4
+
 4:
 	subs	r1, r4, r6
 	cmp	r6, #63	// 0x3f
@@ -359,6 +381,7 @@ bl_sha256_final:
 
 // ptr memcpy(dest, src, len)
 .type bl_memcpy, %function
+.global bl_memcpy
 bl_memcpy:
 	push	{r4, lr}
 	subs	r3, r0, #1
@@ -373,6 +396,7 @@ bl_memcpy:
 	pop	{r4, pc}
 
 // ptr bl_memset(dest, val, len)
+.global bl_memset
 .type bl_memset, %function
 bl_memset:
 	add	r2, r0
@@ -384,6 +408,39 @@ bl_memset:
 0:	
 	bx	lr
 
+// ptr bl_memcmp(ptr, ptr, size)
+// ret: 0: equal, -1: is lower, 1: is greater
+.type bl_memcmp, %function
+.global bl_memcmp
+bl_memcmp:
+push	{r4, r5, lr}
+
+	movs	r3, #0
+3:	
+		cmp	r3, r2
+		bge.n	1f	// return 0
+
+		ldrb	r4, [r0, #0]
+		ldrb	r5, [r1, #0]
+		subs	r4, r4, r5
+		cmp	r4, #0
+		beq.n	2f	// continue
+		blt.n	3f	// return -1
+		b 0f	// return 0
+	2:	
+		adds	r3, #1
+		b.n	3b
+1:	
+	movs	r0, #0
+	b 0f
+3:	
+	mov.w	r0, #-1
+
+0:
+pop	{r4, r5, pc}
+
+
+// STATIC DATA
 .align 4
 
 bl_sha256_initial_hash_value:
@@ -414,3 +471,4 @@ bl_sha256_K256:
 	.word 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3
 	.word 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208
 	.word 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+

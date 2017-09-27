@@ -138,10 +138,20 @@ g_bl_vectors:
 	WDABI data elements which need to be an fixed offset (0x200)
 */
 
+.=WD_ABI_BL_HEADER_OFFSET;										.word WD_ABI_BL_HEADER_MAGIC << 16 // may get patched to set BL Flags
 .=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL;	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_LENGTH;		.word __bootloader_size		// WDABI: size of bootloader for image building
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_LENGTH;		.word __bootloader_length	// WDABI: length of bootloader for image building
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SIZE;		.word __bootloader_size		// WDABI: length of bootloader for image building
 .=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_BANK2OFFSET;.word __flashconfig_start	// WDABI: start of bank2 for image building
-	
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_DSAK_OFFSET;.word __bl_testkey_offset	// WDABI: key-offset
+
+.section .bl_crc32,"a",%progbits
+	.word WD_ABI_UNVERIFIABLE_CRC_VALUE		// this will be linked at the end of bl_, and patched in the elf file to the correct crc value
+ 
+/*************************************************************************
+BOOTLOADER IMPLEMENTATION
+*/
+
 .section .bl_text,"ax",%progbits
 
 /*************************************************************************
@@ -173,37 +183,37 @@ PUSH {r4, r5, r6, lr}
 	// r5 and r6 can be used to store vars in the case blocks (.L_blsrv_*)
 
 	// test for blsrv_erase_update_region = 1
-	MOV r5, #1
+	MOVS r5, #1
 	CMP r1, r5
 	BEQ .L_blsrv_erase_update_region
 
 	// test for blsrv_write_update_region = 2
-	MOV r5, #2
+	MOVS r5, #2
 	CMP r1, r5
 	BEQ .L_blsrv_write_update_region
 
 	// test for blsrv_validate_update_image = 3
-	MOV r5, #3
+	MOVS r5, #3
 	CMP r1, r5
 	BEQ .L_blsrv_validate_update_image
 
 	// test for blsrv_validate_boot_image	0x04
-	MOV r5, #4
+	MOVS r5, #4
 	CMP r1, r5
 	BEQ .L_blsrv_validate_boot_image
 
 	// test for blsrv_apply_update	0x05
-	MOV r5, #5
+	MOVS r5, #5
 	CMP r1, r5
 	BEQ .L_blsrv_apply_update
 
 	// test for blsrv_write_config_data			0x06
-	MOV r5, #6
+	MOVS r5, #6
 	CMP r1, r5
 	BEQ .L_blsrv_write_config_data
 
 	// return false (invalid operation)
-	MOV r0, 0
+	MOVS r0, 0
 	B 0f
 
 	.L_blsrv_erase_update_region:
@@ -281,7 +291,7 @@ PUSH {r4, r5, r6, lr}
 		B 1f
 
 1:
-MOV r0, 1
+MOVS r0, 1
 0:
 POP {r4, r5, r6, pc}
 
@@ -443,6 +453,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	////////////////////////////
 	// metadata validation
 
+
 	// start validating metadata by loading the signature word into r5
 	MOV r5, r4
 	LDR r6, bl_data_metadata_offset
@@ -456,7 +467,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	CMP r5, r6
 	BEQ .L_validate_metadata	// continue		
 		MOV r0, 1	// return error 1 (NoMetadata)
-		B .L_ret
+		B 0f
 
 .L_validate_metadata:
 
@@ -473,8 +484,8 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	// and do the compare
 	CMP r6, r7
 	BHI .L_validate_cpuid	// continue
-		MOV r0, #2	// return error 2 (InvalidMetadata)
-		B .L_ret
+		MOVS r0, #2	// return error 2 (InvalidMetadata)
+		B 0f
 
 .L_validate_cpuid:
 
@@ -486,62 +497,77 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	EOR r0, r2											//							01011010	r0 = r0 xor r2 (all 1 bits are different)
 	ANDS r0, r1											//							01001000	r0 = r0 and r1 (two bits dont match, so this would be incompatible)						
 	BEQ .L_validate_image_data
-		MOV r0, #6	// return error 6 (IncompatibleImage)
-		B .L_ret
+		MOVS r0, #6	// return error 6 (IncompatibleImage)
+		B 0f
 
 .L_validate_image_data:
 
-	BL bl_hal_crc_init
+	MOV r0, r4
+	MOV r1, r8
 
-	// r5 current address, will be incremented by 4 in the loop
-	MOV r5, r4
+	BL bl_calculate_crc
+	MOVS r0, r0
+	BEQ .L_success	// crc=0! valid image
 
-	// r6 will contain the current crc
-	// r7 remaining length, will be post-decremented (by 4) in the loop until 0 is reached
-	// r7 is already initialized from .L_validate_metadata
+	// check if the CRC word has the link time constant representing an unverifyable image
+	MOV r0, r4		// base
+	ADD r0, r8		
+	SUB r0, #4		// &crc
+	LDR r0, [r0]	// crc
+	LDR r1, bl_data_unverifiable_crc_value
+	CMP r0, r1		// if crc==unverifiable_crc_value goto .L_unverfiyable
+	BEQ .L_unverfiyable
 
-.L_validate_next_word:
-	LDR r0, [r5], #4	// load current word, this is post-index r0=*r5 +=4
-
-	// LDR reads not the pysical order, it read LittleEndian, so we get 0x01020304, but in the file we have 0x4030201! 
-	// to allow that we can form the CRC on the file (it seems better IMO), to REV to file-order here
-	REV r0, r0	
-
-	BL bl_hal_crc_update	
-	MOV r6, r0	// store crc in r6
-
-	// check if we are done. SUB updates the flags, so no need to compare here
-	SUBS r7, #4
-	BNE .L_validate_next_word
-
-	// compare r6 to zero for a valid image
-	MOVS r6, r6	//seem like a nop, but is not. It updates the flags!
-	BEQ .L_success	// continue
-
-		// check if the CRC word has the link time constant representing an unverifyable image
-		LDR r0, [r5, #-4];	// r5 points one word next to the length
-		LDR r1, bl_data_unverifiable_crc_value
-		CMP r0, r1
-		BEQ .L_unverfiyable
-
-		// return error 3 (InvalidImage)
-		MOV r1, r8
-		MOV r0, 3
-		B .L_ret
-
-	.L_unverfiyable:
+	// return error 3 (InvalidImage)
+	MOV r1, r8
+	MOVS r0, #3
+	B 0f
 
 	// return error 4 (UnverifyableImage)
-	MOV r0, 4
+	.L_unverfiyable:
+	MOVS r0, #4
 	MOV r1, r8
-	B .L_ret
+	B 0f
 
 	.L_success:
-	MOV r0, 0
+	MOVS r0, #0
 	MOV r1, r8	// size
 
-.L_ret:
+0:
 POP {r4, r5, r6, r7, r8, pc}
+/*************************************************************************
+	u32 bl_calculate_crc(void*, size)
+
+	This method calculates the crc value of the memory-region specified by the args
+*/
+.type bl_calculate_crc, %function
+bl_calculate_crc:
+PUSH {r5, r6, lr}
+
+	MOV r5, r0	// ptr, post-increment
+	MOV r6, r1	// size, post-
+
+	// size != 0
+	// size % 4
+
+	BL bl_hal_crc_init
+
+	1: // while(size) {
+
+		LDR r0, [r5], #4	// r0 = *r5++4
+
+		// LDR reads not the pysical order, it read LittleEndian, so we get 0x01020304, but in the file we have 0x4030201! 
+		// to allow that we can form the CRC on the file (it seems better IMO), to REV to file-order here
+		REV r0, r0	
+		BL bl_hal_crc_update	
+
+		SUBS r6, #4
+	BNE 1b // while(size)
+
+	// r0 contains the crc from the last call to bl_hal_crc_update
+	// this is our return value
+POP {r5, r6, pc}	
+	
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
