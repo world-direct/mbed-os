@@ -2642,7 +2642,7 @@
     "supported_toolchains": [ "GCC_ARM" ],
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_CORE" ],
-    "macros": ["RTC_LSI=1","WD_ABI_CPUID_MASK=0xFFF0FFF0","WD_ABI_CPUID=0x4100C240"],
+    "macros": ["RTC_LSI=1","WD_ABI_CPUID_MASK=0xFFF0FFF0","WD_ABI_CPUID=0x4100C240","WD_BOARD_SHORT_NAME=\"CR1\""],
     "device_has": [ "ANALOGIN", "ETHERNET", "SERIAL", "SERIAL_ASYNCH", "SERIAL_ASYNCH_DMA", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "I2C", "I2CSLAVE", "I2C_ASYNCH", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT", "LOWPOWERTIMER", "ERROR_RED" ],
     "features": [ "LWIP" ],
     "release_versions": [ "5" ]
@@ -2653,7 +2653,7 @@
     "supported_toolchains": [ "GCC_ARM" ],
     "default_toolchain": "GCC_ARM",
     "extra_labels": [ "WD", "WD_ROUTING", "WD_ROUTINGMAX" ],
-    "macros": [ "RTC_LSI=1", "WD_ABI_CPUID_MASK=0xFFF0FFF0", "WD_ABI_CPUID=0x411FC230" ],
+    "macros": [ "RTC_LSI=1", "WD_ABI_CPUID_MASK=0xFFF0FFF0", "WD_ABI_CPUID=0x411FC230","WD_BOARD_SHORT_NAME=\"CR1\""],
     "device_has": [ "SERIAL", "SERIAL_ASYNCH", "SERIAL_ASYNCH_DMA", "SERIAL_FC", "STDIO_MESSAGES", "INTERRUPTIN", "RTC", "SPI", "SPISLAVE", "SPI_ASYNCH", "PORTIN", "PORTOUT" ],
     "release_versions": [ "5" ]
   }
