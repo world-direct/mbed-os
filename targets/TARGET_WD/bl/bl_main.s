@@ -140,7 +140,7 @@ g_bl_vectors:
 .=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_LENGTH;		.word __bootloader_length	// WDABI: length of bootloader for image building
 .=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SIZE;		.word __bootloader_size		// WDABI: length of bootloader for image building
 .=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_BANK2OFFSET;.word __flashconfig_start	// WDABI: start of bank2 for image building
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_DSAK_OFFSET;.word __bl_testkey_offset	// WDABI: key-offset
+.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_KEYSTORE;	.word __bl_testkey_address	// WDABI: key-offset
 
 .section .bl_crc32,"a",%progbits
 	.word WD_ABI_UNVERIFIABLE_CRC_VALUE		// this will be linked at the end of bl_, and patched in the elf file to the correct crc value
@@ -504,7 +504,7 @@ PUSH {r4, r5, r6, r7, r8, lr}
 
 	BL bl_calculate_crc
 	MOVS r0, r0
-	BEQ .L_success	// crc=0! valid image
+	BEQ .L_validate_dsa	// crc=0! valid image
 
 	// check if the CRC word has the link time constant representing an unverifyable image
 	MOV r0, r4		// base
@@ -523,6 +523,18 @@ PUSH {r4, r5, r6, r7, r8, lr}
 	// return error 4 (UnverifyableImage)
 	.L_unverfiyable:
 	MOVS r0, #4
+	MOV r1, r8
+	B 0f
+
+	.L_validate_dsa:
+	// bl_signature_validate (void * image, size_t size);
+	MOV r0, r4
+	MOV r1, r8
+	bl bl_signature_validate
+	MOVS r0, r0
+	BEQ .L_success;	// OK!
+
+	MOVS r0, #6
 	MOV r1, r8
 	B 0f
 
@@ -564,7 +576,17 @@ PUSH {r5, r6, lr}
 	// r0 contains the crc from the last call to bl_hal_crc_update
 	// this is our return value
 POP {r5, r6, pc}	
+
+/*************************************************************************
 	
+	void * bl_error (int code);
+	
+	DIE, DIE, DIE....
+
+	
+*************************************************************************/
+BL_GLOBAL_FUNCTION(bl_error):
+	b .
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
