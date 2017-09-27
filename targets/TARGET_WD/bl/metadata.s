@@ -2,6 +2,8 @@
 #define EXPSTR(a) EXPSTRHLP(a)
 #define EXPSTRHLP(a) #a
 
+#include "bl_asmoptions.inc"
+
 .section .metadata,"a",%progbits
 	. = 0;												.word WD_ABI_METADATA_MAGIC
 	. = WD_ABI_METADATA_FLDOFF_SIZE;					.word __image_size

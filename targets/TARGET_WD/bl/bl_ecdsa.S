@@ -1,12 +1,11 @@
 /*
- * bootloader_ecdsa.S
+ * bl_ecdsa.S
  *
  * Created: 26.09.2017 21:37:55
  *  Author: Guenter.Prossliner
 */ 
 
-.syntax unified
-.thumb
+#include "bl_asmoptions.inc"
 
 #define BL_ECDSA_DEBUG	1
 
