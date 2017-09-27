@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 #include "WD_ABI.h"
+#include "assert.h"
 
 #define blsrv_erase_update_region		0x01
 #define blsrv_write_update_region		0x02
@@ -56,6 +57,10 @@ struct blsrv_desc {
 
 static inline int blsrv_call(struct blsrv_desc * descriptor){
 	int retcode;
+
+	// validate the bootloader magic
+	uint32_t bl_flags = *((uint32_t*)(WD_FLASH_BASE + WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL));
+	assert(bl_flags == WD_ABI_BL_HEADER_MAGIC);
 
 	typedef int (*ct)(void *);
 	void ** vectable = (void**)(WD_FLASH_BASE + WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL);

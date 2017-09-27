@@ -242,5 +242,5 @@ SECTIONS
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
-	__bootloader_size = 0x1000;
+	__bootloader_length = 0x1000;
 }
