@@ -48,13 +48,13 @@ MEMORY
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
-	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x0D00
-    VECTORS (rx) :			ORIGIN = 0x08001000, LENGTH = 0x0300
-	METADATA (rw):			ORIGIN = 0x08001300, LENGTH = 0x0100
-    FLASH (rx)   :			ORIGIN = 0x08001400, LENGTH = 0x80000 - 0x1000 - 0x400 /* = 0x7EC00 = 519168 = 507k) */
+	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x1D00
+    VECTORS (rx) :			ORIGIN = 0x08002000, LENGTH = 0x0300
+	METADATA (rw):			ORIGIN = 0x08002300, LENGTH = 0x0100
+    FLASH (rx)   :			ORIGIN = 0x08002400, LENGTH = 0x80000 - 0x2000 - 0x400 
 
-	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x1000 
-	UPDATE (rw) :			ORIGIN = 0x08081000, LENGTH = 0x7E800
+	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x2000 
+	UPDATE (rw) :			ORIGIN = 0x08082000, LENGTH = 0x80000 - 0x2000
 
 	RAM (rwx)    :			ORIGIN = 0x20000000, LENGTH = 0x18000
 }
@@ -66,6 +66,8 @@ SECTIONS
 
 	.bl_vectors :
 	{
+		__bl_start = .;
+
 		KEEP(*(.bl_vectors))
          . = ALIGN(4);
 	} > BL_VECTORS
@@ -76,6 +78,17 @@ SECTIONS
          . = ALIGN(4);
 	} > BL_TEXT
 
+
+	.bl_crc32 : 
+	{
+		. = ALIGN(4);
+		KEEP(*(.bl_crc32))
+	} > BL_TEXT
+
+	.bl_ecdsa_testkey : 
+	{
+		KEEP(*(.bl_ecdsa_testkey))
+	} > BL_TEXT
 
 	.isr_vector :
     {
@@ -242,5 +255,9 @@ SECTIONS
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
-	__bootloader_length = 0x1000;
+	__bootloader_length = 0x2000;
+	__bootloader_size = ADDR(.bl_crc32) - __bl_start + 4;
+
+	// +4 is to skip the empty word
+	__bl_testkey_address = ADDR(.bl_ecdsa_testkey) + 4;
 }
