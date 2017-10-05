@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <alloca.h>
 
 #include "blsrv.h"
 
@@ -33,11 +34,40 @@ static cfg_ptr m_endptr;
 static void m_checkinit()
 {
 	// m_endptr needs to be initialized once
-	if(!m_endptr.val){
-		m_endptr.val = end_intptr;
-		while (m_endptr.val >= start_intptr && *(--m_endptr.w) == 0xFFFFFFFF);
-		m_endptr.w++;
+	if(m_endptr.val) return;
+
+	// first let's find the first word != 0xFFFFFFFF
+	cfg_ptr p_last;
+	p_last.val = end_intptr;
+	while (p_last.val >= start_intptr && *(--p_last.w) == 0xFFFFFFFF);
+
+	// then let's find the first word 0x00000000
+	cfg_ptr p_zero = p_last;
+	while (p_zero.val >= start_intptr && *p_zero.w != 0x00000000)
+		p_zero.w--;
+
+	// we may need to recover from uncompleted writes.
+	// if this is not true, we zero out the complete block once, so the get state machine in not affected
+	size_t incomplete_size = p_last.val - p_zero.val;
+	if(incomplete_size){
+
+		// let's use a stack-buffer
+		uint32_t * zerob = alloca(incomplete_size);
+		memset(zerob, 0, incomplete_size);
+
+		// and write to flash
+		p_zero.w++;	// don't need to zero out word already zero
+		struct blsrv_desc d;
+		d.operation = blsrv_write_config_data;
+		d.args.write_config_data.offset = p_zero.val - start_intptr;
+		d.args.write_config_data.buffer = (intptr_t)zerob;
+		d.args.write_config_data.buffer_size = incomplete_size;
+		blsrv_call(&d);
 	}
+
+		
+	// now we are on the first 0xFFFFFFFF again	
+	m_endptr.w = p_last.w++;
 }
 
 flashconfig_result flashconfig_get_value(const char * name, const char ** value)
@@ -65,11 +95,11 @@ flashconfig_result flashconfig_get_value(const char * name, const char ** value)
 
 	const char * valueptr;
 	const char * keyptr;
-
+	
 	cfg_ptr p = m_endptr;
-	p.c--;
-
-	for(; state != s_match && p.val > start_intptr;p.c--){
+	p.w--;	// skip 0xFF byte
+	
+	for (; state != s_match && p.val > start_intptr; p.c--) {
 		char c = *p.c;
 
 		// please note that the "missing" breaks here are intentional, and part of the state-machine!
@@ -122,42 +152,44 @@ flashconfig_result flashconfig_set_value(const char * name, char * value)
 	if(!name) return flashconfig_args_error;
 	if(!value) return flashconfig_args_error;
 
-	size_t sname = strlen(name);
-	size_t svalue = strlen(value);
+	size_t sname = strlen(name) + 1;
+	size_t svalue = strlen(value) + 1;
 
 	if(!sname || sname >= FLASHCONFIG_NAME_MAX) return flashconfig_args_error;
 	if(!svalue|| sname >= FLASHCONFIG_VALUE_MAX) return flashconfig_args_error;
 
 	m_checkinit();
-
-	// validate that we have enough storage left
-	cfg_ptr p = m_endptr;	// m_endptr is always word-aligned and on FFFFFFFF
-	#define align_p() do{if(p.val %4) p.val += (4-p.val % 4);} while(0)
-
-	p.c += sname + 1;	// name with \0
-	align_p();
-	size_t valoffset = p.val - m_endptr.val;
-	p.c += svalue + 1;	// value with \0
-	align_p();
-
-	if(p.val >= end_intptr)
-		return flashconfig_overrun;
-
-	size_t memsize = p.val - m_endptr.val;
+	
+	// build stack buffer with the new setting
 	uint32_t buffer[(FLASHCONFIG_NAME_MAX + FLASHCONFIG_VALUE_MAX + 8) / 4];	// alloc as i32 for alignment
-	char * bufferp = (char*)buffer;
+	cfg_ptr p;
+	p.w = buffer;
+	
+	// copy key incl \0
+	memcpy(p.val, name, sname);
+	p.c += sname;
+	
+	// copy value incl \0
+	memcpy(p.val, value, svalue);
+	p.c += svalue;
+	
+	// align to word
+	while (p.val % 4)
+		*p.c++ = '\0';
+	
+	// add termination word
+	*p.w = 0;
+	
+	size_t memsize = p.val - (intptr_t)buffer;
 
-	memset(bufferp, 0, memsize);
-	p.c = bufferp;
-
-	memcpy(bufferp, name, sname);
-	memcpy(bufferp + valoffset, value, svalue);
+	if (m_endptr.val + memsize > end_intptr)
+		return flashconfig_overrun;
 
 	// and write to flash
 	struct blsrv_desc d;
 	d.operation = blsrv_write_config_data;
 	d.args.write_config_data.offset = m_endptr.val - start_intptr;
-	d.args.write_config_data.buffer = (intptr_t)bufferp;
+	d.args.write_config_data.buffer = (intptr_t)buffer;
 	d.args.write_config_data.buffer_size = memsize;
 	blsrv_call(&d);
 
