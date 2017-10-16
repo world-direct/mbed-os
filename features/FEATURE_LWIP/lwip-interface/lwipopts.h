@@ -214,12 +214,14 @@
 #define ETHARP_DEBUG                LWIP_DBG_OFF
 #define UDP_LPC_EMAC                LWIP_DBG_OFF
 
+#define LWIP_STATS                  1
+#define ICMP_STATS                  1
+
 #ifdef LWIP_DEBUG
 #define MEMP_OVERFLOW_CHECK         1
 #define MEMP_SANITY_CHECK           1
 #else
 #define LWIP_NOASSERT               1
-#define LWIP_STATS                  0
 #endif
 
 #define LWIP_DBG_TYPES_ON           LWIP_DBG_ON
