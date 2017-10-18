@@ -15,6 +15,8 @@ class Modbus{
 		
 		enum ModbusErrorCode : uint8_t {
 			Success = 0x00,
+			FunctionCode = 0xF7,
+			Echo = 0xF8,
 			RegisterCount = 0xF9,
 			StartAddress = 0xFA,
 			ByteCount = 0xFB,

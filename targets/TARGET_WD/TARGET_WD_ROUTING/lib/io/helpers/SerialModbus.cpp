@@ -6,7 +6,10 @@
 */
 
 #include "SerialModbus.h"
-#include "lib_crc.h"
+
+extern "C" {
+	#include "lib_crc.h"
+}
 
 #define MODBUS_FC_READHOLDINGREGISTERS			3
 #define MODBUS_FC_WRITEHOLDINGREGISTERS			16
@@ -42,9 +45,10 @@ uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t re
 	// ensure frame interval
 	Thread::wait(MODBUS_FRAME_INTERVAL_MS);
 	
+	Modbus::ModbusErrorCode ret;
 	// write request
-	for(int i = 0; i < sizeof(request_datagram); i++){
-		_serial.putc(request_datagram[i]);
+	if ((ret = write_request(request_datagram, sizeof(request_datagram))) != Modbus::Success) {
+		return ret;
 	}
 	
 	// declare response
@@ -55,24 +59,24 @@ uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t re
 	];
 	
 	// read response
-	for(int i = 0; i < sizeof(response_datagram); i++){
-		response_datagram[i] = _serial.getc();
+	if ((ret = read_response(response_datagram, sizeof(response_datagram))) != Modbus::Success) {
+		return ret;
 	}
 	
 	// check CRC, slave_id and function-code
-	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id) != Modbus::Success){
+	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id, MODBUS_FC_READHOLDINGREGISTERS) != Modbus::Success){
 		return code;
 	}
 	
 	// check byte-count
 	if(response_datagram[2] != (register_count * 2)){
-		return ByteCount;
+		return Modbus::ByteCount;
 	}
 	
 	// copy datagram
 	memcpy(
 		result_buffer, 
-		response_datagram + (sizeof(uint8_t) + 3), 
+		response_datagram + (sizeof(uint8_t) * 3), 
 		register_count * sizeof(uint16_t)
 	);
 	
@@ -100,21 +104,23 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 	// ensure frame interval
 	Thread::wait(MODBUS_FRAME_INTERVAL_MS);
 	
+	Modbus::ModbusErrorCode ret;
+	
 	// write request
-	for(int i = 0; i < sizeof(request_datagram); i++){
-		_serial.putc(request_datagram[i]);
+	if((ret = write_request(request_datagram, sizeof(request_datagram))) != Modbus::Success){
+		return ret;
 	}
 
 	// declare response
 	uint8_t response_datagram[8];
 	
 	// read response
-	for(int i = 0; i < sizeof(response_datagram); i++){
-		response_datagram[i] = _serial.getc();
+	if ((ret = read_response(response_datagram, sizeof(response_datagram))) != Modbus::Success) {
+		return ret;
 	}
 	
 	// check CRC, slave_id and function-code
-	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id) != Modbus::Success){
+	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id, MODBUS_FC_WRITEHOLDINGREGISTERS) != Modbus::Success){
 		return code;
 	}
 	
@@ -138,6 +144,28 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 		return Modbus::RegisterCount;
 	}
 	
+	return Modbus::Success;
+	
+}
+
+Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, size_t length){
+	
+	for(int i = 0; i < length; i++){
+		_serial.putc(request_datagram[i]);
+		int echo = _serial.getc();
+		if (echo != request_datagram[i]) {
+			return Modbus::Echo;
+		}
+	}
+	return Modbus::Success;
+	
+}
+
+Modbus::ModbusErrorCode SerialModbus::read_response(uint8_t * response_datagram, size_t length){
+	
+	for(int i = 0; i < length; i++){
+		response_datagram[i] = _serial.getc();
+	}
 	return Modbus::Success;
 	
 }
@@ -166,7 +194,7 @@ bool SerialModbus::check_CRC(uint8_t * buffer, int length){
 	
 }
 
-uint8_t SerialModbus::check_response(uint8_t * response_datagram, size_t length, uint8_t slave_id){
+uint8_t SerialModbus::check_response(uint8_t * response_datagram, size_t length, uint8_t slave_id, uint8_t function_code){
 	
 	// check CRC
 	if(!check_CRC(response_datagram, length)){
@@ -187,8 +215,8 @@ uint8_t SerialModbus::check_response(uint8_t * response_datagram, size_t length,
 	}
 	
 	// check function-code (undefined error)
-	if(response_datagram[1] != MODBUS_FC_READHOLDINGREGISTERS){
-		return Modbus::Unknown;
+	if (response_datagram[1] != function_code) {
+		return Modbus::FunctionCode;
 	}
 	
 	return Modbus::Success;
