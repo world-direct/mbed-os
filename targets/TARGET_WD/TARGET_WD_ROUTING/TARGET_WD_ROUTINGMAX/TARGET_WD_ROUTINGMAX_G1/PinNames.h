@@ -102,9 +102,14 @@ typedef enum {
 	SPI_MOSI    = PB_15,
     SPI_MISO    = PB_14,
     SPI_SCK     = PB_13,
-    SPI_CS0     = PC_7,
-	SPI_CS1     = PC_6,
-	SPI_CS_FLASH     = PB_2,	// SPI_CS2
+    SPI_CS0     = PC_7,	
+	SPI_CS1     = PC_6,		
+	SPI_CS2		= PA_0,
+	SPI_CS3		= PC_9,
+	SPI_CS4		= PC_8,
+	SPI_CS5		= PA_5,
+	
+	SPI_CS_FLASH	= SPI_CS2, // was PB_2
 	
 	BUS_nINT	= PC_0,
 	
@@ -113,10 +118,10 @@ typedef enum {
 	In3			= PA_8,
 	In4			= PA_9,
 	In5			= PA_10,
-	In6			= PB_9,
-	In7			= PC_8,
-	In8			= PC_9,
-	In9			= PA_0,
+	In6			= PB_5,	// was PB_9
+	In7			= PC_13, // was PC_8
+	In8			= PB_8,	// was PC_9
+	In9			= PB_2,	// was PA_0
 	In10		= PA_4,
 	
 	Out1		= PC_3,
