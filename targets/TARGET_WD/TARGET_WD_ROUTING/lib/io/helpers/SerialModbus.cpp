@@ -17,13 +17,20 @@ extern "C" {
 #define MODBUS_TIMEOUT_MS_SINGLE_CHARACTER		100
 
 // default constructor
-SerialModbus::SerialModbus(PinName tx, PinName rx, int baud): _serial(tx, rx, baud)
+SerialModbus::SerialModbus(PinName tx, PinName rx, int baud, int stopBits, SerialBase::Parity parity, int bits): _serial(tx, rx, baud)
 {
+	_baud = baud;
+	_parity = parity;
+	_stopBits = stopBits;
+	
+	_serial.format(bits, parity, stopBits);
+	
 } //SerialModbus
 
 // default destructor
 SerialModbus::~SerialModbus()
 {
+	
 } //~SerialModbus
 
 uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t register_count, uint8_t* result_buffer){
@@ -157,9 +164,21 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 	
 }
 
+int SerialModbus::GetBaud(){
+	return _baud;
+}
+
+int SerialModbus::GetStopBits(){
+	return _stopBits;
+}
+
+SerialBase::Parity SerialModbus::GetParity(){
+	return _parity;
+}
+
 Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, size_t length){
 	
-	for(int i = 0; i < length; i++){
+	for(uint i = 0; i < length; i++){
 		_serial.putc(request_datagram[i]);
 		if(serial_timeout_reached()){
 			return Modbus::Timeout;
@@ -175,7 +194,7 @@ Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, 
 
 Modbus::ModbusErrorCode SerialModbus::read_response(uint8_t * response_datagram, size_t length){
 	
-	for(int i = 0; i < length; i++){
+	for(uint i = 0; i < length; i++){
 		if(serial_timeout_reached()){
 			return Modbus::Timeout;
 		}
@@ -243,10 +262,7 @@ uint8_t SerialModbus::check_response(uint8_t * response_datagram, size_t length,
 	
 	// check function-code (probably specified --> function-code > 0x80)
 	if(response_datagram[1] > 0x80){
-		return
-			response_datagram[2] > 0 ?
-				response_datagram[2] :
-				Modbus::Unknown;
+		return response_datagram[2];
 	}
 	
 	// check function-code (undefined error)
