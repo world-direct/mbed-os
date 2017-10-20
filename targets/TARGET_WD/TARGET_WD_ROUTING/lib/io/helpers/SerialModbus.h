@@ -19,6 +19,8 @@ class SerialModbus : public Modbus
 	protected:
 	private:
 		Serial _serial;
+		Mutex _mutex;
+		Timer _timer;
 
 	//functions
 	public:
@@ -32,12 +34,12 @@ class SerialModbus : public Modbus
 		SerialModbus& operator=( const SerialModbus &c );
 		Modbus::ModbusErrorCode write_request(uint8_t * request_datagram, size_t length);
 		Modbus::ModbusErrorCode read_response(uint8_t * response_datagram, size_t length);
+		bool SerialModbus::serial_timeout_reached();
+		uint8_t unlock_return(uint8_t return_code);
 		static uint16_t calculate_CRC(uint8_t * buffer, int length);
 		static void place_CRC(uint8_t * buffer, int payload_length);
 		static bool check_CRC(uint8_t * buffer, int length);
 		static uint8_t check_response(uint8_t * response_datagram, size_t length, uint8_t slave_id, uint8_t function_code);
-		
-		
 
 }; //SerialModbus
 

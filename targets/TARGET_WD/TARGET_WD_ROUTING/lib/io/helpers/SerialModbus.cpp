@@ -14,6 +14,7 @@ extern "C" {
 #define MODBUS_FC_READHOLDINGREGISTERS			3
 #define MODBUS_FC_WRITEHOLDINGREGISTERS			16
 #define MODBUS_FRAME_INTERVAL_MS				20
+#define MODBUS_TIMEOUT_MS_SINGLE_CHARACTER		100
 
 // default constructor
 SerialModbus::SerialModbus(PinName tx, PinName rx, int baud): _serial(tx, rx, baud)
@@ -26,6 +27,10 @@ SerialModbus::~SerialModbus()
 } //~SerialModbus
 
 uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t register_count, uint8_t* result_buffer){
+
+	if(!_mutex.trylock()){
+		return Modbus::Lock;
+	}
 
 	// build base request
 	uint8_t request_datagram[]  = {
@@ -48,7 +53,7 @@ uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t re
 	Modbus::ModbusErrorCode ret;
 	// write request
 	if ((ret = write_request(request_datagram, sizeof(request_datagram))) != Modbus::Success) {
-		return ret;
+		return unlock_return(ret);
 	}
 	
 	// declare response
@@ -60,17 +65,17 @@ uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t re
 	
 	// read response
 	if ((ret = read_response(response_datagram, sizeof(response_datagram))) != Modbus::Success) {
-		return ret;
+		return unlock_return(ret);
 	}
 	
 	// check CRC, slave_id and function-code
 	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id, MODBUS_FC_READHOLDINGREGISTERS) != Modbus::Success){
-		return code;
+		return unlock_return(code);
 	}
 	
 	// check byte-count
 	if(response_datagram[2] != (register_count * 2)){
-		return Modbus::ByteCount;
+		return unlock_return(Modbus::ByteCount);
 	}
 	
 	// copy datagram
@@ -80,11 +85,15 @@ uint8_t SerialModbus::Read(uint8_t slave_id, uint16_t start_address, uint16_t re
 		register_count * sizeof(uint16_t)
 	);
 	
-	return Modbus::Success;
+	return unlock_return(Modbus::Success);
 	
 }
 
 uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t register_count, uint8_t * write_buffer){
+	
+	if(!_mutex.trylock()){
+		return Modbus::Lock;
+	}
 	
 	// build base request
 	uint8_t request_datagram[7 + sizeof(uint16_t) * register_count + 2];
@@ -108,7 +117,7 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 	
 	// write request
 	if((ret = write_request(request_datagram, sizeof(request_datagram))) != Modbus::Success){
-		return ret;
+		return unlock_return(ret);
 	}
 
 	// declare response
@@ -116,12 +125,12 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 	
 	// read response
 	if ((ret = read_response(response_datagram, sizeof(response_datagram))) != Modbus::Success) {
-		return ret;
+		return unlock_return(ret);
 	}
 	
 	// check CRC, slave_id and function-code
 	if(uint8_t code = check_response(response_datagram, sizeof(response_datagram), slave_id, MODBUS_FC_WRITEHOLDINGREGISTERS) != Modbus::Success){
-		return code;
+		return unlock_return(code);
 	}
 	
 	// check start-address
@@ -131,7 +140,7 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 			!=
 		start_address
 	){
-		return Modbus::StartAddress;
+		return unlock_return(Modbus::StartAddress);
 	}
 	
 	// check register-count
@@ -141,10 +150,10 @@ uint8_t SerialModbus::Write(uint8_t slave_id, uint16_t start_address, uint16_t r
 		!=
 		register_count
 	){
-		return Modbus::RegisterCount;
+		return unlock_return(Modbus::RegisterCount);
 	}
 	
-	return Modbus::Success;
+	return unlock_return(Modbus::Success);
 	
 }
 
@@ -152,6 +161,9 @@ Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, 
 	
 	for(int i = 0; i < length; i++){
 		_serial.putc(request_datagram[i]);
+		if(serial_timeout_reached()){
+			return Modbus::Timeout;
+		}
 		int echo = _serial.getc();
 		if (echo != request_datagram[i]) {
 			return Modbus::Echo;
@@ -164,9 +176,32 @@ Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, 
 Modbus::ModbusErrorCode SerialModbus::read_response(uint8_t * response_datagram, size_t length){
 	
 	for(int i = 0; i < length; i++){
+		if(serial_timeout_reached()){
+			return Modbus::Timeout;
+		}
 		response_datagram[i] = _serial.getc();
 	}
 	return Modbus::Success;
+	
+}
+
+bool SerialModbus::serial_timeout_reached() {
+	
+	_timer.reset();
+	_timer.start();
+	while(!_serial.readable()){
+		if(_timer.read_ms() > MODBUS_TIMEOUT_MS_SINGLE_CHARACTER){
+			return true;
+		}
+	}
+	return false;
+	
+}
+
+uint8_t SerialModbus::unlock_return(uint8_t return_code){
+	
+	_mutex.unlock();
+	return return_code;
 	
 }
 
