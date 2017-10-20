@@ -120,7 +120,7 @@ typedef enum {
 	In5			= PA_10,
 	In6			= PB_5,	// was PB_9
 	In7			= PC_13, // was PC_8
-	In8			= PB_8,	// was PC_9
+	In8			= PB_1,	// was PC_9
 	In9			= PB_2,	// was PA_0
 	In10		= PA_4,
 	
