@@ -40,7 +40,7 @@ push {r4, r5, lr}
 	// compare signature version
 	ldr r0, [r4]
 	ldr r1, bl_signature_current_version
-	cmp r0, #1
+	cmp r0, r1
 	bne 1f	// return NULL
 
 	// locate the keystore

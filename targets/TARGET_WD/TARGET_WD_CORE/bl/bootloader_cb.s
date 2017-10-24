@@ -36,11 +36,28 @@ PUSH {lr}
 	ORR r2, r2, r1	// perform OR
 	STR r2, [r3, #0]	// and write to register
 
+	/////////////////////////////////////////////////////
+	// Enabled Output for PE10
+	//	BUS_LED	== PE10 == 0x4A
+	//	Port = 0x4A >> 4 ==  0x4 (GPIOE) = 0x40021000
+	//	Pin = 0x4A & 0xF = 0xA
+
+	LDR r3, bl_hal_gpioe_address
+	MOV r2, #0x100000
+	STR r2, [r3, #0]
 
 POP {pc}
 
 /*************************************************************************
-	void bl_hal_ui(void):
+	void bl_hal_ui(value):
+		Turn an binary output (LED) on or off to signal bootloader state
+		if(value) turnon(); else turnoff();
+
+	ON: Bootloader running
+		-> OFF all ok!
+		-> 3 blink fast => DEVELOPMENT MODE
+		-> endless blink slow => DSA verification failed
+
 	Signals the user about the running bootloader (by BUS_LED)
 */
 .global bl_hal_ui
@@ -49,25 +66,42 @@ bl_hal_ui:
 
 PUSH {lr}
 
+	// we use the Port bit set/reset register (GPIOx_BSRR)
+	// Pin = 0xA
+	// to turn it on, we have to RESET, to turn off, we have to SET
+	// SET:		1 << 0xA			= 0x400
+	// RESET:	1 << (0xA + 0x10)	= 0x4000000
 
-	// turn on the BUS-LED (PE10 = 0x4A)
-	// port = 0x4A >> 4 =  0x4 GPIOE_BASE = 0x40021000
+	CMP r0, #0
+	ITE eq
+	MOVEQ r1, #0x4000000
+	MOVNE r1, #0x400
 
-	// pin = 0x4A & 0xF = 0xA
-	// init-mask = 0xA*2 = 1 << 0xA * 2 (2 bits wide) = 100000
-	// on-value-mask = 1 << 0xA = 400 
-
-	// enable output on BUS-LED
-	// *((volatile int *)0x40210000) = 0x100000;
-	LDR r3, bl_hal_gpioe_address
-	MOV r2, #0x100000
-	STR r2, [r3, #0]
-
-	// and turn it on
-	MOV r2, #0x400
-	STR r2, [r3, #0x14]
+	LDR r2, bl_hal_gpioe_address
+	STR r1, [r2, #0x18]
 
 POP {pc}
+
+
+/*************************************************************************
+	void bl_hal_sleep(void):
+		Sleeps a little bit.
+		This should be around 250ms, but only used for blinking, so it don't have to be exact
+*/
+.global bl_hal_sleep
+.type bl_hal_sleep, %function
+bl_hal_sleep:
+
+PUSH {lr}
+
+	MOV r0, #0x100000
+	1:
+		SUBS r0, #1
+		BNE 1b 
+
+POP {pc}
+
+
 
 /*************************************************************************
 	void bl_hal_crc_init(void):

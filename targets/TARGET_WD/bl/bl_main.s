@@ -313,9 +313,8 @@ bl_start:
 	// turn on BUS_LED to signal start of bootloader
 	// MED will turn it of on initialization (somewhere in software_init_hook), so you will just see it flashing!
 	/////////////////////////////////////////////////////
+	MOV r0, #1
 	BL bl_hal_ui
-
-	BL bl_sha256_test
 
 	// get the system state
 	/////////////////////////////////////////////////////
@@ -340,7 +339,7 @@ bl_start:
 	LDR r1, bl_data_commandword_apply
 	CMP r1, r0
 	BNE .L_start_app	// skip update, because if command-word
-
+	
 	MOV r0, r6	//load size
 	BL bl_update	// bl_update(size)
 
@@ -586,7 +585,20 @@ POP {r5, r6, pc}
 	
 *************************************************************************/
 BL_GLOBAL_FUNCTION(bl_error):
-	b .
+	
+	0:
+
+		MOV r0, #0
+		BL bl_hal_ui
+		BL bl_hal_sleep
+
+		MOV r0, #1
+		BL bl_hal_ui
+		BL bl_hal_sleep
+
+		B 0b
+
+
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start

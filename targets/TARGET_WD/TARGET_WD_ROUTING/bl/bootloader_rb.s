@@ -53,12 +53,30 @@ PUSH {lr}
 	ORR r1, r2
 	STR r1, [r0, 0x18]
 
+	/////////////////////////////////////////////////////
+	// Enabled Output for PB_8
+	//	BUS_LED	= PB_8 (0x18)#
+	//	Port: 0x18 >> 4 = 1 (=GPIOB)
+	//  Pin:  0x18 & 0f = 8	
+
+	LDR r0, bl_hal_gpiob_base_address
+
+	// we need to use GPIOx_CRH (Offset 4) for the Pin 8
+	// enable "Alternate function output Push-pull" output on BUS-LED
+	// needs MODE8 to be 0b10, so the mask is 2
+
+	LDR r1, [r0, #4]	// this has an ugly default of 0x44..., so we don't overwrite it with a constant
+	BFC r1, #0, #4
+	MOV r2, #0x2
+	ORR r1, r1, r2
+	STR r1, [r0, #4]
+
+
 POP {pc}
 
 
 /*************************************************************************
-	void bl_hal_ui(void):
-	Signals the user about the running bootloader (by BUS_LED)
+	void bl_hal_ui(value):
 */
 .global bl_hal_ui
 .type bl_hal_ui, %function
@@ -70,23 +88,13 @@ PUSH {lr}
 	//	Port: 0x18 >> 4 = 1 (=GPIOB)
 	//  Pin:  0x18 & 0f = 8	
 
-	LDR r0, bl_hal_gpiob_base_address
-
-	// we need to use GPIOx_CRH (Offset 4) for the Pin 8
-	// enable "Alternate function output Push-pull" output on BUS-LED
-	// needs MODE8 to be 0b10, so the mask is 2
-
-	LDR r1, [r0, #4]	// this has an ugly default of 0x44..., so we need to clear
-	BFC r1, #0, #4
-	MOV r2, #0x2
-	ORR r1, r1, r2
-	STR r1, [r0, #4]
+	LDR r1, bl_hal_gpiob_base_address
 
 	// and turn it on with the
-	// Port output data register (GPIOx_ODR) (GPIOB_ODR Offset=0x0C)
+	// Port output data register (GPIOx_ODR) (GPIOB_ODR Offset=0x0C) Pin 8
 	// Bit: 1<<8 = 0x100
-	MOV r1, #0x100
-	STR r1, [r0, #0x0C]
+	MOV r2, #0x100
+	STR r2, [r1, #0x0C]
 
 POP {pc}
 
