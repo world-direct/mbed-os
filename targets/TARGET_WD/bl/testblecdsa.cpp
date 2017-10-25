@@ -1,0 +1,37 @@
+/*
+ * testblecdsa.cpp
+ *
+ * Created: 25.10.2017 12:20:44
+ *  Author: Guenter.Prossliner
+ */ 
+
+
+#include <stdio.h>
+
+extern "C"{
+	int bl_ecdsa_validate_hash(uint32_t * hash, uint32_t * pk, uint32_t * sig);
+};
+
+int testblecdsa(){
+
+
+	//HASH: 0x5ED5F765, 0xE939258B, 0x3EE0FD95, 0x6CB7C7BB, 0x5F53D95F, 0xBDF33359, 0xF6F6A347, 0xFA920F60
+	//SIGR: 0x8C626868, 0x8FE64C6F, 0x0795963D, 0xBFB8BF73, 0xDEE41632, 0xD9BE4215, 0xE5C0B305, 0x4A779E57
+	//SIGS: 0xE517D962, 0xAC8FAADB, 0x765A9D3C, 0x00752DD1, 0x181BAC38, 0xC4FB7020, 0x4DDC4BF6, 0x3824D396
+
+	uint32_t hash[] = {0x5ED5F765, 0xE939258B, 0x3EE0FD95, 0x6CB7C7BB, 0x5F53D95F, 0xBDF33359, 0xF6F6A347, 0xFA920F60};
+	uint32_t sig[] = {0x8C626868, 0x8FE64C6F, 0x0795963D, 0xBFB8BF73, 0xDEE41632, 0xD9BE4215, 0xE5C0B305, 0x4A779E57,
+	0xE517D962, 0xAC8FAADB, 0x765A9D3C, 0x00752DD1, 0x181BAC38, 0xC4FB7020, 0x4DDC4BF6, 0x3824D396};
+
+	uint32_t pk[] = {0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3,
+	0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F};
+
+	if(bl_ecdsa_validate_hash(hash, pk, sig) == 0){
+		printf("OK!");
+	}
+	
+	sig[0] = 0;
+	if (!bl_ecdsa_validate_hash(hash, pk, sig) == 0) {
+		printf("OK!");
+	}
+}

@@ -32,7 +32,7 @@
 	
 	
 *************************************************************************/
-BL_FUNCTION(bl_signature_findkey):
+BL_GLOBAL_FUNCTION(bl_signature_findkey):
 push {r4, r5, lr}
 
 	mov r4, r0	// r5: sig

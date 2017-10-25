@@ -7,20 +7,6 @@
 
 #include "bl_asmoptions.inc"
 
-#define BL_ECDSA_DEBUG	1
-
-#if (BL_ECDSA_DEBUG) 
-
-.global bl_ecdsa_validate_hash
-
-/*
-extern "C" {
-	int bl_ecdsa_validate_image(void * start, size_t len, uint32_t * pk);
-	int bl_ecdsa_validate_hash(uint32_t * hash, uint32_t * pk, uint32_t * sig);
-}
-*/
-
-#endif
 
 .section .bl_text,"ax",%progbits
 .global bl_ecdsa_validate_image
@@ -441,15 +427,15 @@ bl_ec_fieldMult:
 		stmia.w	r6, {r2, r3}
 		ldr	r3, [r7, #12]
 
-		uxtab	r1, r5, r4
+		// uxtab	r1, r5, r4
 		// [Error] bl_ecdsa.S@443,0: selected processor does not support `uxtab r1,r5,r4' in Thumb mode
 		// only on cortex-m3, not m4!
 
 		// http://www.keil.com/support/man/docs/armasm/armasm_dom1361289923867.htm
 		// r1 := (r4 & 0xFF) + r5
 
-		//and r1, r4, #0xFF
-		//add r1, r5
+		and r1, r4, #0xFF
+		add r1, r5
 
 
 		add.w	r1, r3, r1, lsl #2
