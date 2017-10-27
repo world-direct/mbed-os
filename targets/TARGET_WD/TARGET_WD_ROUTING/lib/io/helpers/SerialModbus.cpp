@@ -6,6 +6,7 @@
 */
 
 #include "SerialModbus.h"
+#include "wd_logging.h"
 
 extern "C" {
 	#include "lib_crc.h"
@@ -14,16 +15,30 @@ extern "C" {
 #define MODBUS_FC_READHOLDINGREGISTERS			3
 #define MODBUS_FC_WRITEHOLDINGREGISTERS			16
 #define MODBUS_FRAME_INTERVAL_MS				20
-#define MODBUS_TIMEOUT_MS_SINGLE_CHARACTER		100
+#define MODBUS_DMA_RX_RAW_BUFFER_LENGTH			512
+#define MODBUS_DMA_RX_FRAME_BUFFER_LENGTH		512
+#define MODBUS_DMA_WRITE_TIMEOUT_MS				50
+#define MODBUS_DMA_ECHO_TIMEOUT_MS				100
 
 // default constructor
-SerialModbus::SerialModbus(PinName tx, PinName rx, int baud, int stopBits, SerialBase::Parity parity, int bits): _serial(tx, rx, baud)
+SerialModbus::SerialModbus(PinName tx, PinName rx, int baud, int stopBits, SerialBase::Parity parity, int bits): 
+	_serial(tx, rx, baud),
+	_tx_complete_sem(1)
 {
 	_baud = baud;
 	_parity = parity;
 	_stopBits = stopBits;
 	
 	_serial.format(bits, parity, stopBits);
+	
+	this->_serial_raw_buffer = new char[MODBUS_DMA_RX_RAW_BUFFER_LENGTH]();
+	this->_serial_frame_buffer = new char[MODBUS_DMA_RX_FRAME_BUFFER_LENGTH]();
+	
+	this->_serial.startRead(
+		this->_serial_raw_buffer,
+		512
+	);
+
 	
 } //SerialModbus
 
@@ -176,44 +191,54 @@ SerialBase::Parity SerialModbus::GetParity(){
 	return _parity;
 }
 
+void SerialModbus::_serial_tx_complete(int evt){
+	_tx_complete_sem.release();
+}
+
 Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, size_t length){
 	
+	this->_serial.write(request_datagram, length, callback(this, &SerialModbus::_serial_tx_complete));
+	
+	this->_tx_complete_sem.wait(MODBUS_DMA_WRITE_TIMEOUT_MS);
+	this->_tx_complete_sem.release();
+	
+	size_t echo_length;
+	_serial.popFrame(this->_serial_frame_buffer, &echo_length, MODBUS_DMA_ECHO_TIMEOUT_MS);
+	
+	if(echo_length == 0){
+		return Modbus::Timeout;
+	}
+	
+	if(length != echo_length){
+		return Modbus::Echo;
+	}
+	
 	for(uint i = 0; i < length; i++){
-		_serial.putc(request_datagram[i]);
-		if(serial_timeout_reached()){
-			return Modbus::Timeout;
-		}
-		int echo = _serial.getc();
-		if (echo != request_datagram[i]) {
+		if (request_datagram[i] != this->_serial_frame_buffer[i]) {
 			return Modbus::Echo;
 		}
 	}
+	
 	return Modbus::Success;
 	
 }
 
 Modbus::ModbusErrorCode SerialModbus::read_response(uint8_t * response_datagram, size_t length){
 	
-	for(uint i = 0; i < length; i++){
-		if(serial_timeout_reached()){
-			return Modbus::Timeout;
-		}
-		response_datagram[i] = _serial.getc();
+	size_t response_length;
+	_serial.popFrame(this->_serial_frame_buffer, &response_length, 200);
+	
+	if(response_length == 0){
+		return Modbus::Timeout;
 	}
+	
+	if(response_length != length){
+		return Modbus::Unknown;
+	}
+	
+	memcpy(response_datagram, this->_serial_frame_buffer, length);
+	
 	return Modbus::Success;
-	
-}
-
-bool SerialModbus::serial_timeout_reached() {
-	
-	_timer.reset();
-	_timer.start();
-	while(!_serial.readable()){
-		if(_timer.read_ms() > MODBUS_TIMEOUT_MS_SINGLE_CHARACTER){
-			return true;
-		}
-	}
-	return false;
 	
 }
 
