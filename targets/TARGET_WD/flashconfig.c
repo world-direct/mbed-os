@@ -22,11 +22,11 @@ typedef union {
 
 
 // linker-script imports
-extern int __flashconfig_start;
+extern int __bank2_start;
 extern int __flashconfig_end;
 
 // we need to use the address of the symbols, because the C compiler dereferences the extern vars automatically
-#define start_intptr ((intptr_t)(&__flashconfig_start))
+#define start_intptr ((intptr_t)(&__bank2_start))
 #define end_intptr ((intptr_t)(&__flashconfig_end))
 
 static cfg_ptr m_endptr;

@@ -5,8 +5,8 @@
 #include "bl_asmoptions.inc"
 
 .section .metadata,"a",%progbits
-	. = 0;												.word WD_ABI_METADATA_MAGIC
-	. = WD_ABI_METADATA_FLDOFF_SIZE;					.word __image_size
+	. = 0;												.word (WD_ABI_HDR_MAGIC << 16) | (WD_ABI_HDR_APP << 8)
+	. = WD_ABI_METADATA_FLDOFF_SIZE;					.word 0xFFFFFFFF
 	. = WD_ABI_METADATA_FLDOFF_APPLICATION_NAME;		.asciz EXPSTR(APPLICATION_NAME)
 	. = WD_ABI_METADATA_FLDOFF_APPLICATION_VERSION;		.asciz EXPSTR(APPLICATION_VERSION)
 	. = WD_ABI_METADATA_FLDOFF_CPUID_MASK;				.word WD_ABI_CPUID_MASK

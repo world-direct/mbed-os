@@ -135,16 +135,16 @@ g_bl_vectors:
 	WDABI data elements which need to be an fixed offset (0x200)
 */
 
-.=WD_ABI_BL_HEADER_OFFSET;										.word WD_ABI_BL_HEADER_MAGIC << 16 // may get patched to set BL Flags
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SRVCALL;	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_LENGTH;		.word __bootloader_length	// WDABI: length of bootloader for image building
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_SIZE;		.word __bootloader_size		// WDABI: length of bootloader for image building
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_BANK2OFFSET;.word __flashconfig_start	// WDABI: start of bank2 for image building
-.=WD_ABI_BL_HEADER_OFFSET + WD_ABI_BL_HEADER_FLDOFF_KEYSTORE;	.word __bl_testkey_address	// WDABI: key-offset
+.=WD_ABI_HDR_OFFSET;
+/* MAGIC */		.word (WD_ABI_HDR_MAGIC << 16) | (WD_ABI_HDR_BL << 8)
+/* SIZE */		.word 0xFFFFFFFF
+/* CPUID_MASK */.word WD_ABI_CPUID_MASK
+/* CPUID */		.word WD_ABI_CPUID
+/* SRVCALL */	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
+/* LENGTH */	.word __bootloader_length	// defined in linker-script
+/* BANK2START*/	.word __bank2_start			// defined in linker-script
+/* KEYSTR: */	.word __bl_testkey_address
 
-.section .bl_crc32,"a",%progbits
-	.word WD_ABI_UNVERIFIABLE_CRC_VALUE		// this will be linked at the end of bl_, and patched in the elf file to the correct crc value
- 
 /*************************************************************************
 BOOTLOADER IMPLEMENTATION
 */
@@ -280,7 +280,8 @@ PUSH {r4, r5, r6, lr}
 	.L_blsrv_write_config_data:
 		// load args
 		LDR r0, [r4], #4	// load offset
-		LDR r1, bl_data_flashconfig_start	// load base address
+		MOV r1, #0x210	// BL ABI Header (BANK2OFF)
+		LDR r1, [r1]	// load base address 
 		ADD r0, r1			// dest = offset + base address
 		LDR r1, [r4], #4	// src
 		LDR r2, [r4], #4	// size
@@ -301,8 +302,10 @@ POP {r4, r5, r6, pc}
 .type bl_start, %function
 bl_start:
 
+	// B .L_start_app
+
 	// variable registers
-	// r4: bool image verification result
+	// r4: image loader state buffer
 	// r5: update image verification result
 	// r6: end of update image pointer (to read command word or to write update status)
 
@@ -318,6 +321,25 @@ bl_start:
 
 	// get the system state
 	/////////////////////////////////////////////////////
+	SUB sp, #0x20
+	MOV r4, sp
+	
+	// bootloader self verify
+	/////////////////////////////////////////////////////
+	MOV r0, WD_FLASH_BASE
+	MOV r1, r4
+	BL bl_read_image
+
+	// data image validate
+	LDR r0, bl_data_image_start
+	MOV r1, r4
+	BL bl_read_image
+
+	// update image validate
+	LDR r0, bl_data_update_image_start
+	MOV r1, r4
+	BL bl_read_image
+
 
 	// start validating boot image
 	LDR r0, bl_data_image_start
@@ -349,6 +371,9 @@ bl_start:
 	BL bl_set_command_word
 
 	.L_start_app:
+
+	// don't need the stack memory any longer
+	ADD sp, #0x20
 
 	// start application
 	/////////////////////////////////////////////
@@ -436,6 +461,21 @@ POP {r4, pc}
 	4: UnverifiableImage (CRC validation failed && CRC==UNVERIYFIABLE_CRC_VALUE)
 	5: IncompatibleImage (CPUID validation failed)
 	6: DigitalSignature check failed
+
+	Bit-Flags:
+	0 (0): Metadata Valid
+	1 (1): Size Valid
+	2 (2): CRC Valid
+	3 (4): CPUID compatible
+	4 (8): DSA valid
+
+	Returned:
+	0: for an empty region of memory
+	1: for an image not run though post-processing (elf-tool)
+	3: incompatible CPUID check
+	7: signature invalid, may apply if bootloader not self-signed
+	F: everything valid, may apply update
+
 */
 .type bl_validate_image, %function
 bl_validate_image:
@@ -602,13 +642,13 @@ BL_GLOBAL_FUNCTION(bl_error):
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
-bl_data_flashconfig_start: .word __flashconfig_start
 bl_data_metadata_offset : .word WD_ABI_METADATA_SECTION_OFFSET
 bl_data_metadata_magic: .word WD_ABI_METADATA_MAGIC
 bl_data_application_max_size: .word __application_max_size
 bl_data_commandword_apply: .word 0x000000FF
 bl_data_commandword_success: .word 0x00000000
-bl_data_unverifiable_crc_value: .word WD_ABI_UNVERIFIABLE_CRC_VALUE
+// TODO //
+bl_data_unverifiable_crc_value: .word 0
 bl_data_cpuid_address: .word 0xE000ED00
 
 bl_HardFault_Handler:

@@ -6,6 +6,8 @@ STACK_SIZE = 0x400;
 HEAP_SIZE = 0x6000;
 
 
+#define BL_LINK_TEST_KEY	0
+
 // https://sourceware.org/binutils/docs/ld/Scripts.html
 
 /* Specify the memory areas */
@@ -21,9 +23,9 @@ MEMORY
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
 	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x3D00
-    VECTORS (rx) :			ORIGIN = 0x08004000, LENGTH = 0x0300
-	METADATA (rw):			ORIGIN = 0x08004300, LENGTH = 0x0100
-    FLASH (rx)   :			ORIGIN = 0x08004400, LENGTH = 0x100000 - 0x4000 - 0x400 /* = 0xFBC00 = 1031168 = 1007k) */
+    VECTORS (rx) :			ORIGIN = 0x08004000, LENGTH = 0x0200
+	METADATA (rw):			ORIGIN = 0x08004200, LENGTH = 0x0100
+    FLASH (rx)   :			ORIGIN = 0x08004300, LENGTH = 0x100000 - 0x4000 - 0x300 /* = 0xFBC00 = 1031168 = 1007k) */
 
 	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
 	UPDATE (rw) :			ORIGIN = 0x08104000, LENGTH = 0xFC000
@@ -51,16 +53,14 @@ SECTIONS
          . = ALIGN(4);
 	} > BL_TEXT
 
-	.bl_crc32 : 
-	{
-		. = ALIGN(4);
-		KEEP(*(.bl_crc32))
-	} > BL_TEXT
+#if BL_LINK_TEST_KEY
 
 	.bl_ecdsa_testkey : 
 	{
 		KEEP(*(.bl_ecdsa_testkey))
 	} > BL_TEXT
+
+#endif
 
     .isr_vector :
     {
@@ -171,13 +171,6 @@ SECTIONS
 
     } > RAM AT > FLASH
 
-	.crc32 : 
-	{
-		. = ALIGN(4);
-		__crc32_ptr = .;
-		KEEP(*(.crc32))
-	} > FLASH
-
     /* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
      * store state across soft reboots. */
@@ -216,17 +209,19 @@ SECTIONS
     __StackLimit = __StackTop - STACK_SIZE;
 
     ASSERT(__StackLimit >= __HeapLimit, "Region RAM overflowed with stack and heap")
-
-	__image_size = ADDR(.crc32) - __image_start + 4;
 	
-	__flashconfig_start = ORIGIN(CONFIG);
+	__bank2_start = ORIGIN(CONFIG);
 	__flashconfig_end = ORIGIN(CONFIG) + LENGTH(CONFIG);
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
 	__bootloader_length = 0x4000;
-	__bootloader_size = ADDR(.bl_crc32) - __bl_start + 4;
+	
+#if BL_LINK_TEST_KEY
 
 	// +4 is to skip the empty word
 	__bl_testkey_address = ADDR(.bl_ecdsa_testkey) + 4;
+#else
+	__bl_testkey_address = 0;
+#endif
 }
