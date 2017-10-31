@@ -179,7 +179,7 @@ PUSH {lr}
 
 /************************************************************************/
 BL_LOCAL_FUNCTION(bl_read3_crc_valid):
-PUSH {r4, lr}
+PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0						// r4: state
 
@@ -208,9 +208,9 @@ PUSH {r4, lr}
 	BNE 3b // while(size)
 
 	// state->image_end+=4
-	LDR r1, [r4, #0x0C]
+	LDR r1, [r4, #0x10]
 	ADD r1, #0x04
-	STR r1, [r4, #0x0C]
+	STR r1, [r4, #0x10]
 
 	// r0 contains the crc from the last call to bl_hal_crc_update, which should be 0!
 	// we can return it directly
@@ -218,7 +218,7 @@ PUSH {r4, lr}
 
 1: MOV r0, 1; B 2f
 0: MOV r0, 0
-2: POP {r4, pc}
+2: POP {r4, r5, r6, pc}
 
 
 /************************************************************************/
