@@ -18,6 +18,9 @@
 	.type name, %function;	\
 	name
 
+#define EXPSTR(a) EXPSTRHLP(a)
+#define EXPSTRHLP(a) #a
+
 
 // we use .bl_text as default, it may get redefined if needed in the .S file
 .section .bl_text,"ax",%progbits

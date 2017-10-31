@@ -131,19 +131,6 @@ g_bl_vectors:
 
 .size  g_bl_vectors, .-g_bl_vectors
 
-/*************************************************************************
-	WDABI data elements which need to be an fixed offset (0x200)
-*/
-
-.=WD_ABI_HDR_OFFSET;
-/* MAGIC */		.word (WD_ABI_HDR_MAGIC << 16) | (WD_ABI_HDR_BL << 8)
-/* SIZE */		.word 0xFFFFFFFF
-/* CPUID_MASK */.word WD_ABI_CPUID_MASK
-/* CPUID */		.word WD_ABI_CPUID
-/* SRVCALL */	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
-/* LENGTH */	.word __bootloader_length	// defined in linker-script
-/* BANK2START*/	.word __bank2_start			// defined in linker-script
-/* KEYSTR: */	.word __bl_testkey_address
 
 /*************************************************************************
 BOOTLOADER IMPLEMENTATION
@@ -169,8 +156,7 @@ BOOTLOADER IMPLEMENTATION
 
 	(see struct blsrv_desc in blsrv.h)
 */
-.type bl_srv_call, %function
-bl_srv_call:
+BL_GLOBAL_FUNCTION(bl_srv_call):
 PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0			// store desc in r4

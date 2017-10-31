@@ -21,10 +21,11 @@ MEMORY
 		On the STM32F437 the Sector 1 is 16k in size.
 	*/
 
-	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
+	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0200
+	BL_ABI_HDR (rx) :		ORIGIN = 0x08000200, LENGTH = 0x0100
 	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x3D00
     VECTORS (rx) :			ORIGIN = 0x08004000, LENGTH = 0x0200
-	METADATA (rw):			ORIGIN = 0x08004200, LENGTH = 0x0100
+	ABI_HDR (rw):			ORIGIN = 0x08004200, LENGTH = 0x0100
     FLASH (rx)   :			ORIGIN = 0x08004300, LENGTH = 0x100000 - 0x4000 - 0x300 /* = 0xFBC00 = 1031168 = 1007k) */
 
 	CONFIG (r) :			ORIGIN = 0x08100000, LENGTH = 0x4000 
@@ -46,6 +47,12 @@ SECTIONS
 		KEEP(*(.bl_vectors))
          . = ALIGN(4);
 	} > BL_VECTORS
+
+	.bl_abi_hdr :
+	{	
+		KEEP(*(.bl_abi_hdr))
+         . = ALIGN(4);
+	} > BL_ABI_HDR
 
 	.bl_text :
 	{
@@ -72,12 +79,11 @@ SECTIONS
          . = ALIGN(4);
     } > VECTORS
 
-    .metadata :
+    .abi_hdr :
     {
-        __metadata_start = .;
-        KEEP(*(.metadata))
+        KEEP(*(.abi_hdr))
          . = ALIGN(4);
-    } > METADATA
+    } > ABI_HDR
 
 
     .text :
