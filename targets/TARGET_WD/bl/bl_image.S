@@ -189,9 +189,9 @@ PUSH {r4, lr}
 	BEQ 0f							// return 0
 
 	// perform crc validation
-
 	LDR r5, [r4, #0x04]				// ptr, post-increment
 	LDR r6, [r4, #0x0C]				// size, post-decrement
+	ADD r6, #4						// add to include CRC padding
 
 	BL bl_hal_crc_init
 

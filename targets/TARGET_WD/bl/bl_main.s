@@ -372,9 +372,6 @@ bl_start:
 
 	.L_start_app:
 
-	// don't need the stack memory any longer
-	ADD sp, #0x20
-
 	// start application
 	/////////////////////////////////////////////
 	LDR r0, bl_data_image_start
