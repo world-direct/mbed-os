@@ -62,7 +62,7 @@ Additional information about the image is returned by a image_state structure, p
 		int image_size;		
 
 		// offset: 0x10
-		// setby: -
+		// setby: bl_read_image entry method
 		// ptr to keystore
 		void * keystore;		
 
@@ -239,37 +239,28 @@ PUSH {lr}
 POP {pc}
 
 /************************************************************************/
-// tries to read the keystore from the image.
-// this only applies to bootloader, but is self-contained, as there is the KEYSTORE flag in HDR
-BL_LOCAL_FUNCTION(bl_read5_read_keystore):
+BL_LOCAL_FUNCTION(bl_read5_dsa_valid):
 PUSH {r4, lr}
 
-	
-1: MOV r0, 1; B 2f
-0: MOV r0, 0
-2: POP {r4, pc}
+	MOV r4, r0					// r4: state
 
-/************************************************************************/
-BL_LOCAL_FUNCTION(bl_read5_dsa_valid):
-PUSH {lr}
-
-	// fail if no keystore
-	LDR r1, [r0, #0x10]
-	CMP r1, #0
+	// fail if no keystore in state
+	LDR r2, [r4, #0x10]			// r2: keystore
+	CMP r2, #0
 	ITT EQ
 	MOVEQ r0, #1
 	BEQ 0f
 
-	LDR r1, [r0, #0x10]			// r1: image_end
-	LDR r2, [r0, #0x04]			// r2: image_start
-	SUB r1, r2					// r1: size
-	MOV r0, r2					// r0: image_start
-
-	BL bl_signature_validate	//(void * image, size_t size);
+	// load args
+	LDR r0, [r4, #0x04]			// r0: image_start
+	LDR r1, [r4, #0x0C]			// r1: size total
+	SUB r1, #WD_ABI_SIZE_SIGNATURE+WD_ABI_SIZE_CRC	// r1: size without signature
+								// r2: keystore
+	BL bl_signature_validate	//(void * image, size_t size, void * keystore);
 	// return-value from bl_signature_validate is passed in r0
 
 0:
-POP {pc}
+POP {r4, pc}
 
 .align 4
 bl_data_cpuid_address: .word 0xE000ED00

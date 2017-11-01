@@ -12,7 +12,7 @@
 
 /*************************************************************************
 	
-	void * bl_signature_findkey (void * signature);
+	(struct * key_vectors, struct * signature_vectors) bl_signature_findkey (void * signature, void * keystore);
 	
 	Finds the key specified by signature.
 	Returns a pointer to the signature-struct, which can be directly passed to the ecdsa_validate_image fn:
@@ -33,49 +33,38 @@
 	
 *************************************************************************/
 BL_GLOBAL_FUNCTION(bl_signature_findkey):
-push {r4, r5, lr}
+push {r4, r5, r6, lr}
 
-	mov r4, r0	// r5: sig
+	mov r4, r0	// r5: &signature_header
+	mov r6, r1	// r6: &keystore_data
 
 	// compare signature version
-	ldr r0, [r4]
-	ldr r1, bl_signature_current_version
+	ldr r0, [r4], #4								// r0: signature magic, r4: &signature_data
+	ldr r1, bl_signature_current_version			// r1: signature magic expected
 	cmp r0, r1
 	bne 1f	// return NULL
-
-	// locate the keystore
-	ldr r0, bl_header_adr
-	ldr r1, [r0, #WD_ABI_BL_HEADER_FLDOFF_KEYSTORE]	// r1: keystore address
-
-	// compare keystore version
-	ldr r0, bl_keystore_current_version
-	ldr r2, [r1]
-	cmp r0, r2
-	bne 1f	// return NULL
-
+	
 	// compare the thumbprint
-	add r1, #4		// r1: thumbprint in keystore
-	add r0, r4, #4	// r0: thumbprint in signature
-	mov r2, #0x20
-	mov r4, r0		// r4 now contains the thumbprint in signature
-	mov r5, r1		// r5 now contains the thumbprint in keystore
+	mov r0, r4		// r0: &thumbprint_signature
+	mov r1, r6		// r1: &thumbprint_keystore
+	mov r2, #0x20	// r2: sizeof(thumbprint)
 	bl bl_memcmp
 	cmp r0, #0
 	bne 1f	// return NULL
 
-	// return ptrs
-	add r1, r4, #0x20
-	add r0, r5, #0x20
+	// set ptrs to vectors (skip thumbprint)
+	add r1, r4, #0x20	// r1: &signature_vectors
+	add r0, r6, #0x20	// r0: &key_vectors
 	b 0f
 1:
 	mov r0, 0
 0:
-pop {r4, r5, pc}
+pop {r4, r5, r6, pc}
 
 
 /*************************************************************************
 	
-	int bl_signature_validate (void * image, size_t size);
+	int bl_signature_validate (void * image, size_t size, void * keystore);
 	
 	Checks the image for a valid signature.
 	Return-Values:
@@ -87,33 +76,39 @@ BL_GLOBAL_FUNCTION(bl_signature_validate):
 push {r4, r5, r6, lr}
 sub sp, #32
 
+							// r0: start
+							// r1: len
+							// r2: keystore
+	/*
 	#define r_start r4
 	#define r_len	r5
 	#define r_pk	r6
 	#define r_hash	sp
+	*/
 
-	mov r_start, r0	
-	mov r_len, r1	
-	mov r_pk, r2	
+	mov r4, r0				// r4: start	
+	mov r5, r1				// r5: len
+	mov r6, r2				// r6: keystore
 
 	// hash the image
 	// r0 = start and r1 = len already
-	mov r2, r_hash
+	mov r2, sp				// r2: hash-buffer
 	bl bl_sha256_digest	
 
 	// find the key
-	mov r0, r_start
-	add r0, r_len
+	mov r0, r4				// r0: start
+	add r0, r5				// r0: &signature_header
+	mov r1, r6				// r1: keystore
 	bl bl_signature_findkey
+							// r0: &key_vectors, or NULL if nf
+							// r1: &signature_vectors
 	cmp r0, #0
 	beq 1f	// return false
 
-	// r0: key-vectors
-	// r1: signature-vectors
 	// int bl_ecdsa_validate_hash(hash, pk, sig);
-	mov r2, r1
-	mov r1, r0
-	mov r0, r_hash
+	mov r2, r1					// r2: &signature_vectors
+	mov r1, r0					// r1: &key_vectors
+	mov r0, sp					// r0: hash-buffer
 	bl bl_ecdsa_validate_hash
 
 	b 0f

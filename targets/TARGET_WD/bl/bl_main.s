@@ -138,6 +138,8 @@ BOOTLOADER IMPLEMENTATION
 
 .section .bl_text,"ax",%progbits
 
+.word 0x290003FF
+
 /*************************************************************************
 	int bl_srv_call(void * cmd)
 	this is the entrypoint service calls from the application to the bootloader
@@ -305,13 +307,11 @@ bl_start:
 	MOV r0, #1
 	BL bl_hal_ui
 
-
 	// get bootloader state
 	/////////////////////////////////////////////////////
 	BL bl_get_bootloader_state
-	// r0: if (!0) => DIE
+	// r0: if (!0) => 
 	// r1: keystore
-
 
 
 	// data image validate
@@ -396,6 +396,7 @@ PUSH {r4, r5, lr}
 
 	// return - values
 	/////////////////////////////////////////////////////
+	MOV r1, 0	// keystore result register defaults to 0
 
 	//	1: DEV-BUILD, no size, no crc, no sig -> continue
 	CMP r0, #1
@@ -409,52 +410,49 @@ PUSH {r4, r5, lr}
 	// 2: size set, but invalid CTC -> DIE
 	// 3: crc ok, cpu incompatible -> DIE	
 	MOV r0, 1	// res = 1
-	MOV r1, 0	// keystore = 0
 	BEQ 0f
 
 	.L_bl_dev:
-	MOV r0, 1	// res = 1
-	MOV r1, 0	// keystore = 0
+	MOV r0, 0	// res = 0
 	BEQ 0f
 
 	.L_bl_prod:
 	MOV r0, 1	// res = 1
-	MOV r1, 0	// keystore = 0
 
 	// locate keystore
-	LDR r1, [r4, #0x08]			// r0: header-flags
-	TST r1, WD_ABI_HDR_FLAG_KEYSTR
+	LDR r3, [r4, #0x08]				// r3: header-flags
+	TST r3, WD_ABI_HDR_FLAG_KEYSTR
 	BEQ 0f							// return if no keystore flag
 
 	// calculate offset in r2 from end based on flags
 	MOV r2, #WD_ABI_SIZE_KEYSTR
-	TST r1, WD_ABI_HDR_FLAG_CRC
+	TST r3, WD_ABI_HDR_FLAG_CRC
 	IT NE
 	ADDNE r2, #WD_ABI_SIZE_CRC
 
-	TST r1, WD_ABI_HDR_FLAG_DSA
+	TST r3, WD_ABI_HDR_FLAG_DSA
 	IT NE
 	ADDNE r2, #WD_ABI_SIZE_SIGNATURE
 
 	// get keystore address
-	LDR r5, [r4, #0x04]			// r5: image_start
+	LDR r0, [r4, #0x04]			// r0: image_start
 	LDR r1, [r4, #0x0C]			// r1: image_size total
-	ADD r5, r1					// r5: image-end
-	SUB r5, r2					// r5: keystore
+	ADD r0, r1					// r0: image-end
+	SUB r0, r2					// r0: &keystore-header
 
 	// test keystore version
-	LDR r1, [r5]
-	LDR r2, =#WD_ABI_KEYSTR_MAGIC
+	LDR r2, [r0]					// r2: keystore-header
+	LDR r1, =#WD_ABI_KEYSTR_MAGIC	// r1: expected header
 	CMP r1, r2
 	BNE 1f
 
 	// store in state if validated
-	ADD r5, #0x04				// r5: keystore without header
+	ADD r0, #0x04				// r0: &keystore
 
 	// re-test with keystore
+	MOV r2, r0					// keystore
 	MOV r0, WD_FLASH_BASE	// image base
 	MOV r1, r4				// state
-	MOV r2, r5				// keystore
 	BL bl_read_image
 
 	// r0: MUST BE 5 (valid DSA, otherwise we have an invalid SIG!)
