@@ -68,27 +68,6 @@ Additional information about the image is returned by a image_state structure, p
 
 	} image_state;
 
-
-	Actions:
-
-	Bootloader-Self-Check:
-		1: RUN()		// development, bootloader not postprocessed
-		4: CONTINUE()	// production, signature not required
-		5: CONTINUE()	// production, signature required
-		default: DIE()	// invalid bootloader header. Return to factory
-
-	Application-Self-Check:
-		1: RUN()		// dev
-
-
-Returned:
-	0: for an empty region of memory
-	1: for an image not run though post-processing (elf-tool)
-	3: incompatible CPUID check
-	7: signature invalid, may apply if bootloader not self-signed
-	F: everything valid, may apply update
-
-
  */ 
 
 

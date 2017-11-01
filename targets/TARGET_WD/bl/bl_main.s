@@ -310,8 +310,14 @@ bl_start:
 	// get bootloader state
 	/////////////////////////////////////////////////////
 	BL bl_get_bootloader_state
-	// r0: if (!0) => 
-	// r1: keystore
+								// r0: bl_ok
+								// r1: keystore
+	CMP r0, #0
+	BNE bl_die
+
+	MOV r4, r1					// r4: keystore
+
+	// get application state
 
 
 	// data image validate
@@ -369,6 +375,74 @@ bl_start:
 	MOV pc, r1
 
 
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_get_application_state):
+//////////////////////////////////////////////////////////////////////////
+//	Reads the application or update flash content to get information about image.
+//		r0: void * base_address: (app or update)
+//		r1: void * keystore, or null of no DSA 
+//
+//	{ r0:res } bl_get_application_state(void * void * keystore);
+//		r0: return code
+//			0: OK (valid, if keystore passed also verified)
+//			1: empty (no metadata)
+//			2: invalid
+//			3: incompatible
+PUSH {r4, r5, lr}
+							// r0: base-address
+							// r1: keystore
+
+	MOV r5, r1				// r5: keystore
+
+	// alloc state
+	/////////////////////////////////////////////////////
+	SUB sp, #0x20			// sp: image-state
+
+	MOV r1, sp				// r1: state
+	MOV r2, r5				// r5: keystore
+	BL bl_read_image
+							// r0: result (0:empty, 1:header exists, 2:has size, 3:crc valid, 4: cpu compatible, 5: dsa validated)
+
+	// if(result==0) return 1	// handle empty
+	CMP r0, #0				
+	ITT EQ
+		MOVEQ r0, 1
+		BEQ 0f
+
+	// if(result==3) return 3;	// handle incompatible
+	CMP r0, #3			
+	ITT EQ
+		MOVEQ r0, 3
+		BEQ 0f
+
+	// if(keystore)
+	CMP r5, #0
+	BNE 2f // {
+		
+		// if(result == 5) return 0
+		CMP r0, #5			
+		ITT EQ
+			MOVEQ r0, #0
+			BEQ 0f
+
+		// return 2
+		MOV r0, #2
+		B 0f
+	// }
+	2:
+
+	// if(result <= 2) return 2
+	CMP r0, #2	
+	ITT LS
+		MOVLS r0, #2
+		BLS 0f
+
+	// return 0
+	MOV r0, #2
+
+0:
+ADD sp, #0x20
+POP {r4, r5, pc}
 
 //////////////////////////////////////////////////////////////////////////
 BL_LOCAL_FUNCTION(bl_get_bootloader_state):
@@ -382,17 +456,18 @@ BL_LOCAL_FUNCTION(bl_get_bootloader_state):
 //		if(keystore == 0) -> BL not signed else BL signed
 //
 //////////////////////////////////////////////////////////////////////////
-PUSH {r4, r5, lr}
+PUSH {r4, r5, r6, lr}
 
 	// bootloader self verify, without DSA
 	/////////////////////////////////////////////////////
 	SUB sp, #0x20
 	MOV r4, sp				// r4: image-state
 
-	MOV r0, WD_FLASH_BASE	// image base
-	MOV r1, r4				// state
-	MOV r2, 0				// without keystore in first pass
+	MOV r0, WD_FLASH_BASE	// r0: image base
+	MOV r1, r4				// r1: state
+	MOV r2, 0				// r2: without keystore in first pass
 	BL bl_read_image
+							// r0: validation-result
 
 	// return - values
 	/////////////////////////////////////////////////////
@@ -444,21 +519,26 @@ PUSH {r4, r5, lr}
 	LDR r2, [r0]					// r2: keystore-header
 	LDR r1, =#WD_ABI_KEYSTR_MAGIC	// r1: expected header
 	CMP r1, r2
-	BNE 1f
+	BNE bl_die
 
-	// store in state if validated
 	ADD r0, #0x04				// r0: &keystore
+	MOV r6, r0					// r6: &keystore
 
 	// re-test with keystore
-	MOV r2, r0					// keystore
-	MOV r0, WD_FLASH_BASE	// image base
-	MOV r1, r4				// state
+	MOV r0, WD_FLASH_BASE		// r0: image base
+	MOV r1, r4					// r1: state
+	MOV r2, r6					// r2: keystore
 	BL bl_read_image
 
 	// r0: MUST BE 5 (valid DSA, otherwise we have an invalid SIG!)
+	CMP r0, #5
+	BNE bl_die
+
+	MOV r0, 0		// r0: 0 (success)
+	MOV r1, r6		// r1: keystore
 0:
 ADD sp, #0x20
-POP {r4, r5, pc}
+POP {r4, r5, r6, pc}
 
 /*************************************************************************
 	void bl_set_command_word(int image-size, int * command_word)
@@ -689,13 +769,13 @@ POP {r5, r6, pc}
 
 /*************************************************************************
 	
-	void * bl_error (int code);
+	void * bl_die (void);
 	
 	DIE, DIE, DIE....
 
 	
 *************************************************************************/
-BL_GLOBAL_FUNCTION(bl_error):
+BL_GLOBAL_FUNCTION(bl_die):
 	
 	0:
 
