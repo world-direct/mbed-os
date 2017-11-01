@@ -25,6 +25,5 @@ g_bl_abi_hdr:
 /* 10: SRVCALL */	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
 /* 14: LENGTH */	.word __bootloader_length	// defined in linker-script
 /* 18: BANK2START*/	.word __bank2_start			// defined in linker-script
-/* 1C: KEYSTR: */	.word __bl_testkey_address
 
 .size  g_bl_abi_hdr, .-g_bl_abi_hdr

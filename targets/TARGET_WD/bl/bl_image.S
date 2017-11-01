@@ -17,16 +17,16 @@ Stages:
 .L_validation_stages_tbl:
 	.align 4
 
-	// checks if there is any valid header
+	// 1: checks if there is any valid header
 	.word bl_read1_header_exisits
 
-	// checks if there is a header postprocessed by the elf-tool (has valid size)
+	// 2: checks if there is a header postprocessed by the elf-tool (has valid size)
 	.word bl_read2_header_validateable
 
-	// checks if the CRC(image + CRC_padding) == 0
+	// 3: checks if the CRC(image + CRC_padding) == 0
 	.word bl_read3_crc_valid
 
-	// checks if the masked CPUID matches the current system
+	// 4: checks if the masked CPUID matches the current system
 	.word bl_read4_cpuid_valid
 
 	// checks if the digital signature is valid
@@ -58,13 +58,13 @@ Additional information about the image is returned by a image_state structure, p
 
 		// offset: 0x0C
 		// setby: bl_read2_header_validateable
-		// size of image, excluding CRC and signature
+		// size of image, including CRC, Keystore and signature
 		int image_size;		
-		
+
 		// offset: 0x10
-		// setby: bl_read2_header_validateable, updated by bl_read3_crc_valid and bl_read5_dsa_valid
-		// pointer to word beyond image, including CRC and signature
-		void * image_end;
+		// setby: -
+		// ptr to keystore
+		void * keystore;		
 
 	} image_state;
 
@@ -97,19 +97,25 @@ Returned:
 
 
 /************************************************************************/
-/*	int bl_read_image(void * image_start, struct readerstate * state)	*/
+/*	int bl_read_image(
+	void * image_start, 
+	struct readerstate * state, 
+	void * keystore				// if (keystore) -> perform DSA validation
+)
+*/
 BL_GLOBAL_FUNCTION(bl_read_image):
 PUSH {r4, r5, lr}
 
 	MOV r4, r1	// r4: state
 
 	// init state
-	MOV r2, #0
-	STR r2, [r4, #0x00]	// state->stage_index = 0
 	STR r0, [r4, #0x04]	// state->image_start = image_start
-	STR r2, [r4, #0x08]	// state->header_flags = 0
-	STR r2, [r4, #0x0C]	// state->image_size = 0
-	STR r2, [r4, #0x10]	// state->image_end = 0
+	MOV r0, #0
+
+	STR r0, [r4, #0x00]	// state->stage_index = 0
+	STR r0, [r4, #0x08]	// state->header_flags = 0
+	STR r0, [r4, #0x0C]	// state->image_size = 0
+	STR r2, [r4, #0x10]	// state->keystore = keystore
 
 	// call validation methods
 	// r5 will hold the address of the method in the table
@@ -168,8 +174,6 @@ PUSH {lr}
 	BEQ	1f
 
 	STR r2, [r0, #0x0C]				// state->image_size = r2
-	ADD r2, r1						// r2: image_end
-	STR r2, [r0, #0x10]				// state->image_end = state->image_size + state->image_base
 
 	B 0f							// return true
 1: MOV r0, 1; B 2f
@@ -191,7 +195,6 @@ PUSH {r4, r5, r6, lr}
 	// perform crc validation
 	LDR r5, [r4, #0x04]				// ptr, post-increment
 	LDR r6, [r4, #0x0C]				// size, post-decrement
-	ADD r6, #4						// add to include CRC padding
 
 	BL bl_hal_crc_init
 
@@ -206,11 +209,6 @@ PUSH {r4, r5, r6, lr}
 
 		SUBS r6, #4
 	BNE 3b // while(size)
-
-	// state->image_end+=4
-	LDR r1, [r4, #0x10]
-	ADD r1, #0x04
-	STR r1, [r4, #0x10]
 
 	// r0 contains the crc from the last call to bl_hal_crc_update, which should be 0!
 	// we can return it directly
@@ -241,8 +239,26 @@ PUSH {lr}
 POP {pc}
 
 /************************************************************************/
+// tries to read the keystore from the image.
+// this only applies to bootloader, but is self-contained, as there is the KEYSTORE flag in HDR
+BL_LOCAL_FUNCTION(bl_read5_read_keystore):
+PUSH {r4, lr}
+
+	
+1: MOV r0, 1; B 2f
+0: MOV r0, 0
+2: POP {r4, pc}
+
+/************************************************************************/
 BL_LOCAL_FUNCTION(bl_read5_dsa_valid):
 PUSH {lr}
+
+	// fail if no keystore
+	LDR r1, [r0, #0x10]
+	CMP r1, #0
+	ITT EQ
+	MOVEQ r0, #1
+	BEQ 0f
 
 	LDR r1, [r0, #0x10]			// r1: image_end
 	LDR r2, [r0, #0x04]			// r2: image_start
@@ -252,12 +268,7 @@ PUSH {lr}
 	BL bl_signature_validate	//(void * image, size_t size);
 	// return-value from bl_signature_validate is passed in r0
 
-	// state->image_end+=0x44
-	LDR r1, [r4, #0x0C]
-	ADD r1, #0x44
-	STR r1, [r4, #0x0C]
-
-
+0:
 POP {pc}
 
 .align 4

@@ -305,16 +305,14 @@ bl_start:
 	MOV r0, #1
 	BL bl_hal_ui
 
-	// get the system state
+
+	// get bootloader state
 	/////////////////////////////////////////////////////
-	SUB sp, #0x20
-	MOV r4, sp
-	
-	// bootloader self verify
-	/////////////////////////////////////////////////////
-	MOV r0, WD_FLASH_BASE
-	MOV r1, r4
-	BL bl_read_image
+	BL bl_get_bootloader_state
+	// r0: if (!0) => DIE
+	// r1: keystore
+
+
 
 	// data image validate
 	LDR r0, bl_data_image_start
@@ -371,6 +369,98 @@ bl_start:
 	MOV pc, r1
 
 
+
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_get_bootloader_state):
+//////////////////////////////////////////////////////////////////////////
+//	Reads the bootloader flash content to get information about the system.
+//	Used internally on startup, or if requested by the User by a srvcall
+//
+//	{ r0:res, r1: keystore } bl_get_bootloader_state(void);
+//
+//		if(res == 0) -> ok
+//		if(keystore == 0) -> BL not signed else BL signed
+//
+//////////////////////////////////////////////////////////////////////////
+PUSH {r4, r5, lr}
+
+	// bootloader self verify, without DSA
+	/////////////////////////////////////////////////////
+	SUB sp, #0x20
+	MOV r4, sp				// r4: image-state
+
+	MOV r0, WD_FLASH_BASE	// image base
+	MOV r1, r4				// state
+	MOV r2, 0				// without keystore in first pass
+	BL bl_read_image
+
+	// return - values
+	/////////////////////////////////////////////////////
+
+	//	1: DEV-BUILD, no size, no crc, no sig -> continue
+	CMP r0, #1
+	BEQ .L_bl_dev
+
+	// 4: PROD BUILD: valid, DSA not checked
+	CMP r0, #4
+	BEQ .L_bl_prod
+
+	// 0: DIE, should not get that far anyway
+	// 2: size set, but invalid CTC -> DIE
+	// 3: crc ok, cpu incompatible -> DIE	
+	MOV r0, 1	// res = 1
+	MOV r1, 0	// keystore = 0
+	BEQ 0f
+
+	.L_bl_dev:
+	MOV r0, 1	// res = 1
+	MOV r1, 0	// keystore = 0
+	BEQ 0f
+
+	.L_bl_prod:
+	MOV r0, 1	// res = 1
+	MOV r1, 0	// keystore = 0
+
+	// locate keystore
+	LDR r1, [r4, #0x08]			// r0: header-flags
+	TST r1, WD_ABI_HDR_FLAG_KEYSTR
+	BEQ 0f							// return if no keystore flag
+
+	// calculate offset in r2 from end based on flags
+	MOV r2, #WD_ABI_SIZE_KEYSTR
+	TST r1, WD_ABI_HDR_FLAG_CRC
+	IT NE
+	ADDNE r2, #WD_ABI_SIZE_CRC
+
+	TST r1, WD_ABI_HDR_FLAG_DSA
+	IT NE
+	ADDNE r2, #WD_ABI_SIZE_SIGNATURE
+
+	// get keystore address
+	LDR r5, [r4, #0x04]			// r5: image_start
+	LDR r1, [r4, #0x0C]			// r1: image_size total
+	ADD r5, r1					// r5: image-end
+	SUB r5, r2					// r5: keystore
+
+	// test keystore version
+	LDR r1, [r5]
+	LDR r2, =#WD_ABI_KEYSTR_MAGIC
+	CMP r1, r2
+	BNE 1f
+
+	// store in state if validated
+	ADD r5, #0x04				// r5: keystore without header
+
+	// re-test with keystore
+	MOV r0, WD_FLASH_BASE	// image base
+	MOV r1, r4				// state
+	MOV r2, r5				// keystore
+	BL bl_read_image
+
+	// r0: MUST BE 5 (valid DSA, otherwise we have an invalid SIG!)
+0:
+ADD sp, #0x20
+POP {r4, r5, pc}
 
 /*************************************************************************
 	void bl_set_command_word(int image-size, int * command_word)
@@ -640,7 +730,7 @@ bl_Other_Handler:
 	B .
 
 bl_flash_handler:
-	MOV pc, pc
+	B .
 
 // the assembler will emit it's data from the LDR r2, =<constant> expressions at the end of the file
 // so this label is to clean up the dissassembly.

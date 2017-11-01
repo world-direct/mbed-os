@@ -5,9 +5,6 @@ M_VECTOR_RAM_SIZE = 0x400;
 STACK_SIZE = 0x400;
 HEAP_SIZE = 0x6000;
 
-
-#define BL_LINK_TEST_KEY	0
-
 // https://sourceware.org/binutils/docs/ld/Scripts.html
 
 /* Specify the memory areas */
@@ -59,15 +56,6 @@ SECTIONS
 		*(.bl_text)
          . = ALIGN(4);
 	} > BL_TEXT
-
-#if BL_LINK_TEST_KEY
-
-	.bl_ecdsa_testkey : 
-	{
-		KEEP(*(.bl_ecdsa_testkey))
-	} > BL_TEXT
-
-#endif
 
     .isr_vector :
     {
@@ -222,12 +210,5 @@ SECTIONS
 	__application_max_size = LENGTH(UPDATE);
 
 	__bootloader_length = 0x4000;
-	
-#if BL_LINK_TEST_KEY
 
-	// +4 is to skip the empty word
-	__bl_testkey_address = ADDR(.bl_ecdsa_testkey) + 4;
-#else
-	__bl_testkey_address = 0;
-#endif
 }

@@ -64,7 +64,6 @@
 	SRVCALL: 0x0800024C
 	LENGTH: 0x4000	-> for core-board this is sector #0
 	BANK2OFF: 0x08100000
-	KEYSTR: 0x08003424
 
 	<image data>
 
@@ -86,6 +85,16 @@
 #define WD_ABI_HDR_APP		0x02		// this is a header of the application
 #define WD_ABI_HDR_FLAG_CRC	0x01
 #define WD_ABI_HDR_FLAG_DSA	0x02
+#define WD_ABI_HDR_FLAG_KEYSTR	0x04
+
+// Size Constants
+#define WD_ABI_SIZE_CRC		0x04
+#define WD_ABI_SIZE_KEYSTR	0x64
+#define WD_ABI_SIZE_SIGNATURE 0x64
+
+// Magics
+#define WD_ABI_KEYSTR_MAGIC	0xCC000001
+
 
 // ABI Field-Offsets
 #define WD_ABI_HDR_FLDOFF_MAGIC	0x00
