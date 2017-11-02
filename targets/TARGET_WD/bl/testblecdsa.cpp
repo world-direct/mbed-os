@@ -10,12 +10,15 @@
 
 extern "C"{
 	int bl_ecdsa_validate_hash(uint32_t * hash, uint32_t * pk, uint32_t * sig);
+	int ecc_ecdsa_validate(const uint32_t *x, const uint32_t *y, const uint32_t *e, const uint32_t *r, const uint32_t *s);
+	
 };
+
 
 int testblecdsa(){	
 	
 	
-	/*
+	
 	// NOK NEW!
 uint32_t pubx[] = {0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3};
 uint32_t puby[] = {0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F};
@@ -24,7 +27,7 @@ uint32_t sigr[] = {0xC87316ED, 0xE653627E, 0x02218D66, 0x72095BF0, 0xD8893CB4, 0
 uint32_t sigs[] = {0xDFCD1765, 0x1E54A623, 0xACB3D272, 0x43509EAA, 0x6FD6C49F, 0x251065E3, 0x19A1E05D, 0x07F07476};	
 	uint32_t * sig = sigr;
 	uint32_t * pk = pubx;
-	*/
+	
 	
 	/*
 	// OK NEW!
@@ -41,7 +44,7 @@ uint32_t sigs[] = {0x62A80A81, 0x23BA1517, 0x4E5A8C09, 0x3AAFEB71, 0x77B34332, 0
 	*/
 	
 	
-
+	/*
 	// TEST NEW OK, deterministic ECDSA...
 	uint32_t pubx[] = { 0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3 };
 	uint32_t puby[] = { 0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F };
@@ -50,7 +53,7 @@ uint32_t sigs[] = {0x62A80A81, 0x23BA1517, 0x4E5A8C09, 0x3AAFEB71, 0x77B34332, 0
 	uint32_t sigs[] = { 0x69A246BB, 0x8680CFA7, 0xE40FF608, 0xCCA01FCB, 0x210DE92E, 0xF457438D, 0xCF69056C, 0x1D0F8576 };
 	uint32_t * sig = sigr;
 	uint32_t * pk = pubx;
-		
+		*/
 	/*
 		// OK OLD!
 		
@@ -67,12 +70,23 @@ uint32_t sigs[] = {0x62A80A81, 0x23BA1517, 0x4E5A8C09, 0x3AAFEB71, 0x77B34332, 0
 	uint32_t pk[] = {0xA14DDD6C, 0x43F9223C, 0x69177D35, 0xA900FC19, 0xE6F81304, 0x4A6456DE, 0x23137AD5, 0x5EF8A2D3,
 	0x1B44945A, 0x2EFEED18, 0xE35EC97F, 0x2EF16341, 0x6203D844, 0x184D0AFA, 0x6BD934AD, 0xBFE8A50F};
 	*/
+	
+
+	
 	if(bl_ecdsa_validate_hash(hash, pk, sig) == 0){
+		printf("OK!");
+	}
+	
+	if (ecc_ecdsa_validate(pubx, puby, hash, sigr, sigs) == 0) {
 		printf("OK!");
 	}
 	
 	sig[0] = 0;
 	if (!bl_ecdsa_validate_hash(hash, pk, sig) == 0) {
+		printf("OK!");
+	}
+	
+	if (ecc_ecdsa_validate(pubx, puby, hash, sigr, sigs) == 0) {
 		printf("OK!");
 	}
 }

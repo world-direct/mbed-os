@@ -87,6 +87,12 @@
 #define WD_ABI_HDR_FLAG_DSA	0x02
 #define WD_ABI_HDR_FLAG_KEYSTR	0x04
 
+// offsets needed in firmware
+#define WD_ABI_HDR_OFFSET_CPUMASK	0x08
+#define WD_ABI_HDR_OFFSET_CPUID		0x0C
+#define WD_ABI_BLHDR_OFFSET_SRVCALL	0x10	
+
+
 // Size Constants
 #define WD_ABI_SIZE_CRC		0x04
 #define WD_ABI_SIZE_KEYSTR	0x64

@@ -57,9 +57,9 @@ pop {r4, r5, r6, pc}
 bl_ecdsa_validate_hash:
 
 	// return true
-	mov r0, #0
+	/*mov r0, #0
 	mov pc, lr
-
+	*/
 	push	{r4, r5, r6, r7, lr}
 	sub	sp, #372
 

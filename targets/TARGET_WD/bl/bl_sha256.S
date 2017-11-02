@@ -7,49 +7,14 @@
 
 #include "bl_asmoptions.inc"
 
-.section .bl_text,"ax",%progbits
-.global bl_sha256_digest
-.global bl_sha256_test
-
-.type bl_sha256_test, %function
-bl_sha256_test:
-PUSH {r4, lr}
-SUB sp, #32
-
-	MOV r4, sp	// buffer
-
-	MOV r0, 0
-	MOV r1, 0
-	MOV r2, r4
-	BL bl_sha256_digest	
-	// hash "" is:	e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855
-	// r4 is:		7852b855 a495991b 649b934c 27ae41e4	996fb924 9afbf4c8 98fc1c14 e3b0c442
-
-	ADR r0, bl_sha256_test_abc
-	MOV r1, 3
-	MOV r2, r4
-	BL bl_sha256_digest	// *r4 => f20015ad b410ff61 96177a9c b00361a3 5dae2223 414140de	8f01cfea ba7816bf       
-
-	ADR r0, bl_sha256_test_long
-	MOV r1, 112
-	MOV r2, r4
-	BL bl_sha256_digest	// *r4 => 7afee9d1 afac4503 e8f07a51 0b249b11 7b049237 036ce59e 78af8380 cf5b16a7       
-
-
-ADD sp, #32
-POP {r4, pc}
-bl_sha256_test_abc: .ascii "abc"
-bl_sha256_test_long: .ascii "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
-
-.align 4
-	
-
-pop {r4, r5, pc}
-
-// bl_sha256_digest(void * start, size_t len, uint32_t digest[8])
-.global bl_sha256_digest
-.type bl_sha256_digest, %function
-bl_sha256_digest:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_sha256_digest):
+//////////////////////////////////////////////////////////////////////////
+//	Calculates a SHA256 hash of a speicified memory-section
+//
+//		r0: void * start
+//		r1: int len
+//		r2: void * buffer (uint32_t[8] output will be written)
 push	{r4, r5, r6, r7, lr}
 sub	sp, #104	// 0x68
 
@@ -85,8 +50,9 @@ add	sp, #104	// 0x68
 pop	{r4, r5, r6, r7, pc}
 
 
-.type bl_sha256_init, %function
-bl_sha256_init:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_sha256_init):
+//////////////////////////////////////////////////////////////////////////
 push {r4, lr}
 
 	mov		r4, r0	// r4: ctx
@@ -104,8 +70,9 @@ push {r4, lr}
 
 pop	{r4, pc}
 
-.type bl_sha256_update, %function
-bl_sha256_update:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_sha256_update):
+//////////////////////////////////////////////////////////////////////////
 push {r3, r4, r5, r6, r7, lr}
 	mov	r5, r0	// r5: ctx
 	mov	r7, r1	// r7: data
@@ -173,9 +140,10 @@ push {r3, r4, r5, r6, r7, lr}
 	pop	{r3, r4, r5, r6, r7, pc}
 
 
-.type bl_sha256_transform, %function
-bl_sha256_transform:
-	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_sha256_transform):
+//////////////////////////////////////////////////////////////////////////
+stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
 	sub	sp, #28
 	ldr	r3, [r0, #8]
 	str	r3, [sp, #4]
@@ -319,11 +287,12 @@ bl_sha256_transform:
 	add	r6, r3
 	str	r6, [r0, #28]
 	add	sp, #28
-	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
 
-.type bl_sha256_final, %function
-bl_sha256_final:
-	push	{r3, r4, r5, lr}
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_sha256_final):
+//////////////////////////////////////////////////////////////////////////
+push	{r3, r4, r5, lr}
 	ldr	r3, [r1, #32]
 	mov	r4, r1
 	ldr	r1, [r1, #36]	// 0x24
@@ -376,10 +345,13 @@ bl_sha256_final:
 	strd	r2, r3, [r4, #96]	// 0x60
 	mov	r1, r5
 	ldmia.w	sp!, {r3, r4, r5, lr}
-	b bl_sha256_transform
+b bl_sha256_transform
 
 
+//////////////////////////////////////////////////////////////////////////
 // STATIC DATA
+//////////////////////////////////////////////////////////////////////////
+
 .align 4
 
 bl_sha256_initial_hash_value:
