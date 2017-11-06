@@ -47,7 +47,7 @@ PUSH {r4, r5, r6, lr}
 	.L_blsrv_validate_update_image:
 		LDR r5, bl_data_update_image_start
 		B .L_validate_image
-
+		
 	.L_blsrv_validate_boot_image:
 		LDR r5, bl_data_image_start
 		B .L_validate_image
@@ -111,8 +111,9 @@ MOVS r0, 1
 0:
 POP {r4, r5, r6, pc}
 
-bl_srv_call_jump_table:
 .align 4
+
+bl_srv_call_jump_table:
 .word .L_blsrv_erase_update_region		// 1
 .word .L_blsrv_write_update_region		// 2
 .word .L_blsrv_validate_update_image	// 3

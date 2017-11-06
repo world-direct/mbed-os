@@ -204,44 +204,6 @@ PUSH {r4, r5, lr}
 	MOV r1, sp				// r1: state
 	MOV r2, r5				// r5: keystore
 	BL bl_read_image
-							// r0: result (0:empty, 1:header exists, 2:has size, 3:crc valid, 4: cpu compatible, 5: dsa validated)
-
-	// if(result==0) return 1	// handle empty
-	CMP r0, #0				
-	ITT EQ
-		MOVEQ r0, 1
-		BEQ 0f
-
-	// if(result==3) return 3;	// handle incompatible
-	CMP r0, #3			
-	ITT EQ
-		MOVEQ r0, 3
-		BEQ 0f
-
-	// if(keystore)
-	CMP r5, #0
-	BNE 2f // {
-		
-		// if(result == 5) return 0
-		CMP r0, #5			
-		ITT EQ
-			MOVEQ r0, #0
-			BEQ 0f
-
-		// return 2
-		MOV r0, #2
-		B 0f
-	// }
-	2:
-
-	// if(result <= 2) return 2
-	CMP r0, #2	
-	ITT LS
-		MOVLS r0, #2
-		BLS 0f
-
-	// return 0
-	MOV r0, #2
 
 0:
 ADD sp, #0x20
@@ -272,30 +234,12 @@ PUSH {r4, r5, r6, lr}
 	BL bl_read_image
 							// r0: validation-result
 
-	// return - values
-	/////////////////////////////////////////////////////
-	MOV r1, 0	// keystore result register defaults to 0
+	// for any bootloader state <0, we need to die. This should not happen basically.
+	BL_ASSERT(r0, GE, #0)	// flags are still set by CMP r0, #0
 
-	//	1: DEV-BUILD, no size, no crc, no sig -> continue
-	CMP r0, #1
-	BEQ .L_bl_dev
-
-	// 4: PROD BUILD: valid, DSA not checked
-	CMP r0, #4
-	BEQ .L_bl_prod
-
-	// 0: DIE, should not get that far anyway
-	// 2: size set, but invalid CTC -> DIE
-	// 3: crc ok, cpu incompatible -> DIE	
-	MOV r0, 1	// res = 1
-	BEQ 0f
-
-	.L_bl_dev:
-	MOV r0, 0	// res = 0
-	BEQ 0f
-
-	.L_bl_prod:
-	MOV r0, 1	// res = 1
+	ITT EQ					// if (result == 0)	// development, return (0, 0)
+		MOVEQ r1, #0
+		BEQ 0f
 
 	// locate keystore
 	LDR r3, [r4, #0x08]				// r3: header-flags
@@ -333,11 +277,9 @@ PUSH {r4, r5, r6, lr}
 	MOV r2, r6					// r2: keystore
 	BL bl_read_image
 
-	// r0: MUST BE 5 (valid DSA, otherwise we have an invalid SIG!)
-	CMP r0, #5
-	BNE bl_die
+	// r0: MUST BE 2 (valid DSA, otherwise we have an invalid self-signature!)
+	BL_ASSERT(r0, EQ, #2)
 
-	MOV r0, 0		// r0: 0 (success)
 	MOV r1, r6		// r1: keystore
 0:
 ADD sp, #0x20

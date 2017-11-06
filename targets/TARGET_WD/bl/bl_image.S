@@ -24,22 +24,19 @@ If a stage is completed with != 0, no further stages are executed.
 //			r0: 0 if valid, else invalid
 //		Values can be loaded and stored in the state_struct (IMAGE_STATE_FLDOFST_XXX) offsets
 
-	// 0:												==> LEVEL "EMPTY
-	// 1: checks if there is any valid header			==> LEVEL "INCOMPATIBLE"
+	// 0:												==> LEVEL -2: "EMPTY
+	// 1: checks if there is any valid header			==> LEVEL -1: "INCOMPATIBLE"
 	.word bl_read1_header_exisits
 
-	// 2: checks if the masked CPUID matches			==> LEVEL "DEVELOPMENT"
+	// 2: checks if the masked CPUID matches			==> LEVEL 0: "COMPATIBLE"
 	.word bl_read2_cpuid_valid							
 
 	// 3: checks if there is a header postprocessed 
-	// by the elf-tool (has valid size)					==> LEVEL "CRC INVALID"
-	.word bl_read3_header_validateable
+	// by the elf-tool (has valid size)					==> LEVEL 1: "IMAGE VALID"
+	.word bl_read3_image_valid
 
-	// 4: checks if the CRC(image + CRC_padding) == 0	==> LEVEL "CRC VALID", up to this level, update is accepted, if level >= bootloader-level
-	.word bl_read4_crc_valid
-
-	// checks if the digital signature is valid			==> LEVEL "DSA VALID"
-	.word bl_read5_dsa_valid
+	// checks if the digital signature is valid			==> LEVEL 2: "IMAGE DSA VALID"
+	.word bl_read4_dsa_valid
 
 	// Mandatory end of table marker
 	.word 0
@@ -66,7 +63,7 @@ Additional information about the image is returned by a image_state structure, p
 		int header_word;
 
 		// offset: 0x0C
-		// setby: bl_read3_header_validateable
+		// setby: bl_read3_image_valid
 		// size of image, including CRC, Keystore and signature
 		int image_size;		
 
@@ -90,13 +87,13 @@ BL_GLOBAL_FUNCTION(bl_read_image):
 //	Returns
 //		r0: the stage_index of the last successfully executed read-method
 //		details can be loader from the state_struct, using IMAGE_STATE_FLDOFST_XXX offsets
-PUSH {r4, r5, lr}
+PUSH {r4, r5, r6, lr}
 
 	MOV r4, r1			// r4: state
 
 	// init state
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_IMAGE_START]	// state->image_start = image_start
-	MOV r0, #0
+	MOV r0, #-2
 
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_STAGE_INDEX]	// state->stage_index = 0
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_HEADER_WORD]	// state->header_word = 0
@@ -107,15 +104,15 @@ PUSH {r4, r5, lr}
 	// r5 will hold the address of the method in the table
 	// r1 will deref the address, and so contain the pointer to the function
 	// r0 will hold the state arg passed to the function
-	LDR r5, =.L_validation_stages_tbl
+	ADR r5, .L_validation_stages_tbl
 
 	1:	// next
-		LDR r1, [r5], #4	// post-incr r5
-		CMP r1, #0			// if(!r1)
+		LDR r6, [r5], #4	// post-incr r5
+		CMP r6, #0			// if(!r6)
 		BEQ 0f				// return
 
 		MOV r0, r4
-		BLX r1				// call r1(state)
+		BLX r6				// call r6(state)
 		CMP r0, #0			// if(!retvalue)
 		BNE 0f				// return
 
@@ -127,7 +124,7 @@ PUSH {r4, r5, lr}
 	
 0:	// done 
 LDR r0, [r4]	// return stage_index in r0
-POP {r4, r5, pc}
+POP {r4, r5, r6, pc}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -171,44 +168,36 @@ PUSH {lr}
 POP {pc}
 
 //////////////////////////////////////////////////////////////////////////
-BL_LOCAL_FUNCTION(bl_read3_header_validateable):
+BL_LOCAL_FUNCTION(bl_read3_image_valid):
 //////////////////////////////////////////////////////////////////////////
 //	Checks if the header was post-processed (by testing the SIZE field)
-//	If not, this will be a DEVELOPMENT image
-PUSH {lr}
-
-	LDR r1, [r0, #IMAGE_STATE_FLDOFST_IMAGE_START]	// r1: image-base
-	MOV r2, r1
-	ADD r2, #WD_ABI_HDR_OFFSET						// r2: &abi-header
-
-	LDR r2, [r2, #4]								// r2: image-size loader from header
-	CMP r2, #0xFFFFFFFF
-	BEQ	1f
-
-	STR r2, [r0, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]	// state->image_size = r2
-
-	B 0f							// return true
-1: MOV r0, 1; B 2f
-0: MOV r0, 0
-2: POP {pc}
-
-
-//////////////////////////////////////////////////////////////////////////
-BL_LOCAL_FUNCTION(bl_read4_crc_valid):
-//////////////////////////////////////////////////////////////////////////
-//	Checks for CRC padding
+//	And performs the CRC validation of the image
 PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0										// r4: state
 
+	LDR r1, [r4, #IMAGE_STATE_FLDOFST_IMAGE_START]	// r1: image-base
+	MOV r2, r1
+	ADD r2, #WD_ABI_HDR_OFFSET						// r2: &abi-header
+	LDR r2, [r2, #4]								// r2: image-size loader from header
+	LDR r0, =__application_max_size					// r0: maximumn app size
+	CMP r2, r0										// if (size>max) return 0
+		ITT HI
+		MOVHI r0, 0
+		BHI 0f
+
 	// check header_flags if we have crc padding
-	LDR r1, [r0, #IMAGE_STATE_FLDOFST_HEADER_WORD]	// r1: header_word
-	TST r1, WD_ABI_HDR_FLAG_CRC
-	BEQ 0f							// return 0
+	LDR r0, [r4, #IMAGE_STATE_FLDOFST_HEADER_WORD]	// r1: header_word
+	TST r0, WD_ABI_HDR_FLAG_CRC						// if(!header & FLAG_CRC) return 0
+		ITT EQ
+		MOVEQ r0, 0
+		BEQ 0f
+
+	STR r2, [r4, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]	// state->image_size = r2
 
 	// perform crc validation
-	LDR r5, [r4, #0x04]								// r5: ptr, post-increment
-	LDR r6, [r4, #0x0C]								// r6: size, post-decrement
+	MOV r5, r1										// r5: ptr, post-increment
+	MOV r6, r2										// r6: size, post-decrement
 
 	BL bl_hal_crc_init
 
@@ -226,14 +215,12 @@ PUSH {r4, r5, r6, lr}
 
 	// r0 contains the crc from the last call to bl_hal_crc_update, which should be 0!
 	// we can return it directly
-	B 2f
 
-1: MOV r0, 1; B 2f
-0: MOV r0, 0
-2: POP {r4, r5, r6, pc}
+0: 
+POP {r4, r5, r6, pc}
 
 //////////////////////////////////////////////////////////////////////////
-BL_LOCAL_FUNCTION(bl_read5_dsa_valid):
+BL_LOCAL_FUNCTION(bl_read4_dsa_valid):
 //////////////////////////////////////////////////////////////////////////
 //	Performs ECDSA validation
 PUSH {r4, lr}
