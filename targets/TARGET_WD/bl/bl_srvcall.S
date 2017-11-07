@@ -19,8 +19,8 @@ PUSH {r4, r5, r6, lr}
 	LDR r1, [r4], #4			// r1: operation
 	
 	SUB r1, #1					// r1: operation table offset (commands start with 1, vs table with 0)
-	CMP r1, #5					// 5 is is the highest accepted offset
-	ITT HI						// if (r1>5) return false;
+	CMP r1, #4					// 4 is is the highest accepted offset
+	ITT HI						// if (r1>4) return false;
 	MOVHI r0, 0
 	BHI 0f
 
@@ -44,36 +44,26 @@ PUSH {r4, r5, r6, lr}
 		BL bl_hal_flash_memcpy
 		B 1f
 
-	.L_blsrv_validate_update_image:
-		LDR r5, bl_data_update_image_start
-		B .L_validate_image
+	.L_blsrv_get_status:
+
+		// load args
+		LDR r1, [r4], #4					// r1: force dsa
+		SUB sp, #SYSTEM_STATE_STRUCT_SIZE	// sp: system state struct
+		MOV r0, sp							// r0: system state struct
+		BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
+
+		// set output args
+		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]
+		STR r0, [r4], #4
+		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE]
+		STR r0, [r4], #4
+		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]
+		STR r0, [r4], #4
+		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_COMMAND_WORD_PTR]
+		LDR r0, [r0]
+		STR r0, [r4], #4
 		
-	.L_blsrv_validate_boot_image:
-		LDR r5, bl_data_image_start
-		B .L_validate_image
-
-
-	.L_validate_image:
-		// r5 contains image-base
-		MOV r0, r5
-
-		// BL bl_validate_image // r0=ret_code, r1=size
-		MOV r6, r1	// store size
-
-		// output fields:
-		STR r0, [r4], #4	// validation_result
-
-		MOV r1, r5
-		//LDR r2, bl_data_metadata_offset
-		ADD r1, r2
-		STR r1, [r4], #4		// metdata_ptr
-
-		MOV r1, r5	// r1=base
-		MOV r2, r6	// r2=size
-		ADD r1, r6	// r1=&command_word (src)
-		LDR r1, [r1] // command_word
-		STR r1, [r4], #4	// command_word
-			
+		ADD sp, #SYSTEM_STATE_STRUCT_SIZE	// dealloc stack memory
 		B 1f
 
 	.L_blsrv_apply_update:
@@ -116,10 +106,9 @@ POP {r4, r5, r6, pc}
 bl_srv_call_jump_table:
 .word .L_blsrv_erase_update_region		// 1
 .word .L_blsrv_write_update_region		// 2
-.word .L_blsrv_validate_update_image	// 3
-.word .L_blsrv_validate_boot_image		// 4
-.word .L_blsrv_apply_update				// 5
-.word .L_blsrv_write_config_data		// 6
+.word .L_blsrv_get_status				// 3
+.word .L_blsrv_apply_update				// 4
+.word .L_blsrv_write_config_data		// 5
 
 
 bl_data_image_start: .word __image_start

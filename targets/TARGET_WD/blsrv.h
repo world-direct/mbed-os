@@ -18,10 +18,9 @@ extern "C" {
 
 #define blsrv_erase_update_region		0x01
 #define blsrv_write_update_region		0x02
-#define blsrv_validate_update_image		0x03
-#define blsrv_validate_boot_image		0x04
-#define blsrv_apply_update				0x05
-#define blsrv_write_config_data			0x06
+#define blsrv_get_status				0x03
+#define blsrv_apply_update				0x04
+#define blsrv_write_config_data			0x05
 
 struct blsrv_desc {
 
@@ -36,11 +35,13 @@ struct blsrv_desc {
 		} write_update_region;
 
 		struct {
+			int force_dsa_validation;		// set this to true, if you need to run dsa validation explicitly
 			// output fields
-			int validation_result;	// output field, will be set by the service
-			intptr_t metadata_ptr;
-			int command_word;	// the word following the image
-		} validate_image;
+			int bootloader_image_status;	// the image verification status
+			int application_image_status;	// the image verification status
+			int update_image_status;		// the image verification status
+			int command_word;				// the word following the image
+		} get_status;
 
 		struct {
 			int validation_result;	// output field, will be set by the service but only if != 0 , otherwise the call will not return but reset and apply!

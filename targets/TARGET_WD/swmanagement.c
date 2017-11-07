@@ -5,11 +5,9 @@ static char m_null_termination;
 static size_t m_download_offset;
 
 static inline void m_set_valid_md(intptr_t mdroot, swmanagement_image_information * info){
-	info->image_total_length = *((size_t*)(mdroot + 0x04));
-	info->image_application_name = (const char *)(mdroot + 0x08);
-	info->image_application_version = (const char *)(mdroot + 0x28);
-	info->image_cpu_id_mask = *((uint32_t*)(mdroot + 0x48));
-	info->image_cpu_id = *((uint32_t*)(mdroot + 0x4C));
+	info->image_total_length = *((size_t*)(mdroot + WD_ABI_HDR_OFFSET_SIZE));
+	info->image_application_name = (const char *)(mdroot + WD_ABI_APPHDR_OFFSET_NAME);
+	info->image_application_version = (const char *)(mdroot + WD_ABI_APPHDR_OFFSET_VERSION);
 }
 
 static inline m_set_invalid_md(swmanagement_image_information * info){
@@ -19,8 +17,7 @@ static inline m_set_invalid_md(swmanagement_image_information * info){
 }
 
 static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * info){
-	if (info->image_validation_result == NoMetadata || 
-		info->image_validation_result == InvalidMetadata) {
+	if (info->image_validation_result < 0) {
 		m_set_invalid_md(info);
 	}
 	else{
@@ -28,25 +25,33 @@ static inline void m_set_md(intptr_t mdroot, swmanagement_image_information * in
 	}
 }
 
+// linker-script imports
+extern int __image_start;
+extern int __update_image_start;
+
+// we need to use the address of the symbols, because the C compiler dereferences the extern vars automatically
+#define image_start_intptr ((intptr_t)(&__image_start))
+#define update_image_start_intptr ((intptr_t)(&__update_image_start))
+
 void swmanagement_get_status(swmanagement_status * status)
 {
 	struct blsrv_desc desc;
 
-	// validate boot image
+	//  get status from bl
 	//////////////////////////////////////////////////////////////////////////
-	desc.operation = blsrv_validate_boot_image;
+	desc.operation = blsrv_get_status;
+	desc.args.get_status.force_dsa_validation = 0;
 	blsrv_call(&desc);
-	status->boot_image_information.image_validation_result = desc.args.validate_image.validation_result;
-	m_set_md(desc.args.validate_image.metadata_ptr, &status->boot_image_information);
 
-	// validate update image
+	status->boot_image_information.image_validation_result = desc.args.get_status.application_image_status;
+	status->update_image_information.image_validation_result = desc.args.get_status.update_image_status;
+	status->update_status = desc.args.get_status.command_word;
+
+	// extract metadata
 	//////////////////////////////////////////////////////////////////////////
-	desc.operation = blsrv_validate_update_image;
-	blsrv_call(&desc);
-	status->update_image_information.image_validation_result = desc.args.validate_image.validation_result;
-	m_set_md(desc.args.validate_image.metadata_ptr, &status->update_image_information);
+	m_set_md(image_start_intptr + WD_ABI_HDR_OFFSET, &status->boot_image_information);
+	m_set_md(update_image_start_intptr + WD_ABI_HDR_OFFSET, &status->update_image_information);
 
-	status->update_status = desc.args.validate_image.command_word;
 }
 
 void swmanagement_prepare_new_download(void)

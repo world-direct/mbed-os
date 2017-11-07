@@ -13,30 +13,27 @@ extern "C" {
 ///< Implementation Note: These values correspond to values hardcoded in the bootloader, so don't alter them!
 typedef enum {
 
-	///< There is an image with a valid CRC checksum
-	ValidImage = 0,
+	///< The is no abi header, maybe area is empty
+	Empty = -2,
 
-	///< No signature byte found in metadata. Normally this is a returned if the section is empty.
-	NoMetadata = 1,
+	///< There is an abi header, but for an incompatible image
+	Incompatible = -1,
 
-	///< The specified image size is out of the allowed range (which depends on total flash and linker settings)
-	InvalidMetadata = 2,
+	///< The image is compatible, but for development only
+	DevelopmentImage = 0,
 
-	///< The CRC validation failed. This may be caused by an invalid or incomplete image.
-	InvalidImage = 3,
+	///< The image is CRC validated
+	CRCValidatedImage = 1,
 
-	///< The CRC validation failed, and the CRC field is 0xFFFFFFFF. This is normally caused by debug build (without ElfFileProcessor has been run on).
-	UnverifyableImage = 4,
-
-	///< The masked system's CPUID don't match the one given in the image
-	IncompatibleImage = 5
+	///< The image is DSA validated
+	DSAValidatedImage = 2
 
 
 } image_validation_result;
 
 typedef struct {
 	
-	///< Returns the total length of the image, as reported by the server.
+	///< Returns the total length of the image, as in ABI header
 	size_t image_total_length;
 		
 	///< returns a pointer to the name of the downloaded image.
@@ -47,13 +44,6 @@ typedef struct {
 	///< only available if at least the first 1k of the image, which contains the metadata section, has been downloaded.
 	const char * image_application_version;
 
-	///< the booloader performs an AND of this mask
-	uint32_t image_cpu_id_mask;
-
-	///< to compare the CPUID register with this value
-	///< if they don't match, no update will be performed
-	uint32_t image_cpu_id;
-	
 	///< returns validation result. This is a not-cached or persistent value.
 	image_validation_result image_validation_result;
 	

@@ -184,9 +184,9 @@ PUSH {r4, r5, r6, lr}
 	ADD r2, #WD_ABI_HDR_OFFSET						// r2: &abi-header
 	LDR r2, [r2, #4]								// r2: image-size loader from header
 	LDR r0, =__application_max_size					// r0: maximumn app size
-	CMP r2, r0										// if (size>max) return 0
+	CMP r2, r0										// if (size>max) return 1
 		ITT HI
-		MOVHI r0, 0
+		MOVHI r0, 1
 		BHI 0f
 
 	// check header_flags if we have crc padding
