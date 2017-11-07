@@ -68,20 +68,27 @@ PUSH {r4, r5, r6, lr}
 
 	.L_blsrv_apply_update:
 
-		LDR r0, bl_data_update_image_start
-		// BL bl_validate_image
-		MOV r6, r1	// size
-		MOVS r5, r0	// result
+		SUB sp, #SYSTEM_STATE_STRUCT_SIZE	// sp: system state struct
+		MOV r0, sp							// r0: system state struct
+		MOV r1, #1							// r1: force dsa
+		BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
 
-		// set validation result to output struct field
-		STR r5, [r4], #4	
+		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]
+		LDR r1, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]
+		LDR r5, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_SIZE]
 
-		BNE 1f	// if (result!=0) return
+		ADD sp, #SYSTEM_STATE_STRUCT_SIZE	// release stack memory
 
-		MOV r0, r6
-		//ADR r1,  bl_data_commandword_apply
-		MOV r1, 0
-		//BL bl_set_command_word
+
+		// store update-state in output-field
+		STR r1, [r4], #4
+
+		CMP r0, r1	
+		BHI 1f		// if(bootloader_image_state > update_image_state) return;
+
+		MOV r0, r5							// r0: update image size
+		ADR r1, bl_data_commandword_apply	// r1: &command-word-apply (0x000000FF)
+		BL bl_set_command_word
 
 		B 1f
 
@@ -113,3 +120,4 @@ bl_srv_call_jump_table:
 
 bl_data_image_start: .word __image_start
 bl_data_update_image_start : .word __update_image_start
+bl_data_commandword_apply: .word 0x000000FF

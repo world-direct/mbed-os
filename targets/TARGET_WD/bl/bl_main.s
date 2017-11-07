@@ -160,8 +160,8 @@ BL_GLOBAL_FUNCTION(bl_start):
 	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// r0: bootloader-image-state
 	LDR r1, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// r1: update-image-state
 
-	CMP r1, r0
-	BNE bl_start_app										// skip update, because update-image-state < bootloader-image-state (bootloader signed, but app is not)
+	CMP r0, r1
+	BHI bl_start_app										// skip update, because update-image-state < bootloader-image-state (bootloader signed, but app is not)
 	
 	
 	// if we reach here we can finally run the update
@@ -327,18 +327,19 @@ PUSH {r4, r5, r6, lr}
 0:
 POP {r4, r5, r6, pc}
 
-/*************************************************************************
-	void bl_set_command_word(int image-size, int * command_word)
-	updates the command-word in flash.
-	
-	NOTE: There is no erase here, so after erase (after factory programming or sw-update), you can only update bits from 1 to 0.
-	the command-word is: 
-		- 0xFFFFFFFF on erase, no further action
-		- 0x0000FFFF if the bootloader should  load the new image, set by bootloader after validation
-		- 0x00000000 if bootloader applied the image, can only be reset by a new image
-*/
-.type bl_set_command_word, %function
-bl_set_command_word:
+
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_set_command_word):
+//////////////////////////////////////////////////////////////////////////
+//	void bl_set_command_word(int image-size, int * command_word)
+//	updates the command-word in flash.
+//
+//	NOTE: There is no erase here, so after erase (after factory programming or sw-update), you can only update bits from 1 to 0.
+//	the command-word is: 
+//	- 0xFFFFFFFF on erase, no further action
+//	- 0x0000FFFF if the bootloader should  load the new image, set by bootloader after validation
+//	- 0x00000000 if bootloader applied the image, can only be reset by a new image
+//
 PUSH {r4, lr}
 
 	LDR r2, bl_data_update_image_start
@@ -367,6 +368,24 @@ PUSH {r4, lr}
 	// variable regisers
 	// r4: size
 	MOV r4, r0
+
+	// signal bl-flash operation by blinking two times
+	MOV r0, #0
+	BL bl_hal_ui
+	BL bl_hal_sleep
+
+	MOV r0, #1
+	BL bl_hal_ui
+	BL bl_hal_sleep
+
+	MOV r0, #0
+	BL bl_hal_ui
+	BL bl_hal_sleep
+
+	MOV r0, #1
+	BL bl_hal_ui
+	BL bl_hal_sleep
+
 
 	// erase app bank
 	BL bl_hal_erase_boot_image
