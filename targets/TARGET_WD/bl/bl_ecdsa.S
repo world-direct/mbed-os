@@ -68,7 +68,7 @@ bl_ecdsa_validate_hash:
 		mov	r6, r0	// hash
 
 	// Calculate w = s^{-1} \pmod{n}
-		add	r3, sp, #8
+		add	r3, sp, #8				// w
 		add.w	r0, r2, #32
 		adr	r1, bl_data_ecdsa_order_m
 		adr	r2, bl_data_ecdsa_order_r

@@ -93,11 +93,14 @@ PUSH {r4, r5, r6, lr}
 
 	// init state
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_IMAGE_START]	// state->image_start = image_start
-	MOV r0, #-2
 
-	STR r0, [r4, #IMAGE_STATE_FLDOFST_STAGE_INDEX]	// state->stage_index = 0
+	MOV r0, #-2
+	STR r0, [r4, #IMAGE_STATE_FLDOFST_STAGE_INDEX]	// state->stage_index = -2
+
+	MOV r0, #0
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_HEADER_WORD]	// state->header_word = 0
 	STR r0, [r4, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]	// state->image_size = 0
+
 	STR r2, [r4, #IMAGE_STATE_FLDOFST_KEYSTORE]		// state->keystore = keystore
 
 	// call validation methods

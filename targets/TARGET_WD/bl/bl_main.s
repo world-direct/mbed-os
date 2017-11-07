@@ -118,48 +118,140 @@ BL_GLOBAL_FUNCTION(bl_start):
 	MOV r0, #1
 	BL bl_hal_ui
 
-	// get bootloader image state
+
+	// get system state without forcing DSA
 	/////////////////////////////////////////////////////
-	BL bl_get_bootloader_image_state
-	BL_ASSERT(r0, NE, #0)
-										// r1: keystore	
-	MOV r4, r1							// r4: keystore
-	
-	// get application image state
+
+	SUB sp, #SYSTEM_STATE_STRUCT_SIZE	// sp: system state struct
+
+	MOV r0, sp							// r0: system state struct
+	MOV r1, #0							// r1: perform dsa-validation = false
+	BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
+
+	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// r0: bootloader image state
+	#ifndef WD_BL_ENABLE_DEVELOPMENT
+		// if development mode is not enabled, bootloader-image-state must be > 0!
+		BL_ASSERT(r0, HI, #0)
+	#else
+		// even in development, bootloader-image-state must be >= 0!
+		BL_ASSERT(r0, GE, #-1)		
+	#endif
+
+	// if update validation state < 1, we can directly start the app
+	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// r0: update-image-state
+	CMP r0, #1
+	BLT bl_start_app
+
+	// evaluate command word
 	/////////////////////////////////////////////////////
-	LDR r0, bl_data_image_start			// r0: image_start
-	MOV r1, r4							// r1: keystore
-	BL bl_get_application_image_state
-										// r0: application_image_state
-	MOV r5, r0							// r5: application_image_state
+	LDR r3, [sp, #SYSTEM_STATE_FLDOFST_COMMAND_WORD_PTR]	// r3: &command-word
+	LDR r1, [r3]											// r1: command-word
+	LDR r2, bl_data_commandword_apply						// r2: command-word comparant to apply update
+	CMP r1, r2
+	BNE bl_start_app										// skip update, because command-word not in apply-state
 
-	// get update image state
+	// if we reach here, we have a request for update, check DSA
 	/////////////////////////////////////////////////////
-	LDR r0, bl_data_image_start			// r0: image_start
-	MOV r1, r4							// r1: keystore
-	BL bl_get_application_image_state
-										// r0: update_image_state
-	MOV r6, r0							// r6: update_image_state
 
+	MOV r0, sp							// r0: system state struct
+	MOV r1, #1							// r1: perform dsa-validation = true
+	BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
 
-	B bl_start_app	// if (result!=0) bl_start_app();
+	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// r0: bootloader-image-state
+	LDR r1, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// r1: update-image-state
 
-	// evaluate command-word
-	LDR r0, bl_data_update_image_start
-	ADD r0, r6		// r0: &command_word
-	LDR r0, [r0]	// r0: command_word
-	LDR r1, bl_data_commandword_apply
 	CMP r1, r0
-	BNE bl_start_app	// skip update, because if command-word
+	BNE bl_start_app										// skip update, because update-image-state < bootloader-image-state (bootloader signed, but app is not)
 	
-	MOV r0, r6	//load size
+	
+	// if we reach here we can finally run the update
+	/////////////////////////////////////////////////////
+
+	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_SIZE]
 	BL bl_update	// bl_update(size)
 
-	// update command-word to zero
-	MOV r0, r6
+	// update command-word to signal ok
+	/////////////////////////////////////////////////////
+	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_SIZE]
 	ADR r1, bl_data_commandword_success	
 	BL bl_set_command_word
 
+	// and run the app
+	B bl_start_app
+
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_get_system_state):
+//////////////////////////////////////////////////////////////////////////
+//	this method implements the system state discovery.
+//	it is called at system startup, and if requested by swmanagement_get_status
+//
+//	Checking for DSA is defered to the last possible stage, because it
+//	is very heavy for runtime execution.
+//
+//	To check for DSA, the bootloader have to be self-checked, and because
+//	we have no way for persistent storage, this needs to be done every time.
+//
+//		r0: state-struct with the following fields (see constants SYSTEM_STATE_*):
+//			0x00: bootloader image state
+//			0x04: application image state
+//			0x08: update image state
+//			0x0C: &command-word
+//			0x10: update image size
+//
+//		r1: bool perform-dsa-validation
+//			set this to != 0 to force dsa validation
+//
+//		returns: void
+PUSH {r4, r5, lr}
+
+	MOV r4, r0							// r4: system-state-struct
+	MOV r5, r1							// r5: perform-dsa-validation
+
+	SUB sp, #IMAGE_STATE_STRUCT_SIZE	// sp: image-load state struct
+
+	// read bootloader state without dsa
+	MOV r0, WD_FLASH_BASE	// r0: image base
+	MOV r1, sp				// r1: image-state
+	MOV r2, 0				// r2: to locate keystore, we first run image-validation without DSA
+	BL bl_read_image
+							// r0: bootloader image state pass 1
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE] = r0
+
+	CMP r5, #0				// need to perform dsa?
+	BEQ 1f					// continue with loading app-state
+
+	MOV r0, sp				// r0: image-state struct
+	BL bl_get_keystore		// r0: keystore
+	MOV r5, r0				// r5: keystore
+	LDR r0, [sp, #IMAGE_STATE_FLDOFST_STAGE_INDEX]	// r0: bootloader final state
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE] = r0
+
+	1:
+
+	// get application image state
+	LDR r0, bl_data_image_start	// r0: image start
+	MOV r1, sp					// r1: state
+	MOV r2, r5					// r2: keystore or NULL
+	BL bl_read_image			// r0: application-image-state
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE] = r0
+
+	// get update image state
+	LDR r0, bl_data_update_image_start	// r0: update image start
+	MOV r1, sp					// r1: state
+	MOV r2, r5					// r2: keystore or NULL
+	BL bl_read_image			// r0: update-image-state
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE] = r0
+	LDR r0, [sp, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]	// r0: update-image-size
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_UPDATE_SIZE]	// state[SYSTEM_STATE_FLDOFST_UPDATE_SIZE] = r0
+	
+	// get command-word address
+	LDR r1, bl_data_update_image_start	// r1: update image start
+	ADD r0, r1							// r0: &comand-word
+	STR r0, [r4, #SYSTEM_STATE_FLDOFST_COMMAND_WORD_PTR]	// state[SYSTEM_STATE_FLDOFST_COMMAND_WORD_PTR] = r0
+
+0:
+ADD sp, #IMAGE_STATE_STRUCT_SIZE
+POP {r4, r5, pc}
 
 //////////////////////////////////////////////////////////////////////////
 BL_LOCAL_FUNCTION(bl_start_app):
@@ -178,71 +270,22 @@ BL_LOCAL_FUNCTION(bl_start_app):
 
 
 //////////////////////////////////////////////////////////////////////////
-BL_LOCAL_FUNCTION(bl_get_application_image_state):
+BL_LOCAL_FUNCTION(bl_get_keystore):
 //////////////////////////////////////////////////////////////////////////
-//	Reads the application or update flash content to get information about image.
-//		r0: void * base_address: (app or update)
-//		r1: void * keystore, or null of no DSA 
+//	Gets the pointer to the keystore in bootload, and checks bootloader self-signature
 //
-//	{ r0:res } bl_get_application_image_state(void * keystore);
-//		r0: return code
-//			0: OK (valid, if keystore passed also verified)
-//			1: empty (no metadata)
-//			2: invalid
-//			3: incompatible
-//		r1: tail_ptr	// pointer after the image
-PUSH {r4, r5, lr}
-							// r0: base-address
-							// r1: keystore
-
-	MOV r5, r1				// r5: keystore
-
-	// alloc state
-	/////////////////////////////////////////////////////
-	SUB sp, #0x20			// sp: image-state
-
-	MOV r1, sp				// r1: state
-	MOV r2, r5				// r5: keystore
-	BL bl_read_image
-
-0:
-ADD sp, #0x20
-POP {r4, r5, pc}
-
-//////////////////////////////////////////////////////////////////////////
-BL_LOCAL_FUNCTION(bl_get_bootloader_image_state):
-//////////////////////////////////////////////////////////////////////////
-//	Reads the bootloader flash content to get information about the system.
-//	Used internally on startup, or if requested by the User by a srvcall
+//	void * bl_get_keystore(void * bootloader_image_struct);
 //
-//	{ r0:res, r1: keystore } bl_get_bootloader_image_state(void);
-//
-//		if(res == 0) -> ok
-//		if(keystore == 0) -> BL not signed else BL signed
+//		r0: bootloader image state
 //
 //////////////////////////////////////////////////////////////////////////
 PUSH {r4, r5, r6, lr}
 
-	// bootloader self verify, without DSA
-	/////////////////////////////////////////////////////
-	SUB sp, #0x20
-	MOV r4, sp				// r4: image-state
-
-	MOV r0, WD_FLASH_BASE	// r0: image base
-	MOV r1, r4				// r1: state
-	MOV r2, 0				// r2: without keystore in first pass
-	BL bl_read_image
-							// r0: validation-result
-
-	// for any bootloader state <0, we need to die. This should not happen basically.
-	BL_ASSERT(r0, GE, #0)	// flags are still set by CMP r0, #0
-
-	ITT EQ					// if (result == 0)	// development, return (0, 0)
-		MOVEQ r1, #0
-		BEQ 0f
+	MOV r4, r0						// r4: image-state
+	MOV r0, #0						// r0: return NULL by default
 
 	// locate keystore
-	LDR r3, [r4, #0x08]				// r3: header-flags
+	LDR r3, [r4, #IMAGE_STATE_FLDOFST_HEADER_WORD]	// r3: header-word
 	TST r3, WD_ABI_HDR_FLAG_KEYSTR
 	BEQ 0f							// return if no keystore flag
 
@@ -257,8 +300,8 @@ PUSH {r4, r5, r6, lr}
 	ADDNE r2, #WD_ABI_SIZE_SIGNATURE
 
 	// get keystore address
-	LDR r0, [r4, #0x04]			// r0: image_start
-	LDR r1, [r4, #0x0C]			// r1: image_size total
+	LDR r0, [r4, #IMAGE_STATE_FLDOFST_IMAGE_START]		// r0: image_start
+	LDR r1, [r4, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]		// r1: image_size total
 	ADD r0, r1					// r0: image-end
 	SUB r0, r2					// r0: &keystore-header
 
@@ -271,7 +314,7 @@ PUSH {r4, r5, r6, lr}
 	ADD r0, #0x04				// r0: &keystore
 	MOV r6, r0					// r6: &keystore
 
-	// re-test with keystore
+	// re-test with keystore for DSA self-validation
 	MOV r0, WD_FLASH_BASE		// r0: image base
 	MOV r1, r4					// r1: state
 	MOV r2, r6					// r2: keystore
@@ -280,9 +323,8 @@ PUSH {r4, r5, r6, lr}
 	// r0: MUST BE 2 (valid DSA, otherwise we have an invalid self-signature!)
 	BL_ASSERT(r0, EQ, #2)
 
-	MOV r1, r6		// r1: keystore
+	MOV r0, r6		// r1: keystore
 0:
-ADD sp, #0x20
 POP {r4, r5, r6, pc}
 
 /*************************************************************************

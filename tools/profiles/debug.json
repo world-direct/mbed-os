@@ -17,6 +17,7 @@
       "-fomit-frame-pointer",
       "-O0",
       "-g3",
+      "-DWD_BL_ENABLE_DEVELOPMENT",
       "-fpermissive"
     ],
     "asm": [ "-x", "assembler-with-cpp" ],

@@ -111,6 +111,7 @@ sub sp, #32
 	mov r0, sp					// r0: hash-buffer
 	bl bl_ecdsa_validate_hash
 
+	mov r0, #0
 	b 0f
 1:
 	mov r0, #-1
