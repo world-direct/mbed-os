@@ -45,6 +45,8 @@ MEMORY
 		On the STM32103 the Sector 1 is 2k in size.
 		To enable Write-Protection of the bootloader, we have to use 2 regions, because
 		"The write-protection granularity is two pages." (see PM0068: STM32F10xxx XL-density Flash programming p14)
+
+		Each bank is 0x80000 bytes in length
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
@@ -56,7 +58,7 @@ MEMORY
 
 	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x2000 
 	UPDATE (rw) :			ORIGIN = 0x08082000, LENGTH = 0x80000 - 0x2000
-
+	// trail: 0x08100000
 	RAM (rwx)    :			ORIGIN = 0x20000000, LENGTH = 0x18000
 }
 

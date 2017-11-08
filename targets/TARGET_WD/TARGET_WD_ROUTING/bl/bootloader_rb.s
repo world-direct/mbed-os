@@ -20,14 +20,13 @@
 #define FLASH_BANK1_END       (0x0807FFFF)
 
 
-.section .bl_text,"ax",%progbits
-
 /*************************************************************************
 	void bl_hal_init(void):
 	Initializes the HW resources needed for other functions in the hal
 */
-.global bl_hal_init
-.type bl_hal_init, %function
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_init):
+//////////////////////////////////////////////////////////////////////////
 bl_hal_init:
 
 PUSH {lr}
@@ -78,10 +77,9 @@ POP {pc}
 /*************************************************************************
 	void bl_hal_ui(value):
 */
-.global bl_hal_ui
-.type bl_hal_ui, %function
-bl_hal_ui:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_ui):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	// we use the Port bit set/reset register (GPIOx_BSRR)
@@ -106,10 +104,9 @@ POP {pc}
 		Sleeps a little bit.
 		This should be around 250ms, but only used for blinking, so it don't have to be exact
 */
-.global bl_hal_sleep
-.type bl_hal_sleep, %function
-bl_hal_sleep:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_sleep):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	MOV r0, #0x80000
@@ -123,9 +120,9 @@ POP {pc}
 	void bl_hal_crc_init(void):
 	Initializes the crc generator to the init value of 0xFFFFFFFF
 */
-.global bl_hal_crc_init
-.type bl_hal_crc_init, %function
-bl_hal_crc_init:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_crc_init):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 	
 	LDR r0, bl_hal_crc_address
@@ -139,10 +136,9 @@ POP {pc}
 	unsigned int bl_hal_crc_update(unsigned int):
 	Updates the crc calculation 
 */
-.global bl_hal_crc_update
-.type bl_hal_crc_update, %function
-bl_hal_crc_update:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_crc_update):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 	
 	LDR r1, bl_hal_crc_address
@@ -163,8 +159,9 @@ POP {pc}
 		[4] => FLASH_CR
 		[8] => FLASH_AR
 */
-.type bl_hal_ldr_flash_reg, %function
-bl_hal_ldr_flash_reg:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_ldr_flash_reg):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	MOV r2, r0
@@ -185,9 +182,9 @@ POP {pc}
 	
 	Unlocks flash controller for ptr if not yet done 
 */
-.type bl_hal_flash_unlock, %function
-bl_hal_flash_unlock:
-
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_unlock):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, lr}
 
 	MOV r4, r0	// ptr
@@ -215,9 +212,9 @@ POP {r4, pc}
 	
 	Locks flash controller if not yet done 
 */
-.type bl_hal_flash_lock, %function
-bl_hal_flash_lock:
-
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_lock):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, lr}
 
 	MOV r4, r0
@@ -238,55 +235,13 @@ PUSH {r4, lr}
 POP {r4, pc}
 
 /*************************************************************************
-	void bl_hal_erase_sector(int sector_nr):
-	
-	Erases the specified sector
-*/
-.type bl_hal_erase_sector, %function
-bl_hal_erase_sector:
-
-PUSH {r4, lr}
-
-	MOV r4, r0 // r4: sector_nr
-
-	// RB uses addresses instead of nrs, so let's get the address into r5
-	// sector size is 0x800
-	MOV r0, #0x800
-	MUL r4, r0, r4	// r4: sector_ptr offset
-	LDR r0, bl_hal_flash_base
-	ADD r4, r0		// r4: sector_ptr
-
-	MOV r0, r4	// ptr arg
-	BL bl_hal_flash_unlock
-	
-	MOV r0, r4	// ptr arg
-	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
-	
-	// enable PER in CR
-	MOV r1, #0x02	
-	STR r1, [r0, #0x04]
-
-	// set address in FLASH_AR
-	STR r4, [r0, #0x08]
-
-	// start by setting STRT (we keep PER)
-	MOV r1, #0x42
-	STR r1, [r0, #0x04]
-
-	MOV r0, r4	// ptr arg, lock waits for !BSY
-	BL bl_hal_flash_lock
-0:
-POP {r4, pc}
-
-/*************************************************************************
 	void bl_hal_flash_memcpy(dest, src, size):
 	
 	Programms data from 'src' to 'dest'
 */
-.global bl_hal_flash_memcpy
-.type bl_hal_flash_memcpy, %function
-bl_hal_flash_memcpy:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_flash_memcpy):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, r5, r6, r7, lr}
 
 	MOV r4, r0 // dest, will be postincremented
@@ -329,15 +284,15 @@ POP {r4, r5, r6, r7, pc}
 	
 	Erases the whole boot-image
 */
-.global bl_hal_erase_boot_image
-.type bl_hal_erase_boot_image, %function
-bl_hal_erase_boot_image:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_erase_boot_image):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
-	MOV r0, #2	// start and current sector
-	MOV r1, #255  // last sector
+	LDR r0, =#0x08002000	// start boot area
+	LDR r1, =#0x08080000	// end boot area
 
-	BL bl_hal_erase_sectors
+	BL bl_hal_erase_region
 0:
 POP {pc}
 
@@ -347,36 +302,54 @@ POP {pc}
 	Erases the whole update image.
 	This is not directly called by the bootloader, but from the downloader.
 	We will keep this here, because we already have everything needed here
+
+	Test (with cmd.exe):
+
+		set path=%path%;C:\Program Files (x86)\STMicroelectronics\STM32 ST-LINK Utility\ST-LINK Utility
+
+		REM write to app
+		ST-LINK_CLI -w32 0x08002000 0x12345678
+		ST-LINK_CLI -w32 0x0807FFFC 0x12345678
+
+		REM write to config start
+		ST-LINK_CLI -w32 0x08080000 0xCCCCCCCC
+		ST-LINK_CLI -w32 0x08081FFC 0xCCCCCCCC
+
+		REM write to update 
+		ST-LINK_CLI -w32 0x08082000 0x12345678
+		ST-LINK_CLI -w32 0x080FFFFC 0x12345678
+
 */
-.global bl_hal_erase_update_image
-.type bl_hal_erase_update_image, %function
-bl_hal_erase_update_image:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_erase_update_image):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
-	LDR r0, =#258	// start and current sector
-	LDR r1, =#384  // last sector
+	LDR r0, =#0x08082000	// start update area
+	LDR r1, =#0x08100000	// end update area
 
-	BL bl_hal_erase_sectors
+	BL bl_hal_erase_region
 
 0:
 POP {pc}
 
 /*************************************************************************
-	void bl_hal_erase_sectors(int from, int to):
+	void bl_hal_erase_region(intpr_t from, intpr_t to):
 	
-	Erases the sectors starting in the speicifed rang of sector numbers (inclusive)
+	Erases the pages in the specifed address region
 */
-.type bl_hal_erase_sectors, %function
-bl_hal_erase_sectors:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_erase_region):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, r5, lr}
 
-	MOV r4, r0	// start and current sector
-	MOV r5, r1  // last sector
+	MOV r4, r0	// from
+	MOV r5, r1  // to
 
 	1:
 		MOV r0, r4
-		BL bl_hal_erase_sector
-		ADD r4, #1
+		BL bl_hal_erase_page
+		ADD r4, #0x800
 		CMP r4, r5
 	BNE 1b
 
@@ -384,13 +357,43 @@ PUSH {r4, r5, lr}
 POP {r4, r5, pc}
 
 /*************************************************************************
-	void bl_hal_flash_wait_idle(ptr):
+	void bl_hal_erase_page(intptr_t page_address):
 	
-	Polls to the FLASH_SR to wait for an operation in bank of ptr to finish
+	Erases the specified page
 */
-.type bl_hal_flash_wait_idle, %function
-bl_hal_flash_wait_idle:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_erase_page):
+//////////////////////////////////////////////////////////////////////////
+PUSH {r4, lr}
 
+	MOV r4, r0 // r4: page_address
+
+	MOV r0, r4	// ptr arg
+	BL bl_hal_flash_unlock
+	
+	MOV r0, r4	// ptr arg
+	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
+	
+	// enable PER in CR
+	MOV r1, #0x02	
+	STR r1, [r0, #0x04]
+
+	// set address in FLASH_AR
+	STR r4, [r0, #0x08]
+
+	// start by setting STRT (we keep PER)
+	MOV r1, #0x42
+	STR r1, [r0, #0x04]
+
+	MOV r0, r4	// ptr arg, lock waits for !BSY
+	BL bl_hal_flash_lock
+0:
+POP {r4, pc}
+
+
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_wait_idle):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 	BL bl_hal_ldr_flash_reg	// r0: FLASH_SR
 1:
@@ -406,7 +409,6 @@ bl_hal_rcc_base_address:	.word RCC_BASE
 bl_hal_gpiob_base_address:	.word GPIOB_BASE
 bl_hal_crc_address:			.word CRC_BASE
 bl_hal_flash_base_address:	.word FLASH_R_BASE
-bl_hal_flash_base:			.word 0x08000000
 bl_hal_flash_bank1_end:		.word FLASH_BANK1_END
 bl_hal_flash_key1:			.word 0x45670123
 bl_hal_flash_key2:			.word 0xCDEF89AB
