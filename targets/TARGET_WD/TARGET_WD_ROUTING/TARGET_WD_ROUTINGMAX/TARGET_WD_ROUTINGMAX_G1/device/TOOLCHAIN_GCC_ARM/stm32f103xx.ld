@@ -48,9 +48,9 @@ MEMORY
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
-	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x1D00
-    VECTORS (rx) :			ORIGIN = 0x08002000, LENGTH = 0x0300
-	METADATA (rw):			ORIGIN = 0x08002300, LENGTH = 0x0100
+	BL_TEXT (rx) :			ORIGIN = 0x08000200, LENGTH = 0x08002000 - 0x200 - 0x300
+    VECTORS (rx) :			ORIGIN = 0x08002000, LENGTH = 0x0200
+	ABI_HDR (rw):			ORIGIN = 0x08002200, LENGTH = 0x0100
     FLASH (rx)   :			ORIGIN = 0x08002400, LENGTH = 0x80000 - 0x2000 - 0x400 
 
 	CONFIG (r) :			ORIGIN = 0x08080000, LENGTH = 0x2000 
@@ -78,18 +78,6 @@ SECTIONS
          . = ALIGN(4);
 	} > BL_TEXT
 
-
-	.bl_crc32 : 
-	{
-		. = ALIGN(4);
-		KEEP(*(.bl_crc32))
-	} > BL_TEXT
-
-	.bl_ecdsa_testkey : 
-	{
-		KEEP(*(.bl_ecdsa_testkey))
-	} > BL_TEXT
-
 	.isr_vector :
     {
 		__image_start = .;
@@ -99,6 +87,12 @@ SECTIONS
          . = ALIGN(4);
 
     } > VECTORS
+
+    .abi_hdr :
+    {
+        KEEP(*(.abi_hdr))
+         . = ALIGN(4);
+    } > ABI_HDR
 
 	.metadata :
 	{
@@ -199,14 +193,6 @@ SECTIONS
 
     } > RAM AT > FLASH
 
-	.crc32 : 
-	{
-		. = ALIGN(4);
-		__crc32_ptr = .;
-		KEEP(*(.crc32))
-	} > FLASH
-
-
 	/* Uninitialized data section
      * This region is not initialized by the C/C++ library and can be used to
      * store state across soft reboots. */
@@ -247,17 +233,12 @@ SECTIONS
     
     /* Check if data + heap + stack exceeds RAM limit */
     ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
-
-	__image_size = ADDR(.crc32) - __image_start + 4;
 	
-	__flashconfig_start = ORIGIN(CONFIG);
+	__bank2_start = ORIGIN(CONFIG);
 	__flashconfig_end = ORIGIN(CONFIG) + LENGTH(CONFIG);
 	__update_image_start = ORIGIN(UPDATE);
 	__application_max_size = LENGTH(UPDATE);
 
 	__bootloader_length = 0x2000;
-	__bootloader_size = ADDR(.bl_crc32) - __bl_start + 4;
 
-	// +4 is to skip the empty word
-	__bl_testkey_address = ADDR(.bl_ecdsa_testkey) + 4;
 }

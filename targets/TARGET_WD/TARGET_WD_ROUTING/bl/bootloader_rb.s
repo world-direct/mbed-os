@@ -98,6 +98,25 @@ PUSH {lr}
 
 POP {pc}
 
+
+/*************************************************************************
+	void bl_hal_sleep(void):
+		Sleeps a little bit.
+		This should be around 250ms, but only used for blinking, so it don't have to be exact
+*/
+.global bl_hal_sleep
+.type bl_hal_sleep, %function
+bl_hal_sleep:
+
+PUSH {lr}
+
+	MOV r0, #0x100000
+	1:
+		SUBS r0, #1
+		BNE 1b 
+
+POP {pc}
+
 /*************************************************************************
 	void bl_hal_crc_init(void):
 	Initializes the crc generator to the init value of 0xFFFFFFFF
