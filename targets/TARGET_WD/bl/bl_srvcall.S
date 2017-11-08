@@ -70,7 +70,7 @@ PUSH {r4, r5, r6, lr}
 
 		SUB sp, #SYSTEM_STATE_STRUCT_SIZE	// sp: system state struct
 		MOV r0, sp							// r0: system state struct
-		MOV r1, #1							// r1: force dsa
+		MOV r1, #2							// r1: force dsa for update region
 		BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
 
 		LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]

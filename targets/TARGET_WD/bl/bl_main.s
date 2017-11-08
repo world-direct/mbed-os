@@ -125,7 +125,7 @@ BL_GLOBAL_FUNCTION(bl_start):
 	SUB sp, #SYSTEM_STATE_STRUCT_SIZE	// sp: system state struct
 
 	MOV r0, sp							// r0: system state struct
-	MOV r1, #0							// r1: perform dsa-validation = false
+	MOV r1, #0							// r1: perform dsa-validation = 0
 	BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
 
 	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// r0: bootloader image state
@@ -150,12 +150,17 @@ BL_GLOBAL_FUNCTION(bl_start):
 	CMP r1, r2
 	BNE bl_start_app										// skip update, because command-word not in apply-state
 
+/*
+
+	`Skip this, as this has already been performed when apply was performed
+
 	// if we reach here, we have a request for update, check DSA
 	/////////////////////////////////////////////////////
 
 	MOV r0, sp							// r0: system state struct
 	MOV r1, #1							// r1: perform dsa-validation = true
 	BL bl_get_system_state				// r0: ?, r1: ?, r2: ?, r3: ?
+*/
 
 	LDR r0, [sp, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// r0: bootloader-image-state
 	LDR r1, [sp, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// r1: update-image-state
@@ -198,14 +203,18 @@ BL_GLOBAL_FUNCTION(bl_get_system_state):
 //			0x0C: &command-word
 //			0x10: update image size
 //
-//		r1: bool perform-dsa-validation
-//			set this to != 0 to force dsa validation
-//
+//		r1: int perform-dsa-validation bit mask
+//			0: no validation
+//			1: validate application region
+//			2: validate update region
+//			3: validate both
+//			remark: bootloader self-sign validation is performed if any validation is requesed (!=0)
 //		returns: void
-PUSH {r4, r5, lr}
+PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0							// r4: system-state-struct
 	MOV r5, r1							// r5: perform-dsa-validation
+	MOV r6, #0							// r6: keystore
 
 	SUB sp, #IMAGE_STATE_STRUCT_SIZE	// sp: image-load state struct
 
@@ -222,7 +231,7 @@ PUSH {r4, r5, lr}
 
 	MOV r0, sp				// r0: image-state struct
 	BL bl_get_keystore		// r0: keystore
-	MOV r5, r0				// r5: keystore
+	MOV r6, r0				// r6: keystore
 	LDR r0, [sp, #IMAGE_STATE_FLDOFST_STAGE_INDEX]	// r0: bootloader final state
 	STR r0, [r4, #SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_BOOTLOADER_IMAGE_STATE] = r0
 
@@ -231,14 +240,20 @@ PUSH {r4, r5, lr}
 	// get application image state
 	LDR r0, bl_data_image_start	// r0: image start
 	MOV r1, sp					// r1: state
-	MOV r2, r5					// r2: keystore or NULL
+	TST r5, #1					// need to validate app-region?
+	ITE EQ
+	MOVEQ r2, #0				// r2: keystore or NULL
+	MOVNE r2, r6
 	BL bl_read_image			// r0: application-image-state
 	STR r0, [r4, #SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE] = r0
 
 	// get update image state
 	LDR r0, bl_data_update_image_start	// r0: update image start
 	MOV r1, sp					// r1: state
-	MOV r2, r5					// r2: keystore or NULL
+	TST r5, #2					// need to validate update-region?
+	ITE EQ
+	MOVEQ r2, #0				// r2: keystore or NULL
+	MOVNE r2, r6
 	BL bl_read_image			// r0: update-image-state
 	STR r0, [r4, #SYSTEM_STATE_FLDOFST_UPDATE_IMAGE_STATE]	// state[SYSTEM_STATE_FLDOFST_APPLICATION_IMAGE_STATE] = r0
 	LDR r0, [sp, #IMAGE_STATE_FLDOFST_IMAGE_SIZE]	// r0: update-image-size
@@ -251,7 +266,7 @@ PUSH {r4, r5, lr}
 
 0:
 ADD sp, #IMAGE_STATE_STRUCT_SIZE
-POP {r4, r5, pc}
+POP {r4, r5, r6, pc}
 
 //////////////////////////////////////////////////////////////////////////
 BL_LOCAL_FUNCTION(bl_start_app):

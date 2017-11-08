@@ -35,7 +35,7 @@ struct blsrv_desc {
 		} write_update_region;
 
 		struct {
-			int force_dsa_validation;		// set this to true, if you need to run dsa validation explicitly
+			int force_dsa_validation;		// bitmask: 1:validate application image, 2: validate update image
 			// output fields
 			int bootloader_image_status;	// the image verification status
 			int application_image_status;	// the image verification status
