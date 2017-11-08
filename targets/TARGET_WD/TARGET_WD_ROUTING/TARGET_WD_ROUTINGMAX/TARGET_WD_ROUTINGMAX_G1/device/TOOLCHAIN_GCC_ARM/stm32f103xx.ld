@@ -48,7 +48,8 @@ MEMORY
 	*/
 
 	BL_VECTORS (rx) :		ORIGIN = 0x08000000, LENGTH = 0x0300
-	BL_TEXT (rx) :			ORIGIN = 0x08000200, LENGTH = 0x08002000 - 0x200 - 0x300
+	BL_ABI_HDR (rx) :		ORIGIN = 0x08000200, LENGTH = 0x0100
+	BL_TEXT (rx) :			ORIGIN = 0x08000300, LENGTH = 0x08002000 - 0x100 - 0x300
     VECTORS (rx) :			ORIGIN = 0x08002000, LENGTH = 0x0200
 	ABI_HDR (rw):			ORIGIN = 0x08002200, LENGTH = 0x0100
     FLASH (rx)   :			ORIGIN = 0x08002400, LENGTH = 0x80000 - 0x2000 - 0x400 
@@ -71,6 +72,12 @@ SECTIONS
 		KEEP(*(.bl_vectors))
          . = ALIGN(4);
 	} > BL_VECTORS
+
+	.bl_abi_hdr :
+	{	
+		KEEP(*(.bl_abi_hdr))
+         . = ALIGN(4);
+	} > BL_ABI_HDR
 
 	.bl_text :
 	{

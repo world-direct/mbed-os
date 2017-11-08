@@ -84,17 +84,19 @@ bl_hal_ui:
 
 PUSH {lr}
 
-	//	BUS_LED	= PB_8 (0x18)#
-	//	Port: 0x18 >> 4 = 1 (=GPIOB)
-	//  Pin:  0x18 & 0f = 8	
+	// we use the Port bit set/reset register (GPIOx_BSRR)
+	// Pin = PB_8 (0x18) & 0f = 8	
+	// to turn it on, we have to RESET, to turn off, we have to SET
+	// SET:		1 << 0x8			= 0x100
+	// RESET:	1 << (0x8 + 0x10)	= 0x1000000
 
-	LDR r1, bl_hal_gpiob_base_address
+	CMP r0, #0
+	ITE eq
+	MOVEQ r1, #0x1000000
+	MOVNE r1, #0x100
 
-	// and turn it on with the
-	// Port output data register (GPIOx_ODR) (GPIOB_ODR Offset=0x0C) Pin 8
-	// Bit: 1<<8 = 0x100
-	MOV r2, #0x100
-	STR r2, [r1, #0x0C]
+	LDR r2, bl_hal_gpiob_base_address
+	STR r1, [r2, #0x10]
 
 POP {pc}
 
@@ -110,7 +112,7 @@ bl_hal_sleep:
 
 PUSH {lr}
 
-	MOV r0, #0x100000
+	MOV r0, #0x80000
 	1:
 		SUBS r0, #1
 		BNE 1b 
