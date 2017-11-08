@@ -15,10 +15,9 @@
 	void bl_hal_init(void):
 	Initializes the HW resources needed for other functions in the hal
 */
-.global bl_hal_init
-.type bl_hal_init, %function
-bl_hal_init:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_init):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	/////////////////////////////////////////////////////
@@ -60,10 +59,9 @@ POP {pc}
 
 	Signals the user about the running bootloader (by BUS_LED)
 */
-.global bl_hal_ui
-.type bl_hal_ui, %function
-bl_hal_ui:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_ui):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	// we use the Port bit set/reset register (GPIOx_BSRR)
@@ -88,10 +86,9 @@ POP {pc}
 		Sleeps a little bit.
 		This should be around 250ms, but only used for blinking, so it don't have to be exact
 */
-.global bl_hal_sleep
-.type bl_hal_sleep, %function
-bl_hal_sleep:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_sleep):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	MOV r0, #0x100000
@@ -107,10 +104,9 @@ POP {pc}
 	void bl_hal_crc_init(void):
 	Initializes the crc generator to the init value of 0xFFFFFFFF
 */
-.global bl_hal_crc_init
-.type bl_hal_crc_init, %function
-bl_hal_crc_init:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_crc_init):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 	
 	MOV r1, #1
@@ -141,9 +137,9 @@ POP {pc}
 	
 	Unlocks flash controller if not yet done 
 */
-.type bl_hal_flash_unlock, %function
-bl_hal_flash_unlock:
-
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_unlock):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	BL bl_hal_flash_wait_idle
@@ -167,9 +163,9 @@ POP {pc}
 	
 	Locks flash controller if not yet done 
 */
-.type bl_hal_flash_lock, %function
-bl_hal_flash_lock:
-
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_lock):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
 	BL bl_hal_flash_wait_idle
@@ -186,44 +182,13 @@ PUSH {lr}
 POP {pc}
 
 /*************************************************************************
-	void bl_hal_erase_sector(int sector_nr):
-	
-	Erases the specified sector
-*/
-.type bl_hal_erase_sector, %function
-bl_hal_erase_sector:
-
-PUSH {r4, lr}
-
-	MOV r4, r0 // sector_nr
-
-	BL bl_hal_flash_unlock
-	BL bl_hal_flash_wait_idle
-
-	// construct value of FLASH_CR
-	MOV r2, r4, LSL #3 // sector number bit 3-6
-
-	ORR r2, #0x10000	// STRT: bit 16
-	ORR r2, #0x200 // PSIZE=b10 : bit 89
-	ORR r2, #0x2 // SER: bit1
-	ORR r2, #0x2000000	// ERRIE: bit 25
-
-	LDR r1, bl_hal_flashc_address
-	STR r2, [r1, #0x10]
-
-	BL bl_hal_flash_lock
-0:
-POP {r4, pc}
-
-/*************************************************************************
 	void bl_hal_flash_memcpy(dest, src, size):
 	
 	Programms data from 'src' to 'dest'
 */
-.global bl_hal_flash_memcpy
-.type bl_hal_flash_memcpy, %function
-bl_hal_flash_memcpy:
-
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_flash_memcpy):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, r5, r6, lr}
 
 	MOV r4, r0 // dest, will be postincremented
@@ -263,13 +228,13 @@ POP {r4, r5, r6, pc}
 	
 	Erases the whole boot-image
 */
-.global bl_hal_erase_boot_image
-.type bl_hal_erase_boot_image, %function
-bl_hal_erase_boot_image:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_erase_boot_image):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
-	MOV r0, #1	// start and current sector
-	MOV r1, #11  // last sector
+	MOV r0, #1	// start sector
+	MOV r1, #11  // noumber of sectors
 
 	BL bl_hal_erase_sectors
 
@@ -282,14 +247,31 @@ POP {pc}
 	Erases the whole update image.
 	This is not directly called by the bootloader, but from the downloader.
 	We will keep this here, because we already have everything needed here
+
+	Test (with cmd.exe):
+
+		set path=%path%;C:\Program Files (x86)\STMicroelectronics\STM32 ST-LINK Utility\ST-LINK Utility
+
+		REM write to app
+		ST-LINK_CLI -w32 0x08004000 0x12345678
+		ST-LINK_CLI -w32 0x080FFFFC 0x12345678
+
+		REM write to config start
+		ST-LINK_CLI -w32 0x08100000 0xCCCCCCCC
+		ST-LINK_CLI -w32 0x08103FFC 0xCCCCCCCC
+
+		REM write to update 
+		ST-LINK_CLI -w32 0x08104000 0x12345678
+		ST-LINK_CLI -w32 0x081FFFFC 0x12345678
+
 */
-.global bl_hal_erase_update_image
-.type bl_hal_erase_update_image, %function
-bl_hal_erase_update_image:
+//////////////////////////////////////////////////////////////////////////
+BL_GLOBAL_FUNCTION(bl_hal_erase_update_image):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 
-	MOV r0, #13	// start and current sector
-	MOV r1, #23  // last sector
+	MOV r0, #17	// start sector ATTENTION: BANK 2 STARTS @0x10, even if it is sector 12 in the datasheet! 
+	MOV r1, #11		// noumber of sectors
 
 	BL bl_hal_erase_sectors
 
@@ -297,22 +279,23 @@ PUSH {lr}
 POP {pc}
 
 /*************************************************************************
-	void bl_hal_erase_sectors(int from, int to):
+	void bl_hal_erase_sectors(int from, int count):
 	
-	Erases the sectors starting in the speicifed rang of sector numbers (inclusive)
+	Erases the sectors starting in the specified range of sector numbers
 */
-.type bl_hal_erase_sectors, %function
-bl_hal_erase_sectors:
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_erase_sectors):
+//////////////////////////////////////////////////////////////////////////
 PUSH {r4, r5, lr}
 
 	MOV r4, r0	// start and current sector
-	MOV r5, r1  // last sector
+	MOV r5, r1  // remaining sectors
 
 	1:
-	MOV r0, r4
-	BL bl_hal_erase_sector
-	ADD r4, #1
-	CMP r4, r5
+		MOV r0, r4
+		BL bl_hal_erase_sector
+		ADD r4, #1
+		SUB r5, #1
 	BNE 1b
 
 
@@ -320,13 +303,43 @@ PUSH {r4, r5, lr}
 POP {r4, r5, pc}
 
 /*************************************************************************
+	void bl_hal_erase_sector(int sector_nr):
+	
+	Erases the specified sector
+*/
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_erase_sector):
+//////////////////////////////////////////////////////////////////////////
+PUSH {r4, lr}
+
+	MOV r4, r0 // sector_nr
+
+	BL bl_hal_flash_unlock
+	BL bl_hal_flash_wait_idle
+
+	LDR r1, bl_hal_flashc_address
+
+	// construct value of FLASH_CR
+	MOV r2, r4, LSL #3	// sector number bit 3-6
+	ORR r2, #0x2		// SER: bit1
+	ORR r2, #0x200		// PSIZE=b10 : bit 89
+	ORR r2, #0x10000	// STRT: bit 16
+
+	STR r2, [r1, #0x10]
+
+	BL bl_hal_flash_lock
+0:
+POP {r4, pc}
+
+
+/*************************************************************************
 	void bl_hal_flash_wait_idle():
 	
 	Polls to the FLASH_SR to wait for an operation to finish
 */
-.type bl_hal_flash_wait_idle, %function
-bl_hal_flash_wait_idle:
-
+//////////////////////////////////////////////////////////////////////////
+BL_LOCAL_FUNCTION(bl_hal_flash_wait_idle):
+//////////////////////////////////////////////////////////////////////////
 PUSH {lr}
 	
 	LDR r1, bl_hal_flashc_address
@@ -335,8 +348,6 @@ PUSH {lr}
 	LDR r0, [r1, #0x0C]		// FLASH_SR
 	ANDS r0, #0x00010000		// bit 16: BSY
 	BNE 1b	// retest
-
-
 POP {pc}
 
 
