@@ -14,11 +14,13 @@ extern "C" {
 	#include "lib_crc.h"
 }
 
-BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
+BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, PinName ActivityLed, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
 	: _tx_complete_sem(1),
-	  _tx_echo_received_sem(1) {
+	  _tx_echo_received_sem(1),
+	  _bt_activity_led(ActivityLed, 1) {
 
 	this->_dmaSerial = new DMASerial(Tx, Rx, baud);
+	this->_bt_activity_led_timeout = new ResettableTimeout(callback(this, &BusTransceiver::_on_bt_activity_led_timeout), 500000);
 		
 	// init
 	this->_bt_rx_buffer = new char[BT_BUFFER_SIZE]();
@@ -48,7 +50,18 @@ void BusTransceiver::_bt_tx_complete(int evt) {
 
 }
 
+void BusTransceiver::_bt_indicate_activity(void) {
+	this->_bt_activity_led.write(0);
+	this->_bt_activity_led_timeout->reset();
+}
+
+void BusTransceiver::_on_bt_activity_led_timeout(void) {
+	this->_bt_activity_led.write(1);
+}
+
 void BusTransceiver::_bt_rx_process_frame(dma_frame_meta_t * frame_meta) {
+	
+	this->_bt_indicate_activity();
 	
 	if (frame_meta->frame_size < 5) {// crc already 4 bytes
 		wd_log_warn("Frame is too short to be valid! (length: %d)", frame_meta->frame_size);
@@ -92,6 +105,7 @@ void BusTransceiver::bt_start(void) {
 
 void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	
+	this->_bt_indicate_activity();
 	uint32_t crc = UINT32_MAX;
 	
 	memcpy(this->_bt_tx_buffer, data, size);
