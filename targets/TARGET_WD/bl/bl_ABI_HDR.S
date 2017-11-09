@@ -22,8 +22,9 @@ g_bl_abi_hdr:
 /* 04: SIZE */		.word 0xFFFFFFFF
 /* 08: CPUID_MASK */.word WD_ABI_CPUID_MASK
 /* 0C: CPUID */		.word WD_ABI_CPUID
-/* 10: SRVCALL */	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
-/* 14: LENGTH */	.word __bootloader_length	// defined in linker-script
-/* 18: BANK2START*/	.word __bank2_start			// defined in linker-script
+.=WD_ABI_BLHDR_OFFSET_SRVCALL
+/* 20: SRVCALL */	.word bl_srv_call			// WDABI: entry vector for indirect calls from blsrv
+/* 24: LENGTH */	.word __bootloader_length	// defined in linker-script
+/* 28: BANK2START*/	.word __bank2_start			// defined in linker-script
 
 .size  g_bl_abi_hdr, .-g_bl_abi_hdr
