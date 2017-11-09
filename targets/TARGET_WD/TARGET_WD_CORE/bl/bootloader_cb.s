@@ -295,7 +295,7 @@ PUSH {r4, r5, lr}
 		MOV r0, r4
 		BL bl_hal_erase_sector
 		ADD r4, #1
-		SUB r5, #1
+		SUBS r5, #1
 	BNE 1b
 
 
@@ -323,8 +323,9 @@ PUSH {r4, lr}
 	MOV r2, r4, LSL #3	// sector number bit 3-6
 	ORR r2, #0x2		// SER: bit1
 	ORR r2, #0x200		// PSIZE=b10 : bit 89
-	ORR r2, #0x10000	// STRT: bit 16
+	STR r2, [r1, #0x10]
 
+	ORR r2, #0x10000	// STRT: bit 16
 	STR r2, [r1, #0x10]
 
 	BL bl_hal_flash_lock

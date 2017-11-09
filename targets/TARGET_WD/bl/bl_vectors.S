@@ -43,9 +43,10 @@ g_bl_vectors:
 
 
 bl_HardFault_Handler:
-	B .
+	BL bl_die
+
 bl_Other_Handler:
-	B .
+	BL bl_die
 
 bl_flash_handler:
-	B .
+	BL bl_die
