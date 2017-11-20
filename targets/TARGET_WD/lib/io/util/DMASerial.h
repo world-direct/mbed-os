@@ -14,8 +14,8 @@
 #include "rtos.h"
 #include "wd_logging.h"
 
-#define DMASERIAL_RX_BUFFER_SIZE	2048
-#define DMASERIAL_RX_QUEUE_SIZE		15
+#define DMASERIAL_RX_BUFFER_SIZE	4096
+#define DMASERIAL_RX_QUEUE_SIZE		20
 
 typedef struct {
 	uint8_t * buffer;

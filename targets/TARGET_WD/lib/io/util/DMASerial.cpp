@@ -111,8 +111,9 @@ void DMASerial::_dma_rx_capture(int evt) {
 	
 		consumer_pointer = (consumer_pointer + frame_size) % huart->RxXferSize;
 	} else {	// Error interrupt -> restart read and hence register interrupts and configure DMA
-		wd_log_warn("DMASerial: Receiver error -> restarting read operation");
+		wd_log_warn("DMASerial: Receiver error (%d) -> restarting read operation", evt);
 		consumer_pointer = 0;
+		this->abort_read();
 		this->read(
 			this->_read_buffer, 
 			this->_read_buffer_size, 
@@ -121,8 +122,7 @@ void DMASerial::_dma_rx_capture(int evt) {
 				SERIAL_EVENT_RX_IDLE |
 				SERIAL_EVENT_RX_OVERFLOW |
 				SERIAL_EVENT_RX_PARITY_ERROR |
-				SERIAL_EVENT_RX_FRAMING_ERROR |
-				SERIAL_EVENT_RX_OVERRUN_ERROR
+				SERIAL_EVENT_RX_FRAMING_ERROR
 			)
 		);
 	}
