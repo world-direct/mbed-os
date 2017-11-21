@@ -15,8 +15,9 @@
 #include "ResettableTimeout.h"
 
 #define BT_BUFFER_SIZE			DMASERIAL_RX_BUFFER_SIZE
+#define BT_TX_QUEUE_SIZE		DMASERIAL_RX_QUEUE_SIZE
 #define BT_TX_WRITE_TIMEOUT		100
-#define BT_TX_ECHO_TIMEOUT		100
+#define BT_TX_ECHO_TIMEOUT		200
 
 class BusTransceiver {
 	
@@ -27,8 +28,13 @@ private:
 	
 	char * _bt_rx_buffer;
 	char * _bt_tx_buffer;
+	char * _bt_tx_frame_buffer;
+	unsigned int _producer_pointer;
+	unsigned int _tx_frame_size;
 	
 	DMASerial *_dmaSerial;
+	Mail<dma_frame_meta_t, BT_TX_QUEUE_SIZE> _dma_tx_frame_queue;
+	Thread _txQueueProcessingThread;
 	
 	rtos::Semaphore _tx_complete_sem;
 	rtos::Semaphore _tx_echo_received_sem;
@@ -54,6 +60,7 @@ private:
 	void _bt_tx_complete(int evt);
 	void _bt_indicate_activity(void);
 	void _on_bt_activity_led_timeout(void);
+	void _tx_queue_process_loop(void);
 
 }; //BusTransceiver
 

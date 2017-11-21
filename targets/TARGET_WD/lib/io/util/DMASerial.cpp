@@ -14,7 +14,7 @@ DMASerial::DMASerial(PinName tx, PinName rx, int baud)
 
 void DMASerial::popFrame(char * buffer, int * length, uint32_t timeout) {
 	
-	osEvent evt = _dma_frame_queue.get(timeout);
+	osEvent evt = _dma_rx_frame_queue.get(timeout);
 	
 	if (evt.status == osEventMail) {
 		
@@ -22,7 +22,7 @@ void DMASerial::popFrame(char * buffer, int * length, uint32_t timeout) {
 		
 		getFrame(frame_meta, buffer, length);
 		
-		_dma_frame_queue.free(frame_meta);
+		_dma_rx_frame_queue.free(frame_meta);
 		
 	} else {
 		*length = 0;
@@ -47,7 +47,7 @@ void DMASerial::attachRxCallback(Callback<void(dma_frame_meta_t *)> func) {
 
 	if (func){
 		this->_rx_cb = func;
-		this->_queueProcessingThread.start(mbed::Callback<void()>(this, &DMASerial::_process_queue_loop));
+		this->_rxQueueProcessingThread.start(mbed::Callback<void()>(this, &DMASerial::_rx_queue_process_loop));
 	}
 
 }
@@ -55,7 +55,7 @@ void DMASerial::attachRxCallback(Callback<void(dma_frame_meta_t *)> func) {
 void DMASerial::detachRxCallback(void) {
 	
 	this->_rx_cb = NULL;
-	this->_queueProcessingThread.terminate();
+	this->_rxQueueProcessingThread.terminate();
 	
 }
 
@@ -71,8 +71,7 @@ int DMASerial::startRead(uint8_t *buffer, int buffer_size) {
 			SERIAL_EVENT_RX_IDLE |
 			SERIAL_EVENT_RX_OVERFLOW |
 			SERIAL_EVENT_RX_PARITY_ERROR |
-			SERIAL_EVENT_RX_FRAMING_ERROR |
-			SERIAL_EVENT_RX_OVERRUN_ERROR
+			SERIAL_EVENT_RX_FRAMING_ERROR
 		)
 	);
 }
@@ -86,7 +85,7 @@ void DMASerial::_dma_rx_capture(int evt) {
 		
 		uint16_t producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 	
-		dma_frame_meta_t * frame_meta = _dma_frame_queue.alloc();
+		dma_frame_meta_t * frame_meta = _dma_rx_frame_queue.alloc();
 	
 		size_t frame_size;
 		if (consumer_pointer < producer_pointer) {
@@ -102,7 +101,7 @@ void DMASerial::_dma_rx_capture(int evt) {
 			frame_meta->buffer_size = huart->RxXferSize;
 			frame_meta->frame_start_pos = consumer_pointer;
 			frame_meta->frame_size = frame_size;
-			if (_dma_frame_queue.put(frame_meta) != osOK) {
+			if (_dma_rx_frame_queue.put(frame_meta) != osOK) {
 				wd_log_error("DMASerial: Unable to enqueue frame!");
 			}
 			} else {
@@ -129,18 +128,18 @@ void DMASerial::_dma_rx_capture(int evt) {
 	
 }
 
-void DMASerial::_process_queue_loop(void) {
+void DMASerial::_rx_queue_process_loop(void) {
 	
 	while(true) {
 		
 		// we will wait here for frame reception
-		osEvent evt = _dma_frame_queue.get(osWaitForever);
+		osEvent evt = _dma_rx_frame_queue.get(osWaitForever);
 		
 		if (evt.status == osEventMail) {
 			
 			dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
 			this->_rx_cb.call(frame_meta);
-			_dma_frame_queue.free(frame_meta);
+			_dma_rx_frame_queue.free(frame_meta);
 			
 		}
 		

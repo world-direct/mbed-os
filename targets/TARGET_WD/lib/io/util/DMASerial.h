@@ -15,7 +15,7 @@
 #include "wd_logging.h"
 
 #define DMASERIAL_RX_BUFFER_SIZE	4096
-#define DMASERIAL_RX_QUEUE_SIZE		20
+#define DMASERIAL_RX_QUEUE_SIZE		10
 
 typedef struct {
 	uint8_t * buffer;
@@ -36,16 +36,18 @@ public:
 	int startRead(uint8_t *buffer, int buffer_size);
 
 private:
-	Mail<dma_frame_meta_t, DMASERIAL_RX_QUEUE_SIZE> _dma_frame_queue;
+	Mail<dma_frame_meta_t, DMASERIAL_RX_QUEUE_SIZE> _dma_rx_frame_queue;
 	int consumer_pointer;
 	uint8_t * _read_buffer;
 	int _read_buffer_size;
 	
-	Thread _queueProcessingThread;
+	Thread _rxQueueProcessingThread;
+	
 	Callback<void(dma_frame_meta_t *)> _rx_cb; 
 	
 	void _dma_rx_capture(int evt);
-	void _process_queue_loop(void);
+	void _rx_queue_process_loop(void);
+	
 };
 
 
