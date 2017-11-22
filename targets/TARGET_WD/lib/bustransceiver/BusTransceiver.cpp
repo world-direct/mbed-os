@@ -15,8 +15,8 @@ extern "C" {
 }
 
 BusTransceiver::BusTransceiver(PinName Tx, PinName Rx, PinName ActivityLed, int baud /*= MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE*/)
-	: _tx_complete_sem(1),
-	  _tx_echo_received_sem(1),
+	: _tx_complete_sem(0),
+	  _tx_echo_received_sem(0),
 	  _bt_activity_led(ActivityLed, 1) {
 
 	this->_dmaSerial = new DMASerial(Tx, Rx, baud);
@@ -129,11 +129,9 @@ void BusTransceiver::bt_transmit_frame(const void * data, size_t size) {
 	
 	// wait for transmit completion
 	this->_tx_complete_sem.wait(BT_TX_WRITE_TIMEOUT);
-	this->_tx_complete_sem.release();
 	
 	// wait for echo reception
 	this->_tx_echo_received_sem.wait(BT_TX_ECHO_TIMEOUT);
-	this->_tx_echo_received_sem.release();
 	
 }
 
