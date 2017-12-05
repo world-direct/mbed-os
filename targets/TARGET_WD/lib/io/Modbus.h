@@ -15,6 +15,14 @@ class Modbus{
 		
 		enum ModbusErrorCode : uint8_t {
 			Success = 0x00,
+			TCPLengthPayload = 0xEE,
+			TCPProtocolIdentifier = 0xEF,
+			TCPTransactionIdentifier = 0xF0,
+			TCPLengthRawRead = 0xF1,
+			TCPClose = 0xF2,
+			TCPReceive = 0xF3,
+			TCPSend = 0xF4,
+			TCPConnect = 0xF5,
 			Lock = 0xF6,
 			FunctionCode = 0xF7,
 			Echo = 0xF8,
