@@ -24,7 +24,8 @@ extern "C" {
 // default constructor
 SerialModbus::SerialModbus(PinName tx, PinName rx, int baud, int stopBits, SerialBase::Parity parity, int bits): 
 	_serial(tx, rx, baud),
-	_tx_complete_sem(1)
+	_tx_complete_sem(0),
+	_rs485_en(RS485_En)
 {
 	_baud = baud;
 	_parity = parity;
@@ -198,10 +199,10 @@ void SerialModbus::_serial_tx_complete(int evt){
 
 Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, size_t length){
 	
+	_rs485_en.write(1);
 	this->_serial.write(request_datagram, length, callback(this, &SerialModbus::_serial_tx_complete));
-	
 	this->_tx_complete_sem.wait(MODBUS_DMA_WRITE_TIMEOUT_MS);
-	this->_tx_complete_sem.release();
+	_rs485_en.write(0);
 	
 	size_t echo_length;
 	_serial.popFrame(this->_serial_frame_buffer, &echo_length, MODBUS_DMA_ECHO_TIMEOUT_MS);
