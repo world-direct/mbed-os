@@ -742,14 +742,11 @@ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
         if (irq == RxIrq) {
             __HAL_UART_ENABLE_IT(handle, UART_IT_RXNE);
 			__HAL_UART_ENABLE_IT(handle, UART_IT_IDLE);
-#if DEVICE_SERIAL_ASYNCH_DMA
-            NVIC_SetVector(irq_n, vector_dma);
+	        NVIC_SetVector(irq_n, vector_dma);
             NVIC_EnableIRQ(irq_n);
+#if DEVICE_SERIAL_ASYNCH_DMA
             NVIC_SetVector(irqn_dma, vector_dma);
             NVIC_EnableIRQ(irqn_dma);
-#else
-            NVIC_SetVector(irq_n, vector);
-            NVIC_EnableIRQ(irq_n);
 #endif
         } else { // TxIrq
             __HAL_UART_ENABLE_IT(handle, UART_IT_TC);
