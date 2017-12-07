@@ -138,7 +138,9 @@ void DMASerial::_rx_queue_process_loop(void) {
 		if (evt.status == osEventMail) {
 			
 			dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
-			this->_rx_cb.call(frame_meta);
+			if (_rx_cb)	{
+				this->_rx_cb.call(frame_meta);
+			}
 			_dma_rx_frame_queue.free(frame_meta);
 			
 		}
