@@ -25,7 +25,7 @@ BTBase::BTBase(PinName Tx, PinName Rx, PinName Irq, PinName Led, int baud = MBED
 	_send_queue_mutex(),
 	_activity_led(Led, 0) {
 	
-	this->_activity_led_timeout = new ResettableTimeout(callback(this, &BTBase::_on_activity_led_timeout), 200000);
+	this->_activity_led_timeout = new ResettableTimeout(callback(this, &BTBase::_on_activity_led_timeout), 40000);
 	this->_activity_led_timeout->stop();
 	
 	// init
@@ -199,7 +199,7 @@ void BTBase::bt_transmit_frame(const void * data, size_t size, uint64_t id) {
 
 void BTBase::bt_await_ready_state(uint32_t timeout) {
 
-	while(timeout-- > 0){
+	while(timeout-- > 0 && _state != BT_STATE_READY){
 		wait_ms(1);
 	}
 
@@ -231,7 +231,7 @@ uint64_t BTBase::_get_address(const char * data) {
 
 void BTBase::_send_enqueue(uint8_t messageType, uint64_t slaveId, const void * data, size_t size) {
 
-	wd_log_error("BTBase::_send_enqueue() -> entry");
+//	wd_log_error("BTBase::_send_enqueue() -> entry");
 	
 	_send_queue_mutex.lock();
 
