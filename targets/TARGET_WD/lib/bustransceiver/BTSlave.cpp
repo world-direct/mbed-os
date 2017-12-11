@@ -88,13 +88,11 @@ void BTSlave::_frame_received_internal(const char * data, size_t size) {
 		
 		case BT_MESSAGE_TYPE_DISCOVER:
 			
-//			wd_log_info("BTSlave::_frame_received_internal() -> received discover message");
-			wd_log_error("BTSlave::_frame_received_internal() -> received discover message");
+			wd_log_info("BTSlave::_frame_received_internal() -> received discover message");
 		
 			if (address == BT_FRAME_ADDRESS_BROADCAST) {
 			
-//				wd_log_debug("BTSlave::_frame_received_internal() -> discover message is broadcast");
-				wd_log_error("BTSlave::_frame_received_internal() -> discover message is broadcast");
+				wd_log_debug("BTSlave::_frame_received_internal() -> discover message is broadcast");
 				
 				_state = BT_STATE_DISCOVER;
 				_activity_led_off();
@@ -126,8 +124,7 @@ void BTSlave::_frame_received_internal(const char * data, size_t size) {
 		
 			if (address == _id) {
 			
-//				wd_log_debug("BTSlave::_frame_received_internal() -> received discover fin message, switch to ready state");
-				wd_log_error("BTSlave::_frame_received_internal() -> received discover fin message, switch to ready state");
+				wd_log_debug("BTSlave::_frame_received_internal() -> received discover fin message, switch to ready state");
 				
 				// received discover finish, clear interrupt line as we are registered
 				_bus_irq_clr();
@@ -148,13 +145,11 @@ void BTSlave::_frame_received_internal(const char * data, size_t size) {
 		
 		case BT_MESSAGE_TYPE_APPDATA:
 		
-//			wd_log_info("BTSlave::_frame_received_internal() -> received app data message");
-			wd_log_error("BTSlave::_frame_received_internal() -> received app data message");
+			wd_log_info("BTSlave::_frame_received_internal() -> received app data message");
 		
 			if (address == _id){
 			
-//				wd_log_debug("BTSlave::_frame_received_internal() -> app data message is addressed to me");
-				wd_log_error("BTSlave::_frame_received_internal() -> app data message is addressed to me");
+				wd_log_debug("BTSlave::_frame_received_internal() -> app data message is addressed to me");
 				
 				// if payload is included, forward frame to upper layer for further processing, thereby skipping message type and address
 				if(size > BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH) {
@@ -170,6 +165,11 @@ void BTSlave::_frame_received_internal(const char * data, size_t size) {
 					
 			}
 		
+			break;
+		
+		case BT_MESSAGE_TYPE_APPDATA_ACK:
+		
+			wd_log_debug("BTSlave::_frame_received_internal() -> received app data ack message of other party");
 			break;
 		
 		default:
@@ -198,7 +198,7 @@ void BTSlave::_tx_queue_process_loop(void) {
 		
 		Thread::signal_wait(BT_SIG_TX_PROCESSING_RELEASE);
 		
-		wd_log_error("BTSlave::_tx_queue_process_loop() -> entry");
+//		wd_log_error("BTSlave::_tx_queue_process_loop() -> entry");
 		
 		// we will wait here for frame reception
 		osEvent evt = _dma_tx_frame_queue.get(BT_SLAVE_TX_FRAME_QUEUE_TIMEOUT_MS);
@@ -212,12 +212,12 @@ void BTSlave::_tx_queue_process_loop(void) {
 			
 			_dma_tx_frame_queue.free(frame_meta);
 			
-			wd_log_error("BTSlave::_tx_queue_process_loop() -> send app data");
+			wd_log_debug("BTSlave::_tx_queue_process_loop() -> send app data");
 			
 			_tx_buffer_flush(size);
 			
 		} else {
-			wd_log_error("BTSlave::_tx_queue_process_loop() -> send ack");
+			wd_log_debug("BTSlave::_tx_queue_process_loop() -> send ack");
 			
 			// nothing to send in queue (timeout reached), just send ack and stop tx processing
 			_tx_active_timeout->stop();

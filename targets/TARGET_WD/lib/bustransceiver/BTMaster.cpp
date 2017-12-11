@@ -35,7 +35,7 @@ void BTMaster::_main_loop(void) {
 	
 			case BT_STATE_INITIAL:
 		
-				wd_log_error("BTMaster -> BT_STATE_INITIAL");
+				wd_log_info("BTMaster -> BT_STATE_INITIAL");
 			
 				// clear memorized slaves
 				_slaveCollection.clear();
@@ -52,7 +52,7 @@ void BTMaster::_main_loop(void) {
 			
 			case BT_STATE_DISCOVER:
 			
-				wd_log_error("BTMaster -> BT_STATE_DISCOVER");
+				wd_log_info("BTMaster -> BT_STATE_DISCOVER");
 			
 				// send discover broadcast message
 				_send_discover_broadcast();
@@ -77,7 +77,7 @@ void BTMaster::_main_loop(void) {
 					
 					// change state to ready
 					_state = BT_STATE_READY;
-					wd_log_error("BTMaster -> BT_STATE_READY");
+					wd_log_info("BTMaster -> BT_STATE_READY");
 					_activity_led_on();
 				
 				}
@@ -87,8 +87,6 @@ void BTMaster::_main_loop(void) {
 			
 			case BT_STATE_READY:
 		
-//				wd_log_error("BTMaster -> BT_STATE_READY");
-			
 				// address slaves alternately for app data handling
 				// todo: check errors and communication timeouts
 		
@@ -99,7 +97,7 @@ void BTMaster::_main_loop(void) {
 				osEvent evt = _dma_tx_frame_queue.get(BT_MASTER_MIN_COMMUNICATION_INTERVAL_MS);
 				if (evt.status == osEventMail) {
 						
-					wd_log_error("BTMaster -> sending app data to slave, locking tx afterwards for slave response window");
+					wd_log_debug("BTMaster -> sending app data to slave, locking tx afterwards for slave response window");
 					
 					size_t size;	
 					dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
@@ -170,7 +168,7 @@ void BTMaster::_send_select_slave(void) {
 	uint64_t id = _slaveCollection.selectNext();
 	if (id == 0) return;
 	
-	wd_log_error("BTMaster -> addressing slave %.8X%.8X", (uint32_t)(id >> 32), (uint32_t)(id));
+	wd_log_debug("BTMaster -> addressing slave %.8X%.8X", (uint32_t)(id >> 32), (uint32_t)(id));
 	
 	// copy message type
 	_tx_frame_buffer[0] = BT_MESSAGE_TYPE_APPDATA;
@@ -208,8 +206,7 @@ void BTMaster::_frame_received_internal(const char * data, size_t size) {
 	switch(_get_message_type(data)) {
 		
 		case BT_MESSAGE_TYPE_DISCOVER:
-//			wd_log_info("BTMaster::_frame_received_internal() -> received discover message");
-			wd_log_error("BTMaster::_frame_received_internal() -> received discover message");
+			wd_log_info("BTMaster::_frame_received_internal() -> received discover message");
 		
 			// add slave
 			_slaveCollection.add(address);
@@ -222,7 +219,7 @@ void BTMaster::_frame_received_internal(const char * data, size_t size) {
 			// is payload included or is message just ack? 
 			if(size > BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH) {
 				
-				wd_log_error("BTMaster::_frame_received_internal() -> received app data");
+				wd_log_debug("BTMaster::_frame_received_internal() -> received app data");
 				
 				// continue locking tx queue as slave has more data to submit
 				_tx_lock();
@@ -232,14 +229,14 @@ void BTMaster::_frame_received_internal(const char * data, size_t size) {
 				
 			} else {
 			
-				wd_log_error("BTMaster::_frame_received_internal() -> received app data without payload!");
+				wd_log_warn("BTMaster::_frame_received_internal() -> received app data without payload!");
 			
 			}
 			
 			break;
 		
 		case BT_MESSAGE_TYPE_APPDATA_ACK:
-			wd_log_error("BTMaster::_frame_received_internal() -> received app data ack");
+			wd_log_debug("BTMaster::_frame_received_internal() -> received app data ack");
 			
 			// slave finished tx process
 			_tx_release();
