@@ -22,9 +22,10 @@ ___________________DEFINES_____________________________
 ******************************************************/
 
 #define BT_MASTER_DISCOVER_FIN_TIMEOUT_MS			500
-#define BT_MASTER_MESSAGE_ACK_TIMEOUT_MS			50
-#define BT_MASTER_MIN_COMMUNICATION_INTERVAL_MS		100
-#define BT_MASTER_TX_QUEUE_LOCK_TIMEOUT_MS			100
+#define BT_MASTER_TX_FRAME_QUEUE_TIMEOUT_MS			30
+#define BT_MASTER_TX_ACK_TIMEOUT_US					1500000
+#define BT_MASTER_TX_ACK_TIMEOUT_EXTENDED_US		6000000
+#define BT_MASTER_MIN_SLAVE_ADDRESS_INTERVAL_S		3
 
 class BTMaster : public BTBase
 {
@@ -36,6 +37,7 @@ private:
 	rtos::Thread _mainLoopThread;
 	ResettableTimeout * _txQueueLockTimeout;
 	BTSlaveCollection _slaveCollection;
+	uint64_t _lastAddressedSlave;
 	
 //functions
 public:
@@ -57,11 +59,12 @@ private:
 	void _main_loop(void);
 	
 	void _on_bus_irq(void);
+	void _on_tx_queue_lock_timeout(void);
 	void _send_discover_broadcast(void);
 	void _send_discover_fin(void);
-	void _send_select_slave(void);
+	void _send_select_slave(uint64_t id = 0);
 	void _tx_release(void);
-	void _tx_lock(void);
+	void _tx_lock(unsigned int timeout = BT_MASTER_TX_ACK_TIMEOUT_US);
 
 }; //BTMaster
 

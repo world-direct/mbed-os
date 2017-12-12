@@ -11,7 +11,7 @@
 
 #include <time.h>
 
-#define BT_SLAVE_COLLECTION_MAX_ERROR_COUNT				3
+#define BT_SLAVE_COLLECTION_MAX_ERROR_COUNT				5
 
 class BTSlaveEntry
 {
@@ -38,7 +38,7 @@ public:
 	bool errorCountExhausted(void) { return _errorCount > BT_SLAVE_COLLECTION_MAX_ERROR_COUNT; };
 	
 	void updateMsgTimestamp(void) { _lastMsgTimestamp = time(NULL); };
-	bool communicationTimeoutReached(int timeout) { return time(NULL) > (_lastMsgTimestamp + timeout); };
+	bool communicationTimeoutReached(unsigned int timeout) { return time(NULL) > (_lastMsgTimestamp + timeout); };
 		
 protected:
 private:

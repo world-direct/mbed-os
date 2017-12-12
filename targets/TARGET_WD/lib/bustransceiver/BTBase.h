@@ -23,8 +23,8 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DEFINES_____________________________
 ******************************************************/
-#define BT_BUFFER_SIZE					DMASERIAL_RX_BUFFER_SIZE
-#define BT_TX_QUEUE_SIZE				DMASERIAL_RX_QUEUE_SIZE
+#define BT_BUFFER_SIZE					4096
+#define BT_TX_QUEUE_SIZE				15
 #define BT_TX_WRITE_TIMEOUT_MS			100
 #define BT_TX_ECHO_TIMEOUT_MS			100
 
@@ -104,6 +104,7 @@ protected:
 	void _send_enqueue(uint8_t messageType, uint64_t slaveId, const void * data, size_t size);
 	void _tx_buffer_flush(size_t size);
 	void _tx_frame_queue_clear(void);
+	void _indicate_activity(void);
 	void _activity_led_on(void) { _activity_led.write(1); };
 	void _activity_led_off(void) { _activity_led.write(0); };
 	
@@ -112,7 +113,6 @@ private:
 	BTBase& operator=( const BTBase &c );
 
 	void _tx_complete(int evt) { _tx_complete_sem.release(); };
-	void _indicate_activity(void);
 	void _on_activity_led_timeout(void) { _activity_led.write(1); };
 	
 	void _tx_buffer_cpy(const void * src, size_t num);
