@@ -15,6 +15,8 @@ public:
 	AnalogInManager(int inputCount = 0, PinName muxSel0 = NC, PinName muxSel1 = NC, PinName muxSel2 = NC, PinName spiMiso = NC, PinName spiSck = NC, PinName spiCs = NC);
 	~AnalogInManager();
 	
+	void start(void);
+	
 	// tolerance in respect to ADC value
 	int getValueChangedTolerance(int inputIndex) { return _valueChangedTolerance[inputIndex]; };
 	void setValueChangedTolerance(int inputIndex, int value) { _valueChangedTolerance[inputIndex] = value; };

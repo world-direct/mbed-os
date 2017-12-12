@@ -8,6 +8,7 @@ class SensorCurrentLoopIn {
 public:
 	SensorCurrentLoopIn(AnalogInManager * analogInManager, int inputIndex);
 	~SensorCurrentLoopIn();
+	void start(void);
 	
 	float getMinRangeValue(void) { return _minRangeValue; };
 	void setMinRangeValue(float value) { _minRangeValue = value; };

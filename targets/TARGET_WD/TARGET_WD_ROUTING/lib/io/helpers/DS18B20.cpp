@@ -93,7 +93,7 @@ OW_STATUS_CODE DS18B20::enumerateSensors(void) {
 		// add sensor if it is not yet in sensor map
 		if(this->_mSensors.find(id) == this->_mSensors.end()) {
 			
-			this->_mSensors.insert(make_pair<uint64_t, DS18B20MeasurementBuffer>(id, DS18B20MeasurementBuffer(DS18B20_MEASUREMENT_BUFFER_SIZE)));
+			this->_mSensors.insert(make_pair<uint64_t, DS18B20MeasurementBuffer>(uint64_t(id), DS18B20MeasurementBuffer(DS18B20_MEASUREMENT_BUFFER_SIZE)));
 			this->_sensorAddedCallback.call(id);
 		}
 		
