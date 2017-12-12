@@ -112,6 +112,16 @@ public:
 		}
 	};
 	
+	uint64_t getCommunicationTimeoutReached(unsigned int timeout) {
+		for (typename std::vector<BTSlaveEntry>::const_iterator it = _entries.begin(); it != _entries.end(); it++) {
+			if ((*it).communicationTimeoutReached(timeout)) {
+				return (*it).getId();
+			}
+		}
+		return 0;
+	}
+	
+	
 protected:
 private:
 

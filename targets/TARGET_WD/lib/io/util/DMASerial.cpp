@@ -86,7 +86,8 @@ void DMASerial::_dma_rx_capture(int evt) {
 		uint16_t producer_pointer = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 	
 		dma_frame_meta_t * frame_meta = _dma_rx_frame_queue.alloc();
-	
+//		wd_log_error("(%x) _dma_rx_frame_queue.alloc()", _dma_rx_frame_queue);
+		
 		size_t frame_size;
 		if (consumer_pointer < producer_pointer) {
 			frame_size = producer_pointer - consumer_pointer;
@@ -104,7 +105,7 @@ void DMASerial::_dma_rx_capture(int evt) {
 			if (_dma_rx_frame_queue.put(frame_meta) != osOK) {
 				wd_log_error("DMASerial: Unable to enqueue frame!");
 			}
-			} else {
+		} else {
 			wd_log_error("DMASerial: Error allocating memory for frame queue!");
 		}
 	
@@ -142,7 +143,7 @@ void DMASerial::_rx_queue_process_loop(void) {
 				this->_rx_cb.call(frame_meta);
 			}
 			_dma_rx_frame_queue.free(frame_meta);
-			
+//			wd_log_error("(%x) _dma_rx_frame_queue.free()", _dma_rx_frame_queue);
 		}
 		
 	}

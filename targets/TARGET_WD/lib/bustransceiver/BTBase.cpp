@@ -82,8 +82,6 @@ void BTBase::_tx_buffer_cpy(const void * src, size_t num) {
 
 void BTBase::_on_rx_frame_received(dma_frame_meta_t * frame_meta) {
 	
-	_indicate_activity();
-	
 	if (frame_meta->frame_size < 5) {// crc already 4 bytes
 		wd_log_warn("BTBase::_on_rx_frame_received() -> frame is too short to be valid (length: %d)", frame_meta->frame_size);
 		return;

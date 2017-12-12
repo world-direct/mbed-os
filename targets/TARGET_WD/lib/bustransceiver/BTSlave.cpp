@@ -33,6 +33,7 @@ int BTSlave::_get_random_int(int from, int to) {
 
 void BTSlave::_tx_release(void) {
 
+//	wd_log_error("BTSlave -> _tx_release()");
 	_txQueueProcessingThread.signal_set(BT_SIG_TX_PROCESSING_RELEASE);
 	
 	// set timeout for tx active window
@@ -41,6 +42,7 @@ void BTSlave::_tx_release(void) {
 }
 
 void BTSlave::_tx_lock(void) {
+//	wd_log_error("BTSlave -> _tx_lock()");
 	_txQueueProcessingThread.signal_clr(BT_SIG_TX_PROCESSING_RELEASE);
 }
 
@@ -69,6 +71,7 @@ void BTSlave::_send_app_data_ack(void) {
 }
 
 void BTSlave::_on_tx_active_timeout(void) {
+	wd_log_warn("BTSlave -> tx active timeout triggered, stopping transmissions for now");
 	_tx_lock();
 }
 
@@ -153,6 +156,7 @@ void BTSlave::_frame_received_internal(const char * data, size_t size) {
 				
 				// if payload is included, forward frame to upper layer for further processing, thereby skipping message type and address
 				if(size > BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH) {
+					_indicate_activity();
 					bt_handle_frame(data + BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH, size - BT_FRAME_MESSAGE_TYPE_LENGTH - BT_FRAME_ADDRESS_LENGTH);
 				}
 				
@@ -196,7 +200,9 @@ void BTSlave::_tx_queue_process_loop(void) {
 
 	while(true) {
 		
-		Thread::signal_wait(BT_SIG_TX_PROCESSING_RELEASE);
+//		wd_log_error("BTSlave::_tx_queue_process_loop() -> await entry");
+		
+		Thread::signal_wait(BT_SIG_TX_PROCESSING_RELEASE, osWaitForever);
 		
 //		wd_log_error("BTSlave::_tx_queue_process_loop() -> entry");
 		
@@ -215,6 +221,7 @@ void BTSlave::_tx_queue_process_loop(void) {
 			wd_log_debug("BTSlave::_tx_queue_process_loop() -> send app data");
 			
 			_tx_buffer_flush(size);
+			_tx_release();
 			
 		} else {
 			wd_log_debug("BTSlave::_tx_queue_process_loop() -> send ack");

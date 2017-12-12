@@ -4,7 +4,6 @@ SensorCurrentLoopIn::SensorCurrentLoopIn(AnalogInManager * analogInManager, int 
 	: _inputIndex(inputIndex), _minRangeValue(3.8f), _maxRangeValue(20.5f), _currentCalibrationCoefficient(0.3357f) {
 
 	this->_analogInManager = analogInManager;
-
 }
 
 SensorCurrentLoopIn::~SensorCurrentLoopIn() {
@@ -12,6 +11,10 @@ SensorCurrentLoopIn::~SensorCurrentLoopIn() {
 	delete this->_analogInManager;
 	this->_analogInManager = NULL;
 	
+}
+
+void SensorCurrentLoopIn::start(void) {
+	this->_analogInManager->start();
 }
 
 float SensorCurrentLoopIn::getValue(void) {

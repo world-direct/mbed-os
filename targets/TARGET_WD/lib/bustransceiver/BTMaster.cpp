@@ -11,13 +11,14 @@
 BTMaster::BTMaster(PinName Tx, PinName Rx, PinName Irq, PinName Led, int baud = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE) 
 	:	BTBase(Tx, Rx, Irq, Led, baud),
 		_irq(Irq),
-		_slaveCollection() {
+		_slaveCollection(),
+		_lastAddressedSlave(0) {
 	
 	_state = BT_STATE_INITIAL;
 			
 	// register interrupt handler for falling edge on bus interrupt
 	_irq.fall(callback(this, &BTMaster::_on_bus_irq));
-	_txQueueLockTimeout = new ResettableTimeout(callback(this, &BTMaster::_tx_release), BT_MASTER_TX_QUEUE_LOCK_TIMEOUT_MS * 1000);
+	_txQueueLockTimeout = new ResettableTimeout(callback(this, &BTMaster::_on_tx_queue_lock_timeout), BT_MASTER_TX_ACK_TIMEOUT_US);
 	_txQueueLockTimeout->stop();
 	
 } //BTMaster
@@ -39,7 +40,8 @@ void BTMaster::_main_loop(void) {
 			
 				// clear memorized slaves
 				_slaveCollection.clear();
-			
+				_lastAddressedSlave = 0;
+				
 				// lock tx queue processing and clear queue
 				_tx_lock();
 				_tx_frame_queue_clear();
@@ -92,24 +94,39 @@ void BTMaster::_main_loop(void) {
 		
 				// wait for tx release
 				Thread::signal_wait(BT_SIG_TX_PROCESSING_RELEASE);
+				
+				uint64_t tempId = _slaveCollection.getCommunicationTimeoutReached(BT_MASTER_MIN_SLAVE_ADDRESS_INTERVAL_S);
+				if (tempId != 0) {
+					wd_log_warn("BTMaster -> detected communication timeout for slave %.8X%.8X, enforcing slave addressing now", (uint32_t)(tempId >> 32), (uint32_t)(tempId));
+					_send_select_slave(tempId);
+				} else {
+				
+					// wait and check if a frame is in tx queue
+					osEvent evt = _dma_tx_frame_queue.get(BT_MASTER_TX_FRAME_QUEUE_TIMEOUT_MS);
+					if (evt.status == osEventMail) {
+						
+						wd_log_debug("BTMaster -> sending app data to slave, locking tx afterwards for slave response window");
 					
-				// wait and check if a frame is in tx queue
-				osEvent evt = _dma_tx_frame_queue.get(BT_MASTER_MIN_COMMUNICATION_INTERVAL_MS);
-				if (evt.status == osEventMail) {
-						
-					wd_log_debug("BTMaster -> sending app data to slave, locking tx afterwards for slave response window");
+						size_t size;	
+						dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
+						_dmaSerial->getFrame(frame_meta, _tx_frame_buffer, &size);
+						_dma_tx_frame_queue.free(frame_meta);
 					
-					size_t size;	
-					dma_frame_meta_t * frame_meta = (dma_frame_meta_t *) evt.value.p;
-					_dmaSerial->getFrame(frame_meta, _tx_frame_buffer, &size);
-					_dma_tx_frame_queue.free(frame_meta);
+						_lastAddressedSlave = _get_address(_tx_frame_buffer);
+						_slaveCollection.reportMsgSent(_lastAddressedSlave);		
+						_tx_buffer_flush(size);
 						
-					_tx_buffer_flush(size);
+						// workaround for sw download because response (especially of initial block) takes longer
+						if(size > 1000) {
+							_tx_lock(BT_MASTER_TX_ACK_TIMEOUT_EXTENDED_US);
+							break;
+						}
 						
-				} else { // otherwise select next slave to provide communication window
-					_send_select_slave();
+					} else { // otherwise select next slave to provide communication window
+						_send_select_slave();
+					}
 				}
-		
+			
 				_tx_lock();
 		
 				break;
@@ -118,8 +135,6 @@ void BTMaster::_main_loop(void) {
 			break;
 		
 		}
-	
-		//wait_ms(200);
 	}
 }
 
@@ -129,6 +144,16 @@ void BTMaster::_on_bus_irq(void) {
 	wd_log_warn("BTMaster -> received bus interrupt, initializing discover routine");
 	_state = BT_STATE_INITIAL;
 
+}
+
+void BTMaster::_on_tx_queue_lock_timeout(void) {
+	
+	if(_lastAddressedSlave != 0) {
+		wd_log_warn("BTMaster -> ACK timeout for slave %.8X%.8X detected!", (uint32_t)(_lastAddressedSlave >> 32), (uint32_t)(_lastAddressedSlave));
+		_slaveCollection.reportErroneousCommunication(_lastAddressedSlave);
+	}
+	_tx_release();
+	
 }
 
 void BTMaster::_send_discover_broadcast(void) {
@@ -163,10 +188,21 @@ void BTMaster::_send_discover_fin(void) {
 
 }
 
-void BTMaster::_send_select_slave(void) {
+void BTMaster::_send_select_slave(uint64_t id) {
 
-	uint64_t id = _slaveCollection.selectNext();
+	// if no id is passed, just select next slave
+	if (id == 0) {
+		id = _slaveCollection.selectNext();
+	}
+	// if there is no slave present, just return
 	if (id == 0) return;
+	
+	// check error count and remove slave (also remove from bus bridge!!)
+	if (_slaveCollection.isErrorCountExhausted(id)) {
+		wd_log_warn("BTMaster -> error count for slave %.8X%.8X exhausted, trigger re-discovery (maybe slave was disconnected?)", (uint32_t)(id >> 32), (uint32_t)(id));
+		_state = BT_STATE_INITIAL;
+		return;
+	}
 	
 	wd_log_debug("BTMaster -> addressing slave %.8X%.8X", (uint32_t)(id >> 32), (uint32_t)(id));
 	
@@ -176,6 +212,9 @@ void BTMaster::_send_select_slave(void) {
 	// copy id
 	memcpy(_tx_frame_buffer + BT_FRAME_MESSAGE_TYPE_LENGTH, &id, BT_FRAME_ADDRESS_LENGTH);
 
+	_lastAddressedSlave = id;
+	_slaveCollection.reportMsgSent(id);
+	
 	_tx_buffer_flush(BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH);
 
 }
@@ -185,10 +224,10 @@ void BTMaster::_tx_release(void) {
 	_mainLoopThread.signal_set(BT_SIG_TX_PROCESSING_RELEASE);
 }
 
-void BTMaster::_tx_lock(void) {
+void BTMaster::_tx_lock(unsigned int timeout) {
 //	wd_log_error("_lock_tx_queue_processing");
 	_mainLoopThread.signal_clr(BT_SIG_TX_PROCESSING_RELEASE);
-	_txQueueLockTimeout->reset();
+	_txQueueLockTimeout->reset(timeout);
 }
 
 void BTMaster::_frame_received_internal(const char * data, size_t size) {
@@ -216,6 +255,8 @@ void BTMaster::_frame_received_internal(const char * data, size_t size) {
 		case BT_MESSAGE_TYPE_APPDATA:
 			wd_log_debug("BTMaster::_frame_received_internal() -> received app data message");
 			
+			_indicate_activity();
+			
 			// is payload included or is message just ack? 
 			if(size > BT_FRAME_MESSAGE_TYPE_LENGTH + BT_FRAME_ADDRESS_LENGTH) {
 				
@@ -239,6 +280,7 @@ void BTMaster::_frame_received_internal(const char * data, size_t size) {
 			wd_log_debug("BTMaster::_frame_received_internal() -> received app data ack");
 			
 			// slave finished tx process
+			_slaveCollection.reportSuccessfulCommunication(address);
 			_tx_release();
 			
 			break;

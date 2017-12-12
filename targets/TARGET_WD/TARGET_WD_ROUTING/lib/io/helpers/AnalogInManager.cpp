@@ -25,14 +25,15 @@ AnalogInManager::AnalogInManager(int inputCount, PinName muxSel0, PinName muxSel
 		this->_minValue[i] = ADC_MAX_VALUE;
 		this->_maxValue[i] = 0;
     }
+		
+}
 
+void AnalogInManager::start(void) {
 	this->read(); // initiate first conversion
 	
 	// start measurement-thread
 	this->_measurementThread.start(mbed::Callback<void()>(this, &AnalogInManager::measurement_entry));
-		
 }
-
 
 AnalogInManager::~AnalogInManager() {
 	
@@ -43,6 +44,7 @@ AnalogInManager::~AnalogInManager() {
 	delete [] this->_maxValue;
 	delete [] this->_valueChangedTolerance;
 	delete [] this->_irq;
+	_measurementThread.terminate();
 }
 
 
