@@ -838,6 +838,7 @@ static nsapi_error_t mbed_lwip_quectelm66_socket_close(nsapi_stack_t *stack, nsa
 {
 	struct lwip_quectelm66_socket *s = (struct lwip_socket *)handle;
 
+	netbuf_delete(s->buf);
 	err_t err = netconn_delete(s->conn);
 	mbed_lwip_quectelm66_arena_dealloc(s);
 	return mbed_lwip_quectelm66_err_remap(err);

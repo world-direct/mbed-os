@@ -21,6 +21,7 @@ protected:
 private:
 	SocketAddress _slaveAddress;
 	TCPSocket _socket;
+	EthernetInterface * _ethernetInterface;
 
 //functions
 public:
@@ -36,7 +37,7 @@ protected:
 private:
 	TCPModbus( const TCPModbus &c );
 	TCPModbus& operator=( const TCPModbus &c );
-	uint8_t TCPClose(ModbusErrorCode error_code = Modbus::Success);
+	uint8_t SocketClose(ModbusErrorCode error_code);
 
 }; //TCPModbus
 
