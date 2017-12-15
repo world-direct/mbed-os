@@ -78,6 +78,7 @@ void SensorDigitalIn::confirmEdge(bool countEdge, int value, int durationUs) {
 			this->_pulseDurationOffset = this->_pulseDurationTimer.read_us() - durationUs;
 			this->_pulseDurationTimer.reset();
 			timestamp_t resetTimeout = durationUs * PULSE_DURATION_RESET_TIMEOUT_FACTOR;
+			if (resetTimeout < 10000000) resetTimeout = 10000000;	// limit to 10 sec min.
 			if (resetTimeout > 60000000) resetTimeout = 60000000;	// limit to 60 sec max.
 			this->_pulseDurationResetTimout->reset(resetTimeout);
 		}
@@ -98,6 +99,7 @@ void SensorDigitalIn::onPollingTick(void) {
 		this->_pulseDurationBuffer->add(durationUs);
 		this->_pulseDurationTimer.reset();
 		timestamp_t resetTimeout = durationUs * PULSE_DURATION_RESET_TIMEOUT_FACTOR;
+		if (resetTimeout < 10000000) resetTimeout = 10000000;	// limit to 10 sec min.
 		if (resetTimeout > 60000000) resetTimeout = 60000000;	// limit to 60 sec max.
 		this->_pulseDurationResetTimout->reset(resetTimeout);
 	}

@@ -15,13 +15,15 @@ extern "C" {
 #define MODBUS_FRAME_INTERVAL_MS				20
 #define MODBUS_DMA_RX_RAW_BUFFER_LENGTH			512
 #define MODBUS_DMA_RX_FRAME_BUFFER_LENGTH		512
-#define MODBUS_DMA_WRITE_TIMEOUT_MS				50
-#define MODBUS_DMA_ECHO_TIMEOUT_MS				100
+#define MODBUS_DMA_WRITE_TIMEOUT_MS				500
+#define MODBUS_DMA_ECHO_TIMEOUT_MS				500
+#define MODBUS_DMA_READ_TIMEOUT_MS				500
 
 // default constructor
 SerialModbus::SerialModbus(PinName tx, PinName rx, int baud, int stopBits, SerialBase::Parity parity, int bits): 
 	_serial(tx, rx, baud),
-	_tx_complete_sem(1)
+	_tx_complete_sem(0),
+	_rs485_en(RS485_En)
 {
 	_baud = baud;
 	_parity = parity;
@@ -195,10 +197,10 @@ void SerialModbus::_serial_tx_complete(int evt){
 
 Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, size_t length){
 	
+	_rs485_en.write(1);
 	this->_serial.write(request_datagram, length, callback(this, &SerialModbus::_serial_tx_complete));
-	
 	this->_tx_complete_sem.wait(MODBUS_DMA_WRITE_TIMEOUT_MS);
-	this->_tx_complete_sem.release();
+	_rs485_en.write(0);
 	
 	size_t echo_length;
 	_serial.popFrame(this->_serial_frame_buffer, &echo_length, MODBUS_DMA_ECHO_TIMEOUT_MS);
@@ -224,7 +226,7 @@ Modbus::ModbusErrorCode SerialModbus::write_request(uint8_t * request_datagram, 
 Modbus::ModbusErrorCode SerialModbus::read_response(uint8_t * response_datagram, size_t length){
 	
 	size_t response_length;
-	_serial.popFrame(this->_serial_frame_buffer, &response_length, 200);
+	_serial.popFrame(this->_serial_frame_buffer, &response_length, MODBUS_DMA_READ_TIMEOUT_MS);
 	
 	if(response_length == 0){
 		return Modbus::Timeout;

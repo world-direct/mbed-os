@@ -34,6 +34,7 @@ class SerialModbus : public Modbus
 	char * _serial_raw_buffer;
 	char * _serial_frame_buffer;
 	rtos::Semaphore _tx_complete_sem;
+	DigitalOut _rs485_en;
 	
 	//functions
 	public:
