@@ -9,12 +9,25 @@
 #ifndef MODBUS_H_
 #define MODBUS_H_
 
+#define MODBUS_FC_READHOLDINGREGISTERS			3
+#define MODBUS_FC_WRITEHOLDINGREGISTERS			16
+
 class Modbus{
 
 	public:
 		
 		enum ModbusErrorCode : uint8_t {
 			Success = 0x00,
+			TCPByteCount = 0xEC,
+			TCPLengthPayload = 0xED,
+			TCPProtocolIdentifier = 0xEE,
+			TCPTransactionIdentifier = 0xEF,
+			TCPLengthRawRead = 0xF0,
+			TCPClose = 0xF1,
+			TCPReceive = 0xF2,
+			TCPSend = 0xF3,
+			TCPConnect = 0xF4,
+			TCPOpen = 0xF5,
 			Lock = 0xF6,
 			FunctionCode = 0xF7,
 			Echo = 0xF8,
