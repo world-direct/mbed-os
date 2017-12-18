@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "mc_res.h"
+#include "rtc_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +54,7 @@ typedef enum {
 
 	Default = 0xFFFFFFFF,
 	UpdatePending = 0xFFFFFF00,
-	UpdateSuccessfull = 0x00000000
+	UpdateSuccessful = 0x00000000
 
 } swmanagement_update_status;
 
@@ -83,9 +84,22 @@ void swmanagement_prepare_new_download(void);
 
 /**
 * @brief
+*	Returns preparation state for new download (prepared / not prepared).
+*/
+uint8_t swmanagement_is_prepared_for_download(void);
+
+/**
+* @brief
 *	Appends raw data to the download area.
 */
 void swmangement_append_download_data(const void * buffer, size_t buffer_size);
+
+/**
+* @brief
+*	Returns state of download process (downloading / not downloading).
+*	If RTC is not enabled, download state returns false.
+*/
+uint8_t swmanagement_is_in_download_state(void);
 
 /**
 * @brief  

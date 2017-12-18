@@ -3,6 +3,7 @@
 
 static char m_null_termination;
 static size_t m_download_offset;
+static time_t m_download_timestamp;
 
 static inline void m_set_valid_md(intptr_t mdroot, swmanagement_image_information * info){
 	info->image_total_length = *((size_t*)(mdroot + WD_ABI_HDR_OFFSET_SIZE));
@@ -64,6 +65,18 @@ void swmanagement_prepare_new_download(void)
 	m_download_offset = 0;
 }
 
+uint8_t swmanagement_is_prepared_for_download(void) {
+	
+	swmanagement_status status;
+	swmanagement_get_status(&status);
+	if (m_download_offset == 0 &&
+		status.update_status == Default &&
+		status.update_image_information.image_validation_result == Empty) {
+		return 1;
+	}
+	return 0;
+}
+
 void swmangement_append_download_data(const void * buffer, size_t buffer_size)
 {
 	intptr_t src = (intptr_t)buffer;
@@ -78,6 +91,22 @@ void swmangement_append_download_data(const void * buffer, size_t buffer_size)
 	
 	m_download_offset += buffer_size;
 
+	if (rtc_isenabled()) {
+		m_download_timestamp = rtc_read();
+	} else {
+		m_download_timestamp = 0;
+	}
+
+}
+
+uint8_t swmanagement_is_in_download_state(void) {
+	if (rtc_isenabled()) {
+		if (m_download_offset > 0 && 
+			rtc_read() < (m_download_timestamp + 20)) { // window of 20 sec. for check
+			return 1;
+		}
+	} 
+	return 0;
 }
 
 image_validation_result swmanagement_update_apply(void)
