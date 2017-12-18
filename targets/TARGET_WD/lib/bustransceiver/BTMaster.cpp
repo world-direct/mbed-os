@@ -30,8 +30,10 @@ BTMaster::~BTMaster() {
 
 void BTMaster::_main_loop(void) {
 	
-	while(true) {
+	uint64_t tempId;
 	
+	while(true) {
+		
 		switch(_state) {
 	
 			case BT_STATE_INITIAL:
@@ -95,7 +97,7 @@ void BTMaster::_main_loop(void) {
 				// wait for tx release
 				Thread::signal_wait(BT_SIG_TX_PROCESSING_RELEASE);
 				
-				uint64_t tempId = _slaveCollection.getCommunicationTimeoutReached(BT_MASTER_MIN_SLAVE_ADDRESS_INTERVAL_S);
+				tempId = _slaveCollection.getCommunicationTimeoutReached(BT_MASTER_MIN_SLAVE_ADDRESS_INTERVAL_S);
 				if (tempId != 0) {
 					wd_log_warn("BTMaster -> detected communication timeout for slave %.8X%.8X, enforcing slave addressing now", (uint32_t)(tempId >> 32), (uint32_t)(tempId));
 					_send_select_slave(tempId);
