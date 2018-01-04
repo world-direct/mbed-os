@@ -33,7 +33,7 @@ class EthernetInterface : public EthInterface
 public:
     /** EthernetInterface lifetime
      */
-    EthernetInterface();
+	EthernetInterface(bool init_tcp_on_connect);
 
     /** Set a static IP address
      *
@@ -108,6 +108,7 @@ protected:
     virtual NetworkStack *get_stack();
 
     bool _dhcp;
+	bool _init_tcp_on_connect;
     char _ip_address[IPADDR_STRLEN_MAX];
     char _netmask[NSAPI_IPv4_SIZE];
     char _gateway[NSAPI_IPv4_SIZE];

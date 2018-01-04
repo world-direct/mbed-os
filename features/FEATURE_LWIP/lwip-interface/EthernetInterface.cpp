@@ -19,8 +19,12 @@
 
 
 /* Interface implementation */
-EthernetInterface::EthernetInterface()
-    : _dhcp(true), _ip_address(), _netmask(), _gateway()
+EthernetInterface::EthernetInterface(bool init_tcp_on_connect)
+	: _dhcp(true)
+	, _init_tcp_on_connect(init_tcp_on_connect)
+	, _ip_address()
+	, _netmask()
+	, _gateway()
 {
 }
 
@@ -42,6 +46,7 @@ nsapi_error_t EthernetInterface::set_dhcp(bool dhcp)
 nsapi_error_t EthernetInterface::connect()
 {
     return mbed_lwip_bringup(_dhcp,
+			_init_tcp_on_connect,
             _ip_address[0] ? _ip_address : 0,
             _netmask[0] ? _netmask : 0,
             _gateway[0] ? _gateway : 0);

@@ -388,19 +388,23 @@ char *mbed_lwip_get_gateway(char *buf, nsapi_size_t buflen)
 #endif
 }
 
-nsapi_error_t mbed_lwip_init(emac_interface_t *emac)
+nsapi_error_t mbed_lwip_init(emac_interface_t *emac, bool init_tcp)
 {
     // Check if we've already brought up lwip
     if (!mbed_lwip_get_mac_address()) {
         // Set up network
         mbed_lwip_set_mac_address();
 
-        sys_sem_new(&lwip_tcpip_inited, 0);
+	    if (init_tcp){
+			sys_sem_new(&lwip_tcpip_inited, 0);
+		}
         sys_sem_new(&lwip_netif_linked, 0);
         sys_sem_new(&lwip_netif_has_addr, 0);
 
-        tcpip_init(mbed_lwip_tcpip_init_irq, NULL);
-        sys_arch_sem_wait(&lwip_tcpip_inited, 0);
+	    if (init_tcp){
+			tcpip_init(mbed_lwip_tcpip_init_irq, NULL);
+			sys_arch_sem_wait(&lwip_tcpip_inited, 0);
+		}
 
         memset(&lwip_netif, 0, sizeof lwip_netif);
         if (!netif_add(&lwip_netif,
@@ -411,7 +415,9 @@ nsapi_error_t mbed_lwip_init(emac_interface_t *emac)
             return NSAPI_ERROR_DEVICE_ERROR;
         }
 
-        netif_set_default(&lwip_netif);
+	    if (init_tcp){
+			netif_set_default(&lwip_netif);
+		}
 
         netif_set_link_callback(&lwip_netif, mbed_lwip_netif_link_irq);
         netif_set_status_callback(&lwip_netif, mbed_lwip_netif_status_irq);
@@ -424,14 +430,14 @@ nsapi_error_t mbed_lwip_init(emac_interface_t *emac)
     return NSAPI_ERROR_OK;
 }
 
-nsapi_error_t mbed_lwip_bringup(bool dhcp, const char *ip, const char *netmask, const char *gw)
+nsapi_error_t mbed_lwip_bringup(bool dhcp, bool init_tcp, const char *ip, const char *netmask, const char *gw)
 {
     // Check if we've already connected
     if (lwip_connected) {
         return NSAPI_ERROR_PARAMETER;
     }
 
-    if(mbed_lwip_init(NULL) != NSAPI_ERROR_OK) {
+	if (mbed_lwip_init(NULL, init_tcp) != NSAPI_ERROR_OK) {
         return NSAPI_ERROR_DEVICE_ERROR;
     }
 

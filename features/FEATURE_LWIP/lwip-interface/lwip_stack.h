@@ -25,8 +25,8 @@ extern "C" {
 #endif
 
 // Access to lwip through the nsapi
-nsapi_error_t mbed_lwip_init(emac_interface_t *emac);
-nsapi_error_t mbed_lwip_bringup(bool dhcp, const char *ip, const char *netmask, const char *gw);
+nsapi_error_t mbed_lwip_init(emac_interface_t *emac, bool init_tcp);
+nsapi_error_t mbed_lwip_bringup(bool dhcp, bool init_tcp, const char *ip, const char *netmask, const char *gw);
 nsapi_error_t mbed_lwip_bringdown(void);
 
 const char *mbed_lwip_get_mac_address(void);
