@@ -192,6 +192,7 @@ SerialBase::Parity SerialModbus::GetParity(){
 }
 
 void SerialModbus::_serial_tx_complete(int evt){
+	_rs485_en.write(0);
 	_tx_complete_sem.release();
 }
 
