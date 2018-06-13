@@ -1,5 +1,5 @@
-#ifndef ACTORDIGITALOUT_H
-#define ACTORDIGITALOUT_H
+#ifndef ACTOR_DIGITAL_OUT_GPIO_H
+#define ACTOR_DIGITAL_OUT_GPIO_H
 
 /******************************************************
 ___________________INCLUDES____________________________
@@ -10,11 +10,11 @@ ___________________INCLUDES____________________________
 /******************************************************
 ___________________DECLARATION_________________________
 ******************************************************/
-class ActorDigitalOut {
+class ActorDigitalOutGpio : public ActorDigitalOut {
 public:
 	
-	ActorDigitalOut(PinName pin, int value = 0) : _digitalOut(pin, value), _value(value){};
-	~ActorDigitalOut(){};
+	ActorDigitalOutGpio(PinName pin, int value = 0) : _digitalOut(pin, value), _value(value){};
+	~ActorDigitalOutGpio(){};
 	
 	int getValue(void) { return _value; };
 	void setValue(int value);
