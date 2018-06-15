@@ -6,6 +6,7 @@ ___________________INCLUDES____________________________
 ******************************************************/
 #include "mbed.h"
 #include "PinNames.h"
+#include "ActorDigitalOut.h"
 
 /******************************************************
 ___________________DECLARATION_________________________
@@ -16,7 +17,7 @@ public:
 	ActorDigitalOutGpio(PinName pin, int value = 0) : _digitalOut(pin, value), _value(value){};
 	~ActorDigitalOutGpio(){};
 	
-	int getValue(void) { return _value; };
+	int getValue(void);
 	void setValue(int value);
 	
 private:

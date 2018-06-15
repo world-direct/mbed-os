@@ -28,16 +28,16 @@ RoutingmaxIO routingmax_io = {
 	},
 	
 	.PTs = {
-		SensorPlatinumTemperature(&analogInManager, 6, SensorPlatinumTemperature::PT1000),
-		SensorPlatinumTemperature(&analogInManager, 7, SensorPlatinumTemperature::PT100)
+		PlatinumTemperaturSensorAim(&analogInManager, 6, PlatinumTemperaturSensor::PTType::PT1000),
+		PlatinumTemperaturSensorAim(&analogInManager, 7, PlatinumTemperaturSensor::PTType::PT100)
 	},
 	
 	.OneWireDS18B20 = DS18B20(&oneWire),
 	
 	.DOUTs = {
-		ActorDigitalOut(Out1),
-		ActorDigitalOut(Out2),
-		ActorDigitalOut(Out3)
+		ActorDigitalOutGpio(Out1),
+		ActorDigitalOutGpio(Out2),
+		ActorDigitalOutGpio(Out3)
 	},
 	
 	.AOUTs = {

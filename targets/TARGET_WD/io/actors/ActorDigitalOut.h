@@ -1,16 +1,15 @@
 #ifndef ACTOR_DIGITAL_OUT_H
 #define ACTOR_DIGITAL_OUT_H
 
-/******************************************************
-___________________DECLARATION_________________________
-******************************************************/
+
 class ActorDigitalOut {
-public:
+	public:
+
+		virtual ~ActorDigitalOut(){};
 	
-	virtual ~ActorDigitalOut(){};
+		virtual int getValue(void) = 0;
 	
-	virtual int getValue(void) { };
-	virtual void setValue(int value);	
+		virtual void setValue(int value) = 0;	
 };
 
 #endif

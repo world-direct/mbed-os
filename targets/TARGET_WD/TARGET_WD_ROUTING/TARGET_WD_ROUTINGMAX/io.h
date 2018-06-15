@@ -11,10 +11,10 @@
 // Sensors
 #include "SensorDigitalIn.h"
 #include "SensorCurrentLoopIn.h"
-#include "SensorPlatinumTemperature.h"
+#include "PlatinumTemperaturSensorAim.h"
 
 // Actors
-#include "ActorDigitalOut.h"
+#include "ActorDigitalOutGpio.h"
 #include "ActorCurrentLoopOut.h"
 
 #define DINCount	10
@@ -26,9 +26,9 @@
 extern struct RoutingmaxIO {
 	SensorDigitalIn DINs[DINCount];
 	SensorCurrentLoopIn AINs[AINCount];
-	SensorPlatinumTemperature PTs[PTCount];
+	PlatinumTemperaturSensorAim PTs[PTCount];
 	DS18B20 OneWireDS18B20;
-	ActorDigitalOut DOUTs[DOUTCount];
+	ActorDigitalOutGpio DOUTs[DOUTCount];
 	ActorCurrentLoopOut AOUTs[AOUTCount];
 } routingmax_io;
 

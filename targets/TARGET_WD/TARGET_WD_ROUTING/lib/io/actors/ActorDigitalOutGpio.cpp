@@ -1,16 +1,19 @@
 /******************************************************
 ___________________INCLUDES____________________________
 ******************************************************/
-#include "ActorDigitalOut.h"
+#include "ActorDigitalOutGpio.h"
 
 
 /******************************************************
 ___________________IMPLEMENTATION______________________
 ******************************************************/
 
-void ActorDigitalOut::setValue(int value) {
+int ActorDigitalOutGpio::getValue(){
+	return this->_value;
+}
+
+void ActorDigitalOutGpio::setValue(int value) {
 	
 	this->_value = value;
-	_digitalOut = value;
-	
+	_digitalOut = value;	
 }
