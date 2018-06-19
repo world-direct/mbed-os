@@ -6,8 +6,9 @@
 
 #include <cstdint>
 #include "mbed.h"
+#include "SensorBase.h"
 
-class PlatinumTemperaturSensor {
+class PlatinumTemperaturSensor : public SensorBase {
 
 public:
 	enum PTUnit {
@@ -22,28 +23,6 @@ public:
 
 	PlatinumTemperaturSensor(PlatinumTemperaturSensor::PTType type);
 	
-	virtual ~PlatinumTemperaturSensor(){}
-	
-	/** 
-	 * Gets the minimum temperatur which can be measured with this sensor
-	 */ 
-	float getMinRangeValue(void);
-
-	/**
-	 * Sets the minimum temperatur that can be measured with this sensor
-	 */
-	void setMinRangeValue(float value);
-	
-	/** 
-	 * Gets the maximum temperatur which can be measured with this sensor
-	 */ 
-	float getMaxRangeValue(void);
-
-	/**
-	 * Sets the maximum temperatur that can be measured with this sensor
-	 */
-	void setMaxRangeValue(float value);
-
 	/**
 	 * Gets the unit of the measurements 
 	 */
@@ -59,52 +38,8 @@ public:
 	 */
 	PTType getType(void);
 
-	/**
-	 * Gets the current measurement of the sensor
-	 */
-	virtual float getValue(void);
-
-	/**
-	 * Gets the minimum measured value of the sensor since startup or last reset
-	 */
-	virtual float getMinMeasuredValue(void);
-
-	/**
-	 * Gets the maximum measured value of the sensor since startup or last reset
-	 */
-	virtual float getMaxMeasuredValue(void);
-
-	/**
-	 * Resets the min/max measured valued of this sensor
-	 */
-	virtual void resetStatistics(void);
-
-	/**
-	 * Attaches an callback, which is called when the current value of the sensor has changed
-	 */
-	virtual void attach(Callback<void(float)> cb);
-
-	/**
-	 * Clears a previous attached callback
-	 */
-	virtual void detach();
-	
-	/**
-	 * Gets the minimum change in the sensor value that triggers a notification
-	 */
-	virtual float getValueChangedTolerance(void);
-	
-	/**
-	 * Sets the minimum change in the sensor value that triggers a notification
-	 */
-	virtual void setValueChangedTolerance(float value = PT_VALUE_CHANGED_TOLERANCE);
 	
 protected:
-
-	/**
-	 * Sets the current value of the sensor
-	 */
-	virtual void setValue(float value);
 	
 	/**
 	 * Converts an analog digital converter output into temperatur
@@ -117,16 +52,6 @@ protected:
 	uint16_t temperature2adc(float temp);
 
 private:
-
-	
-	float m_range_min;
-	float m_range_max;
-	float m_measure_current;
-	float m_measure_min;
-	float m_measure_max;
-
-	float m_change_min;
-	Callback<void(float)> m_measure_current_changed;
 
 	PTUnit m_unit;
 	PTType m_ptType;

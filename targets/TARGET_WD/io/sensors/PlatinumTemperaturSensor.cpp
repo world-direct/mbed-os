@@ -1,30 +1,13 @@
 #include "PlatinumTemperaturSensor.h"
 
-PlatinumTemperaturSensor::PlatinumTemperaturSensor(PlatinumTemperaturSensor::PTType type){
-	m_ptType = type;
-	m_unit = PlatinumTemperaturSensor::PTUnit::CELSIUS;
-	m_range_max = 150.0f;
-	m_range_min = -50.0f;
-	m_change_min = PT_VALUE_CHANGED_TOLERANCE;
-	
-	resetStatistics();
-	setValue(0);
-}
+PlatinumTemperaturSensor::PlatinumTemperaturSensor(PlatinumTemperaturSensor::PTType type) : 
+	SensorBase(), 
+	m_ptType(type),
+	m_unit(PlatinumTemperaturSensor::PTUnit::CELSIUS){
 
-float PlatinumTemperaturSensor::getMinRangeValue(){
-    return this->m_range_min;
-}
-
-void PlatinumTemperaturSensor::setMinRangeValue(float value){
-    this->m_range_min = value;
-}
-
-float PlatinumTemperaturSensor::getMaxRangeValue(){
-    return this->m_range_max;
-}
-
-void PlatinumTemperaturSensor::setMaxRangeValue(float value){
-    this->m_range_max = value;
+	setMinRangeValue(-50.0f);
+	setMaxRangeValue(150.0f);
+	setMaxMeasurementTolerance(PT_VALUE_CHANGED_TOLERANCE);
 }
 
 PlatinumTemperaturSensor::PTUnit PlatinumTemperaturSensor::getUnit(){
@@ -38,63 +21,6 @@ void PlatinumTemperaturSensor::setUnit(PlatinumTemperaturSensor::PTUnit value){
 PlatinumTemperaturSensor::PTType PlatinumTemperaturSensor::getType(){
     return this->m_ptType;
 }
-
-float PlatinumTemperaturSensor::getMinMeasuredValue(){
-    return m_measure_min;
-}
-
-float PlatinumTemperaturSensor::getMaxMeasuredValue(){
-    return m_measure_max;
-}
-
-void PlatinumTemperaturSensor::resetStatistics(){
-    this->m_measure_min = 0;
-    this->m_measure_max = 0;
-}
-
-void PlatinumTemperaturSensor::attach(Callback<void(float)> cb){
-	this->m_measure_current_changed = cb;
-}
-
-void PlatinumTemperaturSensor::detach(){
-	this->m_measure_current_changed = NULL;
-}
-
-float PlatinumTemperaturSensor::getValueChangedTolerance(){
-	return this->m_change_min;
-}
-
-void PlatinumTemperaturSensor::setValueChangedTolerance(float value){
-	this->m_change_min = value;
-}
-
-float PlatinumTemperaturSensor::getValue(){
-	return m_measure_current;
-}
-
-void PlatinumTemperaturSensor::setValue(float value){
-
-	
-	if (value < m_range_min || value > m_range_max) {
-		value = PT_INVALID_VALUE;
-	} else {
-
-		if(value < m_measure_min) { 
-			m_measure_min = value;
-		}
-		
-		if(value > m_measure_max) {
-			m_measure_max = value;
-		}
-	}
-
-	if(abs(value - m_measure_current) > m_change_min){
-		
-		m_measure_current = value;
-		if(m_measure_current_changed) m_measure_current_changed(value);
-	}
-}
-
 
 float PlatinumTemperaturSensor::adc2temperature(uint16_t adc) {
 	
