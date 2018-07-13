@@ -40,6 +40,27 @@ public:
 
 	
 protected:
+
+	/**
+	 * Converts the given resistance into the corresponding temperatur value in grad celsius
+	 */
+	float resistance2temperaturCelsius(float resistance);
+
+	/**
+	 * Converts the given temperatur in grad celsius into the corresponding resistance value
+	 */
+	float temperaturCelsius2resistance(float temperatur);
+
+	/**
+	 * Converts the given temperatur in grad celsius into grad fahrenheit
+	 */
+	float celsius2fahrenheit(float celsius);
+
+	/**
+	 * Converts the given temperatur in grad fahrenheit into grad celsius
+	 */
+	float fahrenheit2celsius(float fahrenheit);
+
 	
 	/**
 	 * Converts an analog digital converter output into temperatur
@@ -53,8 +74,14 @@ protected:
 
 private:
 
+	float getDefaultResistance(PTType type);
+
 	PTUnit m_unit;
 	PTType m_ptType;
+
+	// polynom constants for temperatur/resistance conversion
+	static constexpr float A = 3.90802e-3;
+    static constexpr float B = 5.80195e-7;
 };
 
 #endif

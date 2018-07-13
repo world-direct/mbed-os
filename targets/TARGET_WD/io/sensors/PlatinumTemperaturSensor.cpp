@@ -1,4 +1,5 @@
 #include "PlatinumTemperaturSensor.h"
+#include "math.h"
 
 PlatinumTemperaturSensor::PlatinumTemperaturSensor(PlatinumTemperaturSensor::PTType type) : 
 	SensorBase(), 
@@ -50,4 +51,38 @@ uint16_t PlatinumTemperaturSensor::temperature2adc(float temp) {
 	int64_t rv = this->m_ptType == PlatinumTemperaturSensor::PT1000 ? 2700 : 3300;
 	uint16_t adc = ((int64_t)(65536 * resistance)) / ((int64_t)512 * rv + resistance);
 	return adc;
+}
+
+float PlatinumTemperaturSensor::resistance2temperaturCelsius(float r){
+
+    float R0 = 1000.0;
+
+    float tr = (A- sqrt(pow(A, 2)+4*B*(1-r/R0)))/(2*B);
+	return tr;
+}
+
+float PlatinumTemperaturSensor::temperaturCelsius2resistance(float t){
+
+	float R0 = getDefaultResistance(m_ptType);
+	float r = R0 * (1 + A * t - B * t * t);
+	return r;
+}
+
+float PlatinumTemperaturSensor::getDefaultResistance(PTType type){
+	switch(type){
+		case PT100: 
+			return 100;
+		case PT1000:
+			return 1000;
+		default: 
+			return 0;
+	}
+}
+
+float PlatinumTemperaturSensor::celsius2fahrenheit(float celsius){
+	return 9/5 * celsius + 32;
+}
+
+float PlatinumTemperaturSensor::fahrenheit2celsius(float fahrenheit){
+	return 5/9 * (fahrenheit - 32);
 }
