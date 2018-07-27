@@ -1,21 +1,31 @@
 #ifndef POWER_SENSOR_H
 #define POWER_SENSOR_H
 
-#include "io/sensors/SensorBase.h"
+#include "CalibratableSensor.h"
 
-class PowerSensor : public SensorBase{
+
+class PowerSensor : public CalibratableSensor{
 
     public:
+        
+        enum Unit {
+            W,
+            kW
+        };
 
-        /**
-         * Gets the current calibration coefficient
-         */
-        virtual float getCalibration() = 0;
+        PowerSensor(PowerSensor::Unit unit){
+            m_unit = unit;
+        }
 
-        /**
-         * Read or Write the current calibration coefficient
-         */
-        virtual void setCalibration(float value) = 0;    
+        virtual ~PowerSensor(){}
+
+        PowerSensor::Unit getUnit(){
+            return m_unit;
+        }
+
+    private:
+
+        PowerSensor::Unit m_unit;
 };
 
 #endif
