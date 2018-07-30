@@ -8,7 +8,7 @@ class PowerSensor : public CalibratableSensor{
 
     public:
         
-        enum Unit {
+        enum class Unit {
             W,
             kW
         };
