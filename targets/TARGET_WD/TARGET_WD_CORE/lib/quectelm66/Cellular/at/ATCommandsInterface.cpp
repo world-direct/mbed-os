@@ -163,7 +163,7 @@ int ATCommandsInterface::executeSimple(const char* command, ATResult* pResult, u
 		tries--;
 		
 		if (tries > 0) {
-			wd_log_warn("ATCommandsInterface --> Command \"%s\" failed. %d tries remaining", command, tries);	
+			wd_log_info("ATCommandsInterface --> Command \"%s\" failed. %d tries remaining", command, tries);	
 		}
 		else {
 			wd_log_error("ATCommandsInterface --> Command \"%s\" failed. It was the last try.", command, tries);	

@@ -194,9 +194,12 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 		
 		wd_log_info("QuectelM66CommandCoordinator --> LinkMonitor getState (remaining tries %d)", tries);
 		if (_linkMonitor->GetState(&_rssi, &_gsmRegistrationState, &_gprsRegistrationState, &_bearer, _locationAreaCode, _cellId, 1000) != OK) {
-			wd_log_error("QuectelM66CommandCoordinator --> LinkMonitor getState failed");	
+			wd_log_info("QuectelM66CommandCoordinator --> LinkMonitor getState failed");	
 			return false;
 		}
+
+		_iccid = string(_basicInformationsProcessor->GetICCID());
+
 		wd_log_debug("QuectelM66CommandCoordinator --> LinkMonitor getState succeeded");	
 		
 		// wait here because the states arrives asyncronously
@@ -207,7 +210,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 			LinkMonitor::REGISTRATION_STATE_ROAMING);
 		if (_gsmRegistrationState != LinkMonitor::REGISTRATION_STATE_HOME_NETWORK && 
 			_gsmRegistrationState != LinkMonitor::REGISTRATION_STATE_ROAMING) {
-			wd_log_error("QuectelM66CommandCoordinator --> Invalid GSM registration state (%d)", _gsmRegistrationState);
+			wd_log_info("QuectelM66CommandCoordinator --> Invalid GSM registration state (%d)", _gsmRegistrationState);
 			registered = false;
 		}
 		
@@ -217,7 +220,7 @@ bool QuectelM66CommandCoordinator::pppPreparation() {
 			
 		if (_gprsRegistrationState != LinkMonitor::REGISTRATION_STATE_HOME_NETWORK && 
 			_gprsRegistrationState != LinkMonitor::REGISTRATION_STATE_ROAMING) {
-			wd_log_error("QuectelM66CommandCoordinator --> Invalid GPRS registration state (%d)", _gprsRegistrationState);
+			wd_log_info("QuectelM66CommandCoordinator --> Invalid GPRS registration state (%d)", _gprsRegistrationState);
 			registered =  false;
 		}
 		
@@ -362,7 +365,8 @@ char * QuectelM66CommandCoordinator::GetCellId(void) {
 }
 
 char* QuectelM66CommandCoordinator::GetICCID(){
-	return this->_basicInformationsProcessor->GetICCID();
+	return this->_iccid.c_str();
+	//return this->_basicInformationsProcessor->GetICCID();
 }
 	
 char* QuectelM66CommandCoordinator::GetIMEI(){

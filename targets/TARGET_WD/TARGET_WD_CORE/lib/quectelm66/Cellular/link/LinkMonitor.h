@@ -97,6 +97,7 @@ private:
 	char m_phoneNumber[16];
 	char m_locationAreaCode[5];
 	char m_cellId[5];
+	char m_iccid[24] = { };
 };
 
 #endif /* LINKMONITOR_H_ */

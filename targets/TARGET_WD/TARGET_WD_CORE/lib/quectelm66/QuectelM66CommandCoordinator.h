@@ -19,6 +19,7 @@
 
 #include "mbed.h"
 #include <stdint.h>
+#include <string>
 #include <features/netsocket/nsapi_types.h>
 #include "ATCommandsInterface.h"
 #include "LinkMonitor.h"
@@ -78,6 +79,7 @@ private:
 	char _phoneNumber[16];
 	char _locationAreaCode[5];
 	char _cellId[5];
+	std::string _iccid;
 	
 	DigitalOut _pwrKeyPin;
 	DigitalIn _vdd_extPin;
