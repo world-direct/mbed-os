@@ -365,8 +365,12 @@ char * QuectelM66CommandCoordinator::GetCellId(void) {
 }
 
 char* QuectelM66CommandCoordinator::GetICCID(){
+	
+	if(this->_iccid.empty()){
+		_iccid = string(_basicInformationsProcessor->GetICCID());
+	}
+	
 	return this->_iccid.c_str();
-	//return this->_basicInformationsProcessor->GetICCID();
 }
 	
 char* QuectelM66CommandCoordinator::GetIMEI(){
