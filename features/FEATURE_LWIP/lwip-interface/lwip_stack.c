@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#pragma GCC diagnostic ignored "-Waddress"
+
 #include "nsapi.h"
 #include "mbed_interface.h"
 #include "mbed_assert.h"

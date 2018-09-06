@@ -18,6 +18,7 @@ typedef union {
 	char * c;
 	const char * cc;
 	intptr_t val;
+	uintptr_t uval;
 } cfg_ptr;
 
 
@@ -51,8 +52,8 @@ static void m_checkinit()
 	size_t incomplete_size = p_last.val - p_zero.val;
 	if(incomplete_size){
 
-		// let's use a stack-buffer
-		uint32_t zerob = alloca(incomplete_size);
+		// let's use a stack-buffer, as this is 32 bit only, we use it directly
+		void * zerob = alloca(incomplete_size);
 		memset(zerob, 0, incomplete_size);
 
 		// and write to flash
@@ -132,6 +133,10 @@ flashconfig_result flashconfig_get_value(const char * name, const char ** value)
 			case s_nomatch:
 				if(!c) state = s_aftrval;
 				continue;
+
+			case s_match:
+				// this is just to make the compiler happy about all enums in the switch
+				break;
 		}
 
 	}
@@ -166,11 +171,11 @@ flashconfig_result flashconfig_set_value(const char * name, char * value)
 	p.w = buffer;
 	
 	// copy key incl \0
-	memcpy(p.val, name, sname);
+	memcpy(p.c, name, sname);
 	p.c += sname;
 	
 	// copy value incl \0
-	memcpy(p.val, value, svalue);
+	memcpy(p.c, value, svalue);
 	p.c += svalue;
 	
 	// align to word
@@ -182,7 +187,7 @@ flashconfig_result flashconfig_set_value(const char * name, char * value)
 	
 	size_t memsize = p.val - (intptr_t)buffer;
 
-	if (m_endptr.val + memsize > end_intptr)
+	if (m_endptr.val + (intptr_t)memsize > end_intptr)
 		return flashconfig_overrun;
 
 	// and write to flash

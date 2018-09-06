@@ -31,7 +31,6 @@
         "cxx": [
             "-std=gnu++11",
             "-fno-rtti",
-            "-Wvla",
             "-fpermissive"
         ],
         "ld": [

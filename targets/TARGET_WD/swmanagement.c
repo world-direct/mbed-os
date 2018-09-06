@@ -11,7 +11,7 @@ static inline void m_set_valid_md(intptr_t mdroot, swmanagement_image_informatio
 	info->image_application_version = (const char *)(mdroot + WD_ABI_APPHDR_OFFSET_VERSION);
 }
 
-static inline m_set_invalid_md(swmanagement_image_information * info){
+static inline void m_set_invalid_md(swmanagement_image_information * info){
 	info->image_total_length = 0;
 	info->image_application_name = &m_null_termination;
 	info->image_application_version = &m_null_termination;

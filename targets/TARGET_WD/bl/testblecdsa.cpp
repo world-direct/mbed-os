@@ -15,7 +15,7 @@ extern "C"{
 };
 
 
-int testblecdsa(){	
+void testblecdsa(){	
 	
 	
 	

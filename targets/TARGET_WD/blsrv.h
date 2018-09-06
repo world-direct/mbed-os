@@ -57,12 +57,11 @@ struct blsrv_desc {
 };
 
 static inline int blsrv_call(struct blsrv_desc * descriptor){
-	int retcode;
 
 	// validate the bootloader magic
 	uint32_t bl_abihdr = *((uint32_t*)(WD_FLASH_BASE + WD_ABI_HDR_OFFSET));
 	bl_abihdr &= 0xFFFFFF00;	// clear flags
-	assert(bl_abihdr == (WD_ABI_HDR_MAGIC << 16 | WD_ABI_HDR_BL << 8));	// assert bootloader header
+	assert(bl_abihdr == (uint32_t)(WD_ABI_HDR_MAGIC << 16 | WD_ABI_HDR_BL << 8));	// assert bootloader header
 
 	typedef int (*ct)(void *);
 	void ** vectable = (void**)(WD_FLASH_BASE + WD_ABI_HDR_OFFSET + WD_ABI_BLHDR_OFFSET_SRVCALL);

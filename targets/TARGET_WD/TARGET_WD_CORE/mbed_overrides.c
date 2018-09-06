@@ -28,6 +28,9 @@
 #include "cmsis.h"
 #include "us_ticker_api.h"
 #include "resettrace.h"
+#include "mbed_critical.h"
+#include "mbed_wait_api.h"
+#include "gpio_api.h"
 
 // This function is called after RAM initialization and before main.
 void mbed_sdk_init()
