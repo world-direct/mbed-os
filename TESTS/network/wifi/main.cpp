@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
+#define WIFI 2
+#if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || \
+    MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != WIFI
+#error [NOT_SUPPORTED] No network configuration found for this target.
+#endif
+
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -26,11 +32,8 @@
 #if !defined(MBED_CONF_APP_AP_MAC_SECURE)      || \
     !defined(MBED_CONF_APP_MAX_SCAN_SIZE)      || \
     !defined(MBED_CONF_APP_WIFI_CH_SECURE)     || \
-    !defined(MBED_CONF_APP_WIFI_DRIVER)        || \
     !defined(MBED_CONF_APP_WIFI_PASSWORD)      || \
-    !defined(MBED_CONF_APP_WIFI_RX)            || \
     !defined(MBED_CONF_APP_WIFI_SECURE_SSID)   || \
-    !defined(MBED_CONF_APP_WIFI_TX)            || \
     !defined MBED_CONF_APP_WIFI_SECURE_PROTOCOL
 #error [NOT_SUPPORTED] Requires parameters from mbed_app.json (for secure connections)
 #endif
@@ -40,10 +43,6 @@
 #if !defined(MBED_CONF_APP_AP_MAC_UNSECURE)    || \
     !defined(MBED_CONF_APP_MAX_SCAN_SIZE)      || \
     !defined(MBED_CONF_APP_WIFI_CH_UNSECURE)   || \
-    !defined(MBED_CONF_APP_WIFI_DRIVER)        || \
-    !defined(MBED_CONF_APP_WIFI_PASSWORD)      || \
-    !defined(MBED_CONF_APP_WIFI_RX)            || \
-    !defined(MBED_CONF_APP_WIFI_TX)            || \
     !defined(MBED_CONF_APP_WIFI_UNSECURE_SSID)
 #error [NOT_SUPPORTED] Requires parameters from mbed_app.json (for unsecure connections)
 #endif
@@ -51,7 +50,8 @@
 
 using namespace utest::v1;
 
-utest::v1::status_t test_setup(const size_t number_of_cases) {
+utest::v1::status_t test_setup(const size_t number_of_cases)
+{
     GREENTEA_SETUP(240, "default_auto");
     return verbose_test_setup_handler(number_of_cases);
 }
@@ -93,6 +93,7 @@ Case cases[] = {
 Specification specification(test_setup, cases);
 
 // Entry point into the tests
-int main() {
+int main()
+{
     return !Harness::run(specification);
 }

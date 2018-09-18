@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 #ifndef MBED_PERIPHERALNAMES_H
 #define MBED_PERIPHERALNAMES_H
@@ -42,10 +42,6 @@ typedef enum {
     UART_9  = (int)UART9_BASE,
     UART_10 = (int)UART10_BASE
 } UARTName;
-
-#define STDIO_UART_TX  PD_8
-#define STDIO_UART_RX  PD_9
-#define STDIO_UART     UART_3
 
 typedef enum {
     SPI_1 = (int)SPI1_BASE,
@@ -82,6 +78,10 @@ typedef enum {
     CAN_2 = (int)CAN2_BASE,
     CAN_3 = (int)CAN3_BASE
 } CANName;
+
+typedef enum {
+    QSPI_1 = (int)QSPI_R_BASE,
+} QSPIName;
 
 #ifdef __cplusplus
 }

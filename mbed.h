@@ -33,6 +33,8 @@
 
 #define MBED_ENCODE_VERSION(major, minor, patch) ((major)*10000 + (minor)*100 + (patch))
 #define MBED_VERSION MBED_ENCODE_VERSION(MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION)        
+#include "platform/mbed_version.h"
+
 #if MBED_CONF_RTOS_PRESENT
 #include "rtos/rtos.h"
 #endif
@@ -87,6 +89,7 @@
 #include "drivers/RawSerial.h"
 #include "drivers/UARTSerial.h"
 #include "drivers/FlashIAP.h"
+#include "drivers/MbedCRC.h"
 
 // mbed Internal components
 #include "drivers/Timer.h"
@@ -99,7 +102,7 @@
 #include "drivers/InterruptIn.h"
 #include "platform/mbed_wait_api.h"
 #include "hal/sleep_api.h"
-#include "platform/mbed_sleep.h"
+#include "platform/mbed_power_mgmt.h"
 #include "platform/mbed_rtc_time.h"
 #include "platform/mbed_poll.h"
 #include "platform/ATCmdParser.h"
@@ -108,10 +111,12 @@
 #include "platform/DirHandle.h"
 #include "platform/CriticalSectionLock.h"
 #include "platform/DeepSleepLock.h"
+#include "platform/mbed_stats.h"
 
 // mbed Non-hardware components
 #include "platform/Callback.h"
 #include "platform/FunctionPointer.h"
+#include "platform/ScopedLock.h"
 
 using namespace mbed;
 using namespace std;

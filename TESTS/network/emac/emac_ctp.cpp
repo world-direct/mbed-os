@@ -19,14 +19,11 @@
 #include "unity/unity.h"
 #include "utest.h"
 
-#if MBED_CONF_APP_TEST_WIFI || MBED_CONF_APP_TEST_ETHERNET
-
 #include "mbed.h"
 
-#include "lwip/opt.h" /* ETH_PAD_SIZE */
-
-#include "emac_stack_mem.h"
-#include "emac_api.h"
+#include "EMAC.h"
+#include "EMACMemoryManager.h"
+#include "emac_TestMemoryManager.h"
 
 #include "emac_tests.h"
 #include "emac_ctp.h"
@@ -91,7 +88,7 @@ ctp_function emac_if_ctp_header_handle(unsigned char *eth_input_frame, unsigned 
         // Copy own address to origin
         memcpy(&eth_output_frame[6], origin_addr, 6);
         return CTP_FORWARD;
-    // reply
+        // reply
     } else if (function == 0x0001) {
         *receipt_number = ethernet_ptr[1] << 8 | ethernet_ptr[0];
         return CTP_REPLY;
@@ -100,13 +97,15 @@ ctp_function emac_if_ctp_header_handle(unsigned char *eth_input_frame, unsigned 
     return CTP_NONE;
 }
 
-void emac_if_ctp_msg_build(int eth_frame_len, const unsigned char *dest_addr, const unsigned char *origin_addr, const unsigned char *forward_addr)
+void emac_if_ctp_msg_build(int eth_frame_len, const unsigned char *dest_addr, const unsigned char *origin_addr, const unsigned char *forward_addr, int options)
 {
     if (eth_frame_len < ETH_FRAME_HEADER_LEN) {
         eth_frame_len = ETH_FRAME_HEADER_LEN;
     }
 
-    printf("message sent %x:%x:%x:%x:%x:%x\r\n\r\n", dest_addr[0], dest_addr[1], dest_addr[2], dest_addr[3], dest_addr[4], dest_addr[5]);
+    if (emac_if_get_trace_level() & TRACE_SEND) {
+        printf("message sent %x:%x:%x:%x:%x:%x\r\n\r\n", dest_addr[0], dest_addr[1], dest_addr[2], dest_addr[3], dest_addr[4], dest_addr[5]);
+    }
 
     int outgoing_msg_index = emac_if_add_outgoing_msg(eth_frame_len);
 
@@ -115,9 +114,22 @@ void emac_if_ctp_msg_build(int eth_frame_len, const unsigned char *dest_addr, co
         return;
     }
 
-    emac_stack_mem_chain_t *mem_chain_p = emac_stack_mem_alloc(0, eth_frame_len + ETH_PAD_SIZE, 0);
+    int alloc_opt = 0;
+    int align = 0;
+    if (options & CTP_OPT_NON_ALIGNED) {
+        alloc_opt |= MEM_NO_ALIGN; // Force align to odd address
+        align = 1;                 // Reserve memory overhead to align to odd address
+    }
 
-    if (!mem_chain_p) {
+    emac_mem_buf_t *buf;
+    if (options & CTP_OPT_HEAP) {
+        buf = emac_m_mngr_get()->alloc_heap(eth_frame_len, align, alloc_opt);
+    } else {
+        // Default allocation is from pool
+        buf = emac_m_mngr_get()->alloc_pool(eth_frame_len, align, alloc_opt);
+    }
+
+    if (!buf) {
         SET_ERROR_FLAGS(NO_FREE_MEM_BUF);
         emac_if_free_outgoing_msg(outgoing_msg_index);
         return;
@@ -131,13 +143,11 @@ void emac_if_ctp_msg_build(int eth_frame_len, const unsigned char *dest_addr, co
     int receipt_number = emac_if_ctp_header_build(eth_output_frame_data, dest_addr, origin_addr, forward_addr);
     emac_if_set_outgoing_msg_receipt_num(outgoing_msg_index, receipt_number);
 
-    emac_if_memory_buffer_write(mem_chain_p, eth_output_frame_data, true);
+    emac_if_memory_buffer_write(buf, eth_output_frame_data, true);
 
-    //emac_if->ops.link_out(hw_driver, mem_chain_p);
-    emac_if_get()->ops.link_out(emac_if_get(), mem_chain_p);
-
-    emac_stack_mem_free(0, mem_chain_p);
+    emac_if_check_memory(true);
+    emac_if_get()->link_out(buf);
+    emac_if_check_memory(false);
 }
 
-#endif
 

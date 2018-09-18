@@ -19,6 +19,7 @@
 #define MBED_CRITICALSECTIONLOCK_H
 
 #include "platform/mbed_critical.h"
+#include "platform/mbed_toolchain.h"
 
 namespace mbed {
 
@@ -56,33 +57,35 @@ namespace mbed {
   */
 class CriticalSectionLock {
 public:
-    CriticalSectionLock() 
+    CriticalSectionLock()
     {
         core_util_critical_section_enter();
     }
 
-    ~CriticalSectionLock() 
+    ~CriticalSectionLock()
     {
         core_util_critical_section_exit();
     }
 
     /** Mark the start of a critical section
+     *  @deprecated This function is inconsistent with RAII and is being removed in the future. Replaced by static function CriticalSectionLock::enable.
      *
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.8",
-            "This function is inconsistent with RAII and is being removed in the future."
-            "Replaced by static function CriticalSectionLock::enable.")
+                          "This function is inconsistent with RAII and is being removed in the future."
+                          "Replaced by static function CriticalSectionLock::enable.")
     void lock()
     {
         core_util_critical_section_enter();
     }
 
     /** Mark the end of a critical section
+     *  @deprecated This function is inconsistent with RAII and is being removed in the future. Replaced by static function CriticalSectionLock::enable.
      *
      */
     MBED_DEPRECATED_SINCE("mbed-os-5.8",
-            "This function is inconsistent with RAII and is being removed in the future."
-            "Replaced by static function CriticalSectionLock::disable.")
+                          "This function is inconsistent with RAII and is being removed in the future."
+                          "Replaced by static function CriticalSectionLock::disable.")
     void unlock()
     {
         core_util_critical_section_exit();

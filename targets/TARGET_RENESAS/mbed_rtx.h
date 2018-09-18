@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-#define OS_IDLE_THREAD_STACK_SIZE   512
+#if defined(TARGET_RZ_A1H) || defined(TARGET_VK_RZ_A1H) || defined(TARGET_GR_LYCHEE)
 
 #if defined(__CC_ARM)
     extern char Image$$ARM_LIB_STACK$$Base[];
@@ -42,6 +42,7 @@
     /* No region declarations needed */
 #else
     #error "no toolchain defined"
+#endif
 #endif
 
 #endif  // MBED_MBED_RTX_H

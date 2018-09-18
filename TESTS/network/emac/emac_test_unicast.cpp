@@ -20,43 +20,55 @@
 #include "unity.h"
 #include "utest.h"
 
-#if MBED_CONF_APP_TEST_WIFI || MBED_CONF_APP_TEST_ETHERNET
-
 #include "emac_tests.h"
 #include "emac_util.h"
 #include "emac_ctp.h"
 
 using namespace utest::v1;
 
-void test_emac_unicast_cb(void)
+void test_emac_unicast_cb(int opt)
 {
-    emac_if_validate_outgoing_msg();
+    static bool send_request = true;
+    static int no_response_cnt = 0;
+    static int retries = 0;
+    static int test_step = 0;
 
-    static uint8_t counter = 0;
-
-    // Send three unicast
-    if (counter < 3) {
-        emac_if_ctp_msg_build(100, emac_if_get_echo_server_addr(0), emac_if_get_own_addr(), emac_if_get_own_addr());
-    }
-
-    // End test
-    if (counter > 10) {
-        worker_loop_end();
-
-        if (emac_if_count_outgoing_msg() != 0) {
-            SET_ERROR_FLAGS(TEST_FAILED);
+    // Timeout
+    if (opt == TIMEOUT && send_request) {
+        CTP_MSG_SEND(100, emac_if_get_echo_server_addr(0), emac_if_get_own_addr(), emac_if_get_own_addr(), 0);
+        send_request = false;
+        no_response_cnt = 0;
+    } else if (opt == TIMEOUT) {
+        if (++no_response_cnt > 5) {
+            if (++retries > 3) {
+                printf("too many retries\r\n\r\n");
+                SET_ERROR_FLAGS(TEST_FAILED);
+                END_TEST_LOOP;
+            } else {
+                printf("retry count %i\r\n\r\n", retries);
+                send_request = true;
+            }
         }
     }
-    counter++;
+
+    // Echo response received
+    if (opt == INPUT) {
+        if (++test_step == 3) {
+            END_TEST_LOOP;
+        } else {
+            retries = 0;
+            send_request = true;
+        }
+    }
 }
 
 void test_emac_unicast()
 {
-    RESET_ERROR_FLAGS;
-    SET_TRACE_LEVEL(TRACE_ETH_FRAMES | TRACE_SUCCESS | TRACE_FAILURE);
+    RESET_ALL_ERROR_FLAGS;
+    SET_TRACE_LEVEL(TRACE_SEND | TRACE_ETH_FRAMES | TRACE_SUCCESS | TRACE_FAILURE);
 
-    if (emac_if_count_echo_server_addr()) {
-        worker_loop_start(test_emac_unicast_cb, 1 * SECOND_TO_MS);
+    if (ECHO_SERVER_ADDRESS_KNOWN) {
+        START_TEST_LOOP(test_emac_unicast_cb, 1 * SECOND_TO_MS);
     }
 
     PRINT_ERROR_FLAGS;
@@ -64,4 +76,3 @@ void test_emac_unicast()
     RESET_OUTGOING_MSG_DATA;
 }
 
-#endif
