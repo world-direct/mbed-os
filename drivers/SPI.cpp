@@ -234,22 +234,6 @@ void SPI::unlock_deep_sleep()
     }
 }
 
-void SPI::lock_deep_sleep()
-{
-    if (_deep_sleep_locked == false) {
-        sleep_manager_lock_deep_sleep();
-        _deep_sleep_locked = true;
-    }
-}
-
-void SPI::unlock_deep_sleep()
-{
-    if (_deep_sleep_locked == true) {
-        sleep_manager_unlock_deep_sleep();
-        _deep_sleep_locked = false;
-    }
-}
-
 #if TRANSACTION_QUEUE_SIZE_SPI
 
 void SPI::start_transaction(transaction_t *data)

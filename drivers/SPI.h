@@ -254,15 +254,6 @@ private:
     /** Unlock deep sleep in case it is locked */
     void unlock_deep_sleep();
 
-
-private:
-    /** Lock deep sleep only if it is not yet locked */
-    void lock_deep_sleep();
-
-    /** Unlock deep sleep in case it is locked */
-    void unlock_deep_sleep();
-
-
 #if TRANSACTION_QUEUE_SIZE_SPI
 
     /** Start a new transaction

@@ -33,6 +33,7 @@
 #include "rtc_api_hal.h"
 #include "mbed_error.h"
 #include "mbed_mktime.h"
+#include "hal/lp_ticker_api.h"
 
 static RTC_HandleTypeDef RtcHandle;
 
@@ -356,7 +357,7 @@ void rtc_set_wake_up_timer(uint32_t delta)
         DivIndex++;
     }
 
-    irq_handler = (void (*)(void))lp_ticker_irq_handler;
+    irq_handler = (void (*)(void))ticker_irq_handler;
     NVIC_SetVector(RTC_WKUP_IRQn, (uint32_t)RTC_IRQHandler);
     NVIC_EnableIRQ(RTC_WKUP_IRQn);
 
