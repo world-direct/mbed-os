@@ -188,4 +188,10 @@ void us_ticker_clear_interrupt(void)
     __HAL_TIM_CLEAR_FLAG(&TimMasterHandle, TIM_FLAG_CC1);
 }
 
+void us_ticker_free(void)
+{
+    // TODO
+    // implementation required by mbed-os-5.9.7
+}
+
 #endif // TIM_MST_16BIT

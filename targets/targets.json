@@ -4442,7 +4442,8 @@
         ],
         "core": "Cortex-M4F",
         "extra_labels_add": [
-            "WD_CORE"
+            "WD_CORE",
+            "STM_EMAC"
         ],
         "macros_add": [
             "WD_ABI_CPUID_MASK=0xFFF0FFF0",
