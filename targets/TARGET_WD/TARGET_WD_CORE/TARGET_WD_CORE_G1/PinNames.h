@@ -38,6 +38,10 @@ extern "C" {
 #endif
 
 typedef enum {
+
+    // Not connected
+    NC = (int)0xFFFFFFFF,
+
     PA_0  = 0x00,
     PA_1  = 0x01,
     PA_2  = 0x02,
@@ -227,9 +231,21 @@ typedef enum {
 	Version4	= PC_8,
 	Version8	= PC_7,
 	
-    // Not connected
-    NC = (int)0xFFFFFFFF
+    // Modem-PINs
+    MDMTXD = GSM_TXD,   // Transmit Data            (ok, available)
+    MDMRXD = GSM_RXD,   // Receive Data             (ok, available)
+    MDMCTS = GSM_CTS,   // Clear to Send            (ok, available)
+    MDMDCD = NC,        // Data Carrier Detect      (ok, NC is fine)
+    MDMDSR = NC,        // Data Set Ready           (ok, currently not in use)
+    MDMDTR = NC,        // Data Terminal Ready      (ok, currently not in use)
+    MDMRI  = GSM_RI,    // Ring Indicator           (ok, available)
+    MDMRTS = NC,        // Request to Send          (ok, currently not in use)
+
 } PinName;
+
+#define ACTIVE_HIGH_POLARITY    1
+#define ACTIVE_LOW_POLARITY     0
+#define MDM_PIN_POLARITY        ACTIVE_HIGH_POLARITY
 
 #ifdef __cplusplus
 }

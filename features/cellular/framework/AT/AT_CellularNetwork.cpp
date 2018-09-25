@@ -281,7 +281,7 @@ nsapi_error_t AT_CellularNetwork::activate_context()
     // try to find or create context with suitable stack
     if (get_context()) {
         // try to authenticate user before activating or modifying context
-        err = do_user_authentication();
+        //err = do_user_authentication();
     } else {
         err = NSAPI_ERROR_NO_CONNECTION;
     }
@@ -315,12 +315,12 @@ nsapi_error_t AT_CellularNetwork::activate_context()
     _at.resp_stop();
 
     if (!_is_context_active) {
-        tr_info("Activate PDP context %d", _cid);
-        _at.cmd_start("AT+CGACT=1,");
-        _at.write_int(_cid);
-        _at.cmd_stop();
-        _at.resp_start();
-        _at.resp_stop();
+        // tr_info("Activate PDP context %d", _cid);
+        // _at.cmd_start("AT+CGACT=1,");
+        // _at.write_int(_cid);
+        // _at.cmd_stop();
+        // _at.resp_start();
+        // _at.resp_stop();
     }
 
     err = (_at.get_last_error() == NSAPI_ERROR_OK) ? NSAPI_ERROR_OK : NSAPI_ERROR_NO_CONNECTION;
@@ -403,7 +403,7 @@ nsapi_error_t AT_CellularNetwork::open_data_channel()
     /* Initialize PPP
      * If blocking: mbed_ppp_init() is a blocking call, it will block until
                   connected, or timeout after 30 seconds*/
-    return nsapi_ppp_connect(_at.get_file_handle(), callback(this, &AT_CellularNetwork::ppp_status_cb), NULL, NULL, _ip_stack_type);
+    return nsapi_ppp_connect(_at.get_file_handle(), callback(this, &AT_CellularNetwork::ppp_status_cb), _uname, _pwd, _ip_stack_type);
 #else
     return NSAPI_ERROR_OK;
 #endif // #if NSAPI_PPP_AVAILABLE
@@ -507,6 +507,7 @@ void AT_CellularNetwork::ppp_status_cb(nsapi_event_t event, intptr_t parameter)
 
 nsapi_error_t AT_CellularNetwork::do_user_authentication()
 {
+
     // if user has defined user name and password we need to call CGAUTH before activating or modifying context
     if (_pwd && _uname) {
         _at.cmd_start("AT+CGAUTH=");
