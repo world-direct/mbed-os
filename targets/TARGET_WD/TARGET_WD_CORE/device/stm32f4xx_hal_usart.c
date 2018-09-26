@@ -1479,7 +1479,7 @@ void HAL_USART_IRQHandler(USART_HandleTypeDef *husart)
       {
         /* Call user error callback */
         HAL_USART_ErrorCallback(husart);
-        husart->ErrorCode = HAL_USART_ERROR_NONE;
+        //husart->ErrorCode = HAL_USART_ERROR_NONE;
       }
     }
     return;

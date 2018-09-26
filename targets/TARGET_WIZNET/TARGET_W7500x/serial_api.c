@@ -216,6 +216,13 @@ static void uart_irq(UARTName name, int id)
        if( UART_GetITStatus(UART,UART_IT_FLAG_RXI) != RESET ){
            irq_handler(serial_irq_ids[id], RxIrq);
        }
+       if (__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) {
+		   if (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET) {
+				irq_handler(serial_irq_ids[id], RxIrq);
+				__HAL_UART_CLEAR_FLAG(huart, UART_FLAG_IDLE);
+		   }
+	   }
+
     }
 }
 

@@ -831,13 +831,13 @@ int serial_irq_handler_asynch(serial_t *obj)
     uint8_t i = 0;
     
     if ((huart->Instance->CR3 & USART_CR3_DMAT) !=0) {
-		// call dma tx interrupt
-		HAL_DMA_IRQHandler(huart->hdmatx);
-	}
-	if ((huart->Instance->CR3 & USART_CR3_DMAR) !=0) {
-		// call dma rx interrupt
-		HAL_DMA_IRQHandler(huart->hdmarx);
-	}
+        // call dma tx interrupt
+        HAL_DMA_IRQHandler(huart->hdmatx);
+    }
+    if ((huart->Instance->CR3 & USART_CR3_DMAR) !=0) {
+        // call dma rx interrupt
+        HAL_DMA_IRQHandler(huart->hdmarx);
+    }
 
     // TX PART:
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) != RESET) {
