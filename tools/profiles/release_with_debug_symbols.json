@@ -28,7 +28,7 @@
             "-std=gnu99"
         ],
         "cxx": [
-            "-std=gnu++11",
+            "-std=gnu++14",
             "-Wvla"
         ],
         "ld": [
