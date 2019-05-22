@@ -63,7 +63,7 @@ void test_digital_in_out_count_impulses(void)
         routingmax_io.DOUTs[i].setValue(0);
     }
 
-    wait_ms(100);
+    wait_ms(100 * DINCount);
 
     //wd_log_info("check if corresponding input state is LOW");
     for (int i = 0; i < DINCount; i++) {
