@@ -102,9 +102,12 @@ static void _eth_arch_low_level_init(struct netif *netif)
     /* Init ETH */
     uint8_t MACAddr[6];
     EthHandle.Instance = ETH;
-    EthHandle.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE;
-    EthHandle.Init.Speed = ETH_SPEED_100M;
+    //EthHandle.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE;
+    EthHandle.Init.AutoNegotiation = ETH_AUTONEGOTIATION_DISABLE;
+    //EthHandle.Init.Speed = ETH_SPEED_100M;
+    EthHandle.Init.Speed = ETH_SPEED_10M;
     EthHandle.Init.DuplexMode = ETH_MODE_FULLDUPLEX;
+    //EthHandle.Init.DuplexMode = ETH_MODE_HALFDUPLEX;
     EthHandle.Init.PhyAddress = ETH_ARCH_PHY_ADDRESS;
 #if (MBED_MAC_ADDRESS_SUM != MBED_MAC_ADDR_INTERFACE)
     MACAddr[0] = MBED_MAC_ADDR_0;
