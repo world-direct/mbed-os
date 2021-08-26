@@ -23,6 +23,10 @@ option(BUILD_TESTING "Run unit tests only." OFF)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     include(CTest)
+    
+endif()
+
+if(BUILD_TESTING)
     add_definitions(-DUNITTEST)
     add_subdirectory(UNITTESTS)
 endif()
@@ -93,7 +97,7 @@ if(${CMAKE_CROSSCOMPILING})
     )
 
     # Add MBED_TEST_MODE for backward compatibility with Greentea tests written for use with Mbed CLI 1
-    if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+    if(BUILD_TESTING)
         target_compile_definitions(${PROJECT_NAME}
             INTERFACE
                 MBED_TEST_MODE
