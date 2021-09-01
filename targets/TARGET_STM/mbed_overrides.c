@@ -292,7 +292,7 @@ void mbed_sdk_init()
 #if (MBED_CONF_TARGET_RTC_CLOCK_SOURCE == USE_RTC_CLK_HSE)
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-#if (!TARGET_STM32F1)
+#if defined(RCC_RTCCLKSOURCE_HSE_DIVX)
     PeriphClkInitStruct.RTCClockSelection = (RCC_RTCCLKSOURCE_HSE_DIVX | RTC_HSE_DIV << 16);
 #else
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_HSE_DIV128;
