@@ -25,11 +25,15 @@
             "help": "Reset control pin",
             "value": null
         },
-        "polarity": {
-            "help": "Pin polarity, 1 = Active high, 0 = Active low",
+        "polarity_pwr": {
+            "help": "Pin polarity of power control pin, 1 = Active high, 0 = Active low",
             "value": null
         },
-        "baudrate" : {
+        "polarity_rst": {
+            "help": "Pin polarity of reset control pin, 1 = Active high, 0 = Active low",
+            "value": null
+        },
+        "baudrate": {
             "help": "Serial connection baud rate",
             "value": 115200
         },

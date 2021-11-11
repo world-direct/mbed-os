@@ -30,9 +30,9 @@ public:
     /**
      * Constructs the Quectel EC2X series driver. It is mandatory to provide
      * a FileHandle object, the power pin and the polarity of the pin.
-     * Providing reset pin is optional.
+     * Providing reset pin is optional and the polarity of the pin.
      */
-    QUECTEL_EC2X(FileHandle *fh, PinName pwr, bool active_high, PinName rst = NC);
+    QUECTEL_EC2X(FileHandle *fh, PinName pwr, bool polariy_pwr, PinName rst = NC, bool polarity_rst = false);
 
     virtual nsapi_error_t hard_power_on();
     virtual nsapi_error_t hard_power_off();
@@ -41,7 +41,8 @@ public:
 
 private:
     nsapi_error_t press_power_button(std::chrono::duration<uint32_t, std::milli> timeout);
-    bool _active_high;
+    bool _active_high_pwr;
+    bool _active_high_rst;
     DigitalOut _pwr_key;
     DigitalOut _rst;
 };

@@ -75,11 +75,12 @@ static const intptr_t cellular_properties[AT_CellularDevice::PROPERTY_MAX] = {
     0,  // PROPERTY_AT_SEND_DELAY
 };
 
-QUECTEL_EC2X::QUECTEL_EC2X(FileHandle *fh, PinName pwr, bool active_high, PinName rst)
+QUECTEL_EC2X::QUECTEL_EC2X(FileHandle *fh, PinName pwr, bool polarity_pwr, PinName rst, bool polarity_rst)
     : AT_CellularDevice(fh),
-      _active_high(active_high),
-      _pwr_key(pwr, !_active_high),
-      _rst(rst, !_active_high)
+      _active_high_pwr(polarity_pwr),
+      _active_high_rst(polarity_rst),
+      _pwr_key(pwr, !polarity_pwr),
+      _rst(rst, polarity_rst)
 {
     set_cellular_properties(cellular_properties);
 }
@@ -95,8 +96,9 @@ CellularDevice *CellularDevice::get_default_instance()
 #endif
     static QUECTEL_EC2X device(&serial,
                                MBED_CONF_QUECTEL_EC2X_PWR,
-                               MBED_CONF_QUECTEL_EC2X_POLARITY,
-                               MBED_CONF_QUECTEL_EC2X_RST);
+                               MBED_CONF_QUECTEL_EC2X_POLARITY_PWR,
+                               MBED_CONF_QUECTEL_EC2X_RST,
+                               MBED_CONF_QUECTEL_EC2X_POLARITY_RST);
     return &device;
 }
 #endif
@@ -104,9 +106,9 @@ CellularDevice *CellularDevice::get_default_instance()
 nsapi_error_t QUECTEL_EC2X::press_power_button(duration<uint32_t, std::milli> timeout)
 {
     if (_pwr_key.is_connected()) {
-        _pwr_key = _active_high;
+        _pwr_key = _active_high_pwr;
         ThisThread::sleep_for(timeout);
-        _pwr_key = !_active_high;
+        _pwr_key = !_active_high_pwr;
         ThisThread::sleep_for(100ms);
     }
 
@@ -127,9 +129,9 @@ nsapi_error_t QUECTEL_EC2X::hard_power_off()
 nsapi_error_t QUECTEL_EC2X::soft_power_on()
 {
     if (_rst.is_connected()) {
-        _rst = _active_high;
+        _rst = !_active_high_rst;
         ThisThread::sleep_for(460ms);
-        _rst = !_active_high;
+        _rst = _active_high_rst;
         ThisThread::sleep_for(100ms);
 
         _at.lock();
