@@ -21,6 +21,10 @@
 #include "AT_CellularNetwork.h"
 #include "rtos/ThisThread.h"
 #include "drivers/BufferedSerial.h"
+#include "drivers/DigitalIn.h"
+#include "QUECTEL_EC2X_CellularNetwork.h"
+#define TRACE_GROUP "EC2X"
+#include "mbed-trace/mbed_trace.h"
 
 using namespace std::chrono;
 using namespace mbed;
@@ -103,6 +107,19 @@ CellularDevice *CellularDevice::get_default_instance()
 }
 #endif
 
+nsapi_error_t QUECTEL_EC2X::init()
+{
+    auto ret = AT_CellularDevice::init();
+    if (ret == NSAPI_ERROR_OK) {
+        auto network = open_network();
+        if (network != nullptr) {
+            //ret = network->set_access_technology(mbed::CellularNetwork::RadioAccessTechnology::RAT_GSM);
+            ret = network->set_access_technology(mbed::CellularNetwork::RadioAccessTechnology::RAT_UTRAN);
+        }
+    }
+    return ret;
+}
+
 nsapi_error_t QUECTEL_EC2X::press_power_button(duration<uint32_t, std::milli> timeout)
 {
     if (_pwr_key.is_connected()) {
@@ -112,22 +129,79 @@ nsapi_error_t QUECTEL_EC2X::press_power_button(duration<uint32_t, std::milli> ti
         ThisThread::sleep_for(100ms);
     }
 
+
+
+
     return NSAPI_ERROR_OK;
 }
 
 nsapi_error_t QUECTEL_EC2X::hard_power_on()
 {
-    return press_power_button(600ms);
+    mbed::DigitalIn _state(LTE_STATUS);
+    if (_state.read() == 0) {
+        tr_warning("Modem already on");
+        return NSAPI_ERROR_OK;
+    } else {
+        tr_info("turning modem on.");
+    }
+    press_power_button(600ms);
+
+    tr_info("wait for state getting low");
+    auto begin = rtos::Kernel::Clock::now();
+    bool currentState = _state.read() == 1;
+    while (currentState && rtos::Kernel::Clock::now() - begin < std::chrono::seconds(10)) {
+        currentState = _state.read() == 1;
+        tr_info("state is %s", currentState ? "true" : "false");
+        rtos::ThisThread::sleep_for(500ms);
+    }
+    tr_info("state is %s", currentState ? "true" : "false");
+    //tr_info("waiting 10 sec for power on");
+    //rtos::ThisThread::sleep_for(std::chrono::seconds(10));
+    tr_info("powered on");
+    return NSAPI_ERROR_OK;
 }
 
 nsapi_error_t QUECTEL_EC2X::hard_power_off()
-
 {
-    return press_power_button(750ms);
+    mbed::DigitalIn _state(LTE_STATUS);
+    if (_state.read() == 1) {
+        tr_warning("Modem already off");
+        return NSAPI_ERROR_OK;
+    } else {
+        tr_info("turning modem off.");
+    }
+    press_power_button(750ms);
+
+    tr_info("wait for state getting high");
+    auto begin = rtos::Kernel::Clock::now();
+    bool currentState = _state.read() == 1;
+    while (!currentState && rtos::Kernel::Clock::now() - begin < std::chrono::seconds(65)) {
+        currentState = _state.read() == 1;
+        tr_info("state is %s", currentState ? "true" : "false");
+        rtos::ThisThread::sleep_for(500ms);
+    }
+    tr_info("state is %s", currentState ? "true" : "false");
+    tr_info("powered down");
+    /*tr_info("waiting for POWERED DOWN");
+    _at.lock();
+
+    _at.set_at_timeout(milliseconds(65000));
+    _at.resp_start();
+    _at.set_stop_tag("POWERED DOWN");
+    bool rdy = _at.consume_to_stop_tag();
+
+    _at.unlock();
+    if (!rdy) {
+        tr_warn("did not receive power down");
+        return NSAPI_ERROR_DEVICE_ERROR;
+    }
+    tr_info("powered down");*/
+    return NSAPI_ERROR_OK;
 }
 
 nsapi_error_t QUECTEL_EC2X::soft_power_on()
 {
+    tr_info("soft_power_on");
     if (_rst.is_connected()) {
         _rst = !_active_high_rst;
         ThisThread::sleep_for(460ms);
@@ -154,5 +228,12 @@ nsapi_error_t QUECTEL_EC2X::soft_power_on()
 
 nsapi_error_t QUECTEL_EC2X::soft_power_off()
 {
+    tr_info("soft power off");
     return hard_power_off();
+}
+
+
+AT_CellularNetwork *QUECTEL_EC2X::open_network_impl(ATHandler &at)
+{
+    return new QUECTEL_EC2X_CellularNetwork(at, *this);
 }

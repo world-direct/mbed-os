@@ -9,4 +9,5 @@ target_include_directories(mbed-cellular
 target_sources(mbed-cellular
     INTERFACE
         QUECTEL_EC2X.cpp
+        QUECTEL_EC2X_CellularNetwork.cpp
 )

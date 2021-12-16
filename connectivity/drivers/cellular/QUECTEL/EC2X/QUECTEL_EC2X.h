@@ -34,11 +34,14 @@ public:
      */
     QUECTEL_EC2X(FileHandle *fh, PinName pwr, bool polariy_pwr, PinName rst = NC, bool polarity_rst = false);
 
+    virtual nsapi_error_t init() override;
+
     virtual nsapi_error_t hard_power_on();
     virtual nsapi_error_t hard_power_off();
     virtual nsapi_error_t soft_power_on();
     virtual nsapi_error_t soft_power_off();
-
+protected:
+    virtual AT_CellularNetwork *open_network_impl(ATHandler &at);
 private:
     nsapi_error_t press_power_button(std::chrono::duration<uint32_t, std::milli> timeout);
     bool _active_high_pwr;
