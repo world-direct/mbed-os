@@ -23,6 +23,7 @@
 #include "drivers/BufferedSerial.h"
 #include "drivers/DigitalIn.h"
 #include "QUECTEL_EC2X_CellularNetwork.h"
+#include "QUECTEL_EC2X_CellularContext.h"
 #define TRACE_GROUP "EC2X"
 #include "mbed-trace/mbed_trace.h"
 
@@ -236,4 +237,9 @@ nsapi_error_t QUECTEL_EC2X::soft_power_off()
 AT_CellularNetwork *QUECTEL_EC2X::open_network_impl(ATHandler &at)
 {
     return new QUECTEL_EC2X_CellularNetwork(at, *this);
+}
+
+AT_CellularContext *QUECTEL_EC2X::create_context_impl(ATHandler &at, const char *apn, bool cp_req, bool nonip_req)
+{
+    return new QUECTEL_EC2X_CellularContext(at, this, apn, cp_req, nonip_req);
 }

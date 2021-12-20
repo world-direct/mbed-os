@@ -42,6 +42,7 @@ public:
     virtual nsapi_error_t soft_power_off();
 protected:
     virtual AT_CellularNetwork *open_network_impl(ATHandler &at);
+    virtual AT_CellularContext *create_context_impl(ATHandler &at, const char *apn, bool cp_req = false, bool nonip_req = false) override;
 private:
     nsapi_error_t press_power_button(std::chrono::duration<uint32_t, std::milli> timeout);
     bool _active_high_pwr;
