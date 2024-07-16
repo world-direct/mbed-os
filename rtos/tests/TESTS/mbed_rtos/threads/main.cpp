@@ -31,13 +31,13 @@
 #include <mstd_mutex>
 #include <type_traits>
 
-#define THREAD_STACK_SIZE 512
+#define THREAD_STACK_SIZE 1024
 #if defined(__CORTEX_A9) || defined(__CORTEX_A5) || defined(__CORTEX_M23) || defined(__CORTEX_M33) || defined(TARGET_ARM_FM) ||  defined(TARGET_CY8CKIT_062_WIFI_BT_PSA)
+#define PARALLEL_THREAD_STACK_SIZE 1024
+#define CHILD_THREAD_STACK_SIZE 1024
+#else
 #define PARALLEL_THREAD_STACK_SIZE 512
 #define CHILD_THREAD_STACK_SIZE 512
-#else
-#define PARALLEL_THREAD_STACK_SIZE 384
-#define CHILD_THREAD_STACK_SIZE 384
 #endif
 
 #define TEST_ASSERT_DURATION_WITHIN(delta, expected, actual) \
