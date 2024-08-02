@@ -479,6 +479,9 @@ void CellularStateMachine::state_registering()
             _cb_data.error = _network.set_registration(_plmn);
             _command_success = (_cb_data.error == NSAPI_ERROR_OK);
         }
+        if((CellularNetwork::RegistrationStatus)_cb_data.status_data == CellularNetwork::RegistrationStatus::RegistrationDenied) {
+           send_event_cb(_current_event);
+        }
         retry_state_or_fail();
     }
 }
