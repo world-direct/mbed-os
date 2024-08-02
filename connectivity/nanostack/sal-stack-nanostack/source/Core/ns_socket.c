@@ -1438,6 +1438,10 @@ buffer_t *socket_tx_buffer_event(buffer_t *buf, uint8_t status)
     if (buf->ack_receive_cb) {
         buf->ack_receive_cb(buf, status);
     }
+    if (status == SOCKET_BUSY) {
+        //SOCKET_BUSY shuold not be forward further and switched back orginal behaviour
+        status = SOCKET_TX_FAIL;
+    }
 
     /* Suppress events once socket orphaned */
     if (!buf->socket || (buf->socket->flags & (SOCKET_FLAG_PENDING | SOCKET_FLAG_CLOSED))) {
@@ -1566,8 +1570,17 @@ struct protocol_interface_info_entry *socket_interface_determine(const socket_t 
         }
     }
 
-    /* Try a routing table entry for greater-than-realm scope */
+    /* For greater-than-realm scope, use default interface if a default interface ID */
+    /* has been set (e.g. using setsockopt), else try a routing table entry */
     if (addr_ipv6_scope(buf->dst_sa.address, NULL) > IPV6_SCOPE_REALM_LOCAL) {
+        if (socket_ptr->default_interface_id != -1) {
+            cur_interface = protocol_stack_interface_info_get_by_id(socket_ptr->default_interface_id);
+            if (cur_interface) {
+                return cur_interface;
+            } else {
+                return NULL;
+            }
+        }
         if (ipv6_buffer_route(buf)) {
             return buf->interface;
         }
