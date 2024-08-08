@@ -1002,6 +1002,7 @@ void AT_CellularContext::cellular_callback(nsapi_event_t ev, intptr_t ptr)
             tr_info("cb: CellularContext disconnected");
             set_cid(-1);
             _is_connected = false;
+            _is_context_active = false;
         }
 #endif // NSAPI_PPP_AVAILABLE
         // forward status change events to application, call_network_cb will make sure that only changed event are forwarded
