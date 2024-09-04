@@ -498,18 +498,7 @@ static nsapi_size_or_error_t nsapi_dns_query_multiple(NetworkStack *stack, const
         return MIN(us_cached, addr_count);
     }
     delete [] tmp;
-    // create a udp socket
-    UDPSocket socket;
-    int err = socket.open(stack);
-    if (err) {
-        return err;
-    }
 
-    socket.set_timeout(MBED_CONF_NSAPI_DNS_RESPONSE_WAIT_TIME);
-
-    if (interface_name != NULL) {
-        socket.setsockopt(NSAPI_SOCKET, NSAPI_BIND_TO_DEVICE, interface_name, NSAPI_INTERFACE_NAME_MAX_SIZE);
-    }
     // create network packet
     uint8_t *const packet = (uint8_t *)malloc(DNS_BUFFER_SIZE);
     if (!packet) {
@@ -525,6 +514,18 @@ static nsapi_size_or_error_t nsapi_dns_query_multiple(NetworkStack *stack, const
 
     // check against each dns server
     while (true) {
+        // create a udp socket
+        UDPSocket socket;
+        int err = socket.open(stack);
+        if (err) {
+            return err;
+        }
+        socket.set_timeout(MBED_CONF_NSAPI_DNS_RESPONSE_WAIT_TIME);
+
+        if (interface_name != NULL) {
+            socket.setsockopt(NSAPI_SOCKET, NSAPI_BIND_TO_DEVICE, interface_name, NSAPI_INTERFACE_NAME_MAX_SIZE);
+        }
+
         SocketAddress dns_addr;
         err = nsapi_dns_get_server_addr(stack, &index, &total_attempts, &send_success, &dns_addr, interface_name);
         if (err != NSAPI_ERROR_OK) {
@@ -587,12 +588,6 @@ static nsapi_size_or_error_t nsapi_dns_query_multiple(NetworkStack *stack, const
 
     // clean up packet
     free(packet);
-
-    // clean up udp
-    err = socket.close();
-    if (err) {
-        return err;
-    }
 
     // return result
     return result;
