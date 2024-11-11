@@ -321,7 +321,8 @@ typedef enum nsapi_socket_option {
     NSAPI_STAGGER,           /*!< Read estimated stagger value to destination */
     NSAPI_IPTOS,             /*!< Set IP type of service to set specific precedence */
     NSAPI_BROADCAST,         /*!< Set broadcast flag for UDP socket */
-    NSAPI_PKTINFO            /*!< Get additional information when using sendto_control/recvfrom_control */
+    NSAPI_PKTINFO,           /*!< Get additional information when using sendto_control/recvfrom_control */
+    NSAPI_NODELAY,           /*!< Disable the nagle algorithm */
 } nsapi_socket_option_t;
 
 typedef enum nsapi_tlssocket_level {

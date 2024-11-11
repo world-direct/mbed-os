@@ -637,6 +637,18 @@ nsapi_error_t LWIP::setsockopt(nsapi_socket_t handle, int level, int optname, co
 
             s->conn->pcb.tcp->keep_intvl = *(int *)optval;
             return 0;
+
+        case NSAPI_NODELAY:
+            if (optlen != sizeof(int) || NETCONNTYPE_GROUP(s->conn->type) != NETCONN_TCP) {
+                return NSAPI_ERROR_UNSUPPORTED;
+            }
+            if(*(int *)optval == 1) {
+                tcp_nagle_disable(s->conn->pcb.tcp);
+            }
+            else {
+                tcp_nagle_enable(s->conn->pcb.tcp);
+            }
+            return 0;
 #endif
 
         case NSAPI_REUSEADDR:
